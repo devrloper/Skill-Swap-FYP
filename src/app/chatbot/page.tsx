@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import NavBar from "@/app/components/navbar/page";
 import Footer from "@/app/components/footer/page";
-import { Button } from "@/app/ui/button";
+import  Button  from "@/app/ui/button";
 import { Send, X } from "lucide-react";
 import { ChatMessage } from "@/app/lib/types";
 import { Mic, MicOff } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 
 type Chat = {
   id: string;
@@ -22,14 +23,22 @@ export default function ChatbotPage() {
   const [search, setSearch] = useState("");
   const [showSidebar, setShowSidebar] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
   const messages = activeChat?.messages || [];
+  const skillSwapQuestions = [
+    "What is SkillSwap and how does it work?",
+    "How can I exchange skills on SkillSwap?",
+    "How does AI matching work in SkillSwap?",
+    "Is SkillSwap free for beginners?",
+  ];
 
-  /* ✅ CHAT AREA AUTO SCROLL ONLY */
+  /* CHAT AREA AUTO SCROLL ONLY */
   useEffect(() => {
     const el = chatContainerRef.current;
     if (!el) return;
@@ -75,11 +84,21 @@ export default function ChatbotPage() {
     };
 
     setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === activeChatId
-          ? { ...chat, messages: [...chat.messages, userMessage] }
-          : chat
-      )
+      prev.map((chat) => {
+        if (chat.id !== activeChatId) return chat;
+
+        const isFirstUserMessage =
+          chat.messages.filter((m) => m.role === "user").length === 0;
+
+        return {
+          ...chat,
+          title:
+            isFirstUserMessage && chat.title === "New Chat"
+              ? generateChatTitle(userMessage.content)
+              : chat.title,
+          messages: [...chat.messages, userMessage],
+        };
+      })
     );
 
     setInputMessage("");
@@ -167,7 +186,40 @@ export default function ChatbotPage() {
     recognition.start();
     recognitionRef.current = recognition;
   };
+  const generateChatTitle = (text: string) => {
+    return text.split(" ").slice(0, 4).join(" ") + "...";
+  };
+  const deleteChat = (id: string) => {
+    setChats((prev) => prev.filter((chat) => chat.id !== id));
+    if (activeChatId === id) {
+      setActiveChatId(null);
+    }
+  };
+  const editChatTitle = (id: string) => {
+    const newTitle = prompt("Edit chat title");
+    if (!newTitle) return;
 
+    setChats((prev) =>
+      prev.map((chat) => (chat.id === id ? { ...chat, title: newTitle } : chat))
+    );
+  };
+  const openEditModal = (chat: Chat) => {
+    setEditingChatId(chat.id);
+    setEditTitle(chat.title);
+    setIsEditModalOpen(true);
+  };
+
+  const saveEditedTitle = () => {
+    if (!editTitle.trim() || !editingChatId) return;
+
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === editingChatId ? { ...chat, title: editTitle.trim() } : chat
+      )
+    );
+
+    setIsEditModalOpen(false);
+  };
   return (
     <div className="min-h-screen  flex flex-col bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-300">
       <NavBar />
@@ -182,57 +234,56 @@ export default function ChatbotPage() {
             />
           )}
 
-          {/*  SIDEBAR */}
-          <div
-            className={`
-              fixed md:static z-40
-              top-0 left-0 h-full
-              w-72 p-5 flex flex-col
-              bg-gradient-to-b from-purple-500 via-pink-500 to-indigo-500 backdrop-blur-md text-white
-              transform transition-transform duration-300
-              ${showSidebar ? "translate-x-0" : "-translate-x-full"}
-              md:translate-x-0
-            `}
-          >
-            {/* CLOSE BUTTON */}
-            <div className="flex justify-between items-center mb-4 md:hidden">
-              <h2 className="text-lg font-semibold">Chats</h2>
-              <button onClick={() => setShowSidebar(false)}>
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <Button
-              onClick={startNewChat}
-              className="mb-4 bg-white/30 hover:bg-white/40 text-white"
-            >
+          {/* SIDEBAR */}
+          <div className="w-72 p-5 bg-gradient-to-r from-purple-950 to-pink-950 text-white flex flex-col">
+            <Button onClick={startNewChat} className="mb-4 bg-white/30">
               + New Chat
             </Button>
 
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="mb-4 px-3 py-2 rounded-lg bg-white/30 placeholder-white/70 focus:outline-none"
+              placeholder="Search chats..."
+              className="mb-4 px-3 py-2 rounded bg-white/20"
             />
 
             <div className="flex-1 space-y-2 overflow-y-auto">
-              {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => {
-                    setActiveChatId(chat.id);
-                    setShowSidebar(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm ${
-                    chat.id === activeChatId
-                      ? "bg-white/40"
-                      : "hover:bg-white/20"
-                  }`}
-                >
-                  {chat.title}
-                </button>
-              ))}
+              {chats
+                .filter((c) =>
+                  c.title.toLowerCase().includes(search.toLowerCase())
+                )
+                .map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer ${
+                      chat.id === activeChatId
+                        ? "bg-white/40"
+                        : "hover:bg-white/20"
+                    }`}
+                    onClick={() => setActiveChatId(chat.id)}
+                  >
+                    <span className="truncate">{chat.title}</span>
+
+                    <div className="flex gap-2">
+                      <Pencil
+                        size={16}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(chat);
+                        }}
+                        className="hover:text-purple-300"
+                      />
+                      <Trash2
+                        size={16}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteChat(chat.id);
+                        }}
+                        className="hover:text-red-400"
+                      />
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -276,6 +327,26 @@ export default function ChatbotPage() {
                   </div>
                 ))}
             </div>
+            {/* SUGGESTED QUESTIONS (TEXT ONLY) */}
+            {messages.length === 1 && (
+              <div className="px-4 pb-3">
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+                  Suggested questions
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {skillSwapQuestions.map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setInputMessage(q)}
+                      className=" px-3 py-1.5 text-sm rounded-full bg-white/70 border border-gray-200 text-gray-800 hover:bg-purple-50hover:border-purple-300 hover:text-purple-700 transition"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/*  INPUT (WITH VOICE RECORDING) */}
             <div className="p-3 bg-white/70">
@@ -304,7 +375,7 @@ export default function ChatbotPage() {
                 </Button>
                 <Button
                   onClick={handleSendMessage}
-                  className="px-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white shrink-0"
+                  
                 >
                   <Send />
                 </Button>
@@ -313,7 +384,35 @@ export default function ChatbotPage() {
           </div>
         </div>
       </div>
-
+      {/* 🔹 EDIT TITLE MODAL */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setIsEditModalOpen(false)}
+          />
+          <div className="bg-white rounded-2xl p-6 w-[90%] max-w-md z-10">
+            <div className="flex justify-between mb-4">
+              <h2 className="font-semibold">Edit Chat Title</h2>
+              <X onClick={() => setIsEditModalOpen(false)} />
+            </div>
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full px-4 py-3 border rounded-xl"
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => setIsEditModalOpen(false)}>Cancel</button>
+              <button
+                onClick={saveEditedTitle}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <Footer />
     </div>
   );

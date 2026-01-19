@@ -1,7 +1,12 @@
+"use client";
 import Image from "next/image";
-
+import { useState } from "react";
+import Modal from "@/app/Modals/profilemodal/page"
 export default function HeroSection() {
+  const [open, setOpen] = useState(false);
+
   return (
+    <>
     <section className="bg-[#fdf4ff] min-h-screen flex flex-col-reverse lg:flex-row items-center justify-center px-6 sm:px-10 lg:px-20 py-10">
       {/* LEFT CONTENT */}
       <div className="w-full lg:w-1/2 text-center lg:text-left space-y-6 mt-10 lg:mt-0">
@@ -16,7 +21,9 @@ export default function HeroSection() {
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-          <button className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-6 py-3 rounded-full font-medium shadow-md hover:opacity-90 transition-all">
+          <button
+            onClick={() => setOpen(true)}
+            className="bg-gradient-to-r  from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:opacity-90 transition-all">
             Enroll Now
           </button>
           <button className="text-pink-600 font-medium flex items-center justify-center space-x-1 hover:underline">
@@ -42,5 +49,8 @@ export default function HeroSection() {
         </div>
       </div>
     </section>
+          <Modal open={open} setOpen={setOpen} />
+          </>
+
   );
 }

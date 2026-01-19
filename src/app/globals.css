@@ -81,3 +81,30 @@ body {
 .animate-plus-rotate {
   animation: plus-rotate 4s ease-in-out infinite;
 }
+  .input-fancy {
+          @apply w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 pt-5 pb-2 text-white focus:outline-none focus:ring-2 focus:ring-pink-400 placeholder-transparent;
+        }
+
+        .label-fancy {
+          @apply absolute left-4 top-2 text-white/60 text-sm transition-all pointer-events-none;
+        }
+
+        .input-fancy:focus + .label-fancy,
+        .input-fancy:not(:placeholder-shown) + .label-fancy {
+          @apply text-xs text-white/80 top-1;
+        }
+
+        .btn-outline {
+          @apply rounded-xl py-3 px-6 border-2 border-white/50 font-semibold;
+        }
+
+        .btn-primary {
+          @apply rounded-xl py-3 px-6 font-semibold;
+        }
+         /* Optional: Smooth fade for each step */
+        div > div > div {
+          @apply transition-opacity duration-500 ease-in-out;
+        }
+
+        
+        

@@ -29,7 +29,7 @@ export default function Navbar() {
           <Link href="/trendingskills" className="text-gray-700 hover:text-purple-600">
           Trending Skills
           </Link>
-          <Link href="#" className="text-gray-700 hover:text-purple-600">
+          <Link href="/matching" className="text-gray-700 hover:text-purple-600">
             Matching
           </Link>
           <Link href="/chating" className="text-gray-700 hover:text-purple-600">
@@ -38,7 +38,7 @@ export default function Navbar() {
           <Link href="/chatbot" className="text-gray-700 hover:text-purple-600">
             AI Chat Bot
           </Link>
-          <Link href="#" className="text-gray-700 hover:text-purple-600">
+          <Link href="/dashboard" className="text-gray-700 hover:text-purple-600">
             Dashboard
           </Link>
         </div>
@@ -48,7 +48,7 @@ export default function Navbar() {
           <Link href="/signin" className="text-purple-600 font-medium hover:text-purple-700 transition">
             Sign In
           </Link>
-          <Link  href="signup"  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-2 rounded-md font-medium shadow-md hover:opacity-90 transition">
+          <Link  href="signup"  className="bg-gradient-to-r from-purple-950 to-pink-600 text-white px-4 py-2 rounded-md font-medium shadow-md hover:opacity-90 transition">
             Sign Up
           </Link>
         </div>
@@ -107,12 +107,12 @@ export default function Navbar() {
           ))}
 
           <div className="pt-3 border-t border-gray-200 space-y-3">
-            <button className="w-full text-purple-600 font-medium border border-purple-600 px-4 py-2 rounded-md hover:bg-purple-50 transition">
+            <Link href="/signin" className="w-full text-purple-600 font-medium border border-purple-600 px-4 py-2 rounded-md hover:bg-purple-50 transition">
               Sign In
-            </button>
-            <button className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-2 rounded-md font-medium shadow-md hover:opacity-90 transition">
+            </Link>
+            <Link href="/signup" className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-2 rounded-md font-medium shadow-md hover:opacity-90 transition">
               Sign Up
-            </button>
+            </Link>
           </div>
         </div>
       )}

@@ -1,23 +1,17 @@
 "use client";
 
 import React from "react";
-import Navbar from "@/app/components/Navbar/page";
+import Navbar from "@/app/components/navbar/page";
 import Footer from "@/app/components/footer/page";
-import Image from "next/image"
-import {
-  Target,
-  Heart,
-  Users,
-  Globe,
-  CheckCircle,
-} from "lucide-react";
+import Image from "next/image";
+import { Target, Heart, Users, Globe } from "lucide-react";
 
 export default function AboutPage() {
   return (
     <main className="bg-gray-950 text-white">
       <Navbar />
 
-     {/* ================= HERO SECTION ================= */}
+      {/* HERO SECTION  */}
       <section className="relative py-28 px-6 text-center">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-pink-600/30"></div>
@@ -39,7 +33,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ================= IMAGE CARDS ================= */}
+      {/* IMAGE CARDS  */}
       <section className="relative -mt-20 px-6">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
@@ -63,139 +57,188 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
-      {/* ================= WHY SKILLSWAP ================= */}
-      <section className="py-24 bg-gray-900">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
-          <div>
-            <h2 className="text-4xl font-bold mb-6">
-              Why SkillSwap Exists
-            </h2>
-            <p className="text-white/70 text-lg mb-6">
-              Education is expensive. Talent is everywhere.
-              <br /><br />
-              SkillSwap removes barriers by allowing people to exchange
-              real-world skills instead of money.
-            </p>
-            <p className="text-white/60">
-              If you have knowledge — you already have value.
-            </p>
-          </div>
+      {/* HERO / WHY SKILLSWAP */}
+      <section className="relative w-full overflow-hidden bg-gradient-to-br from-[#f7f5ff] via-[#f3f7ff] to-[#eef6ff]">
+        {/* Background Glow Blobs */}
+        <div className="absolute -top-32 -left-32 w-[420px] h-[420px] bg-purple-400/30 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 -right-32 w-[420px] h-[420px] bg-blue-400/30 rounded-full blur-[120px]" />
 
-          <div className="grid gap-4">
-            {[
-              "No paid courses",
-              "Skill-for-skill exchange",
-              "AI verified professionals",
-              "Global learning community",
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-6 py-4"
-              >
-                <CheckCircle className="text-pink-400" />
-                <span className="text-white/80">{item}</span>
+        <div className="relative max-w-7xl mx-auto px-6 py-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-14 lg:gap-24">
+            {/* LEFT CONTENT */}
+            <div
+              className="
+    flex flex-col space-y-6
+    text-center lg:text-left
+    max-w-2xl mx-auto lg:mx-0
+    lg:pl-16
+  "
+            >
+              <span className="inline-block w-fit mx-auto  px-4 py-1 text-sm font-semibold rounded-full bg-pink-100 text-pink-600 uppercase tracking-wide">
+                About SkillSwap
+              </span>
+
+              <h1 className="text-3xl sm:text-4xl md:text-5xl xl:text-3xl font-extrabold text-gray-900 leading-tight">
+                We’re a Global <br className="hidden sm:block" />
+                Skill Exchange Platform
+              </h1>
+
+              <p className="max-w-xl mx-auto md:mx-0 text-gray-600 text-base md:text-lg leading-relaxed">
+                SkillSwap connects learners and professionals to exchange
+                <span className="font-semibold text-purple-600">
+                  {" "}
+                  real-world skills{" "}
+                </span>
+                without money. Learn faster, teach smarter, and grow together
+                with AI-powered validation.
+              </p>
+
+              {/* STATS */}
+              <div className="flex flex-wrap justify-center md:justify-center gap-10 pt-4">
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">98%</p>
+                  <p className="text-gray-500">User Satisfaction</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">1200+</p>
+                  <p className="text-gray-500">Active Users</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">500+</p>
+                  <p className="text-gray-500">Skills Swapped</p>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* RIGHT VISUAL */}
+            <div
+              className="
+  hidden lg:flex
+  relative justify-center items-center
+  lg:-translate-x-12
+"
+            >
+              {/* BLUE GRADIENT CIRCLE */}
+              <div
+                className="
+          absolute
+          w-[220px] h-[220px]
+          sm:w-[280px] sm:h-[280px]
+          md:w-[340px] md:h-[340px]
+          lg:w-[380px] lg:h-[380px]
+          rounded-full
+          bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500
+          opacity-90
+        "
+              />
+
+              {/* GLOW */}
+              <div
+                className="
+          absolute
+          w-[420px] h-[420px]
+          bg-blue-500/40
+          blur-[140px]
+          -z-10
+        "
+              />
+
+              {/* IMAGE */}
+              <img
+                src="/girl.png"
+                alt="SkillSwap Hero"
+                className="
+            relative
+            w-72 sm:w-80 md:w-[420px] lg:w-[960px]
+            object-contain
+            z-10
+          "
+              />
+
+              {/* Floating Badges */}
+              <div className="absolute top-8 right-4 bg-white/90 backdrop-blur shadow-xl rounded-2xl px-4 py-2 text-sm font-semibold text-gray-700">
+                ✅ AI Verified Skills
+              </div>
+
+              <div className="absolute bottom-8 left-4 bg-white/90 backdrop-blur shadow-xl rounded-2xl px-4 py-2 text-sm font-semibold text-gray-700">
+                🌍 Global Community
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ================= DIFFERENTIATORS ================= */}
-      <section className="py-24 bg-gray-950">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl font-bold text-center mb-16">
-            What Makes SkillSwap Different
-          </h2>
+      {/* DIFFERENTIATORS */}
+     <section className="py-24 bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 relative overflow-hidden">
+  {/* Subtle background glow */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(236,72,153,0.08),transparent_60%)] pointer-events-none" />
 
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              {
-                icon: Target,
-                title: "Smart Matching",
-                desc: "AI connects the right learners and teachers",
-              },
-              {
-                icon: Users,
-                title: "Peer-to-Peer",
-                desc: "Direct learning without middlemen",
-              },
-              {
-                icon: Globe,
-                title: "Global Reach",
-                desc: "Learn from anywhere in the world",
-              },
-              {
-                icon: Heart,
-                title: "Community First",
-                desc: "Growth through collaboration",
-              },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="text-center p-8 rounded-2xl bg-gradient-to-b from-white/5 to-transparent border border-white/10 hover:border-pink-500/40 transition"
-              >
-                <item.icon className="w-10 h-10 mx-auto text-pink-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-white/60 text-sm">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+  <div className="relative max-w-7xl mx-auto px-6">
+    <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">
+      What Makes SkillSwap Different
+    </h2>
 
-      {/* ================= CORE VALUES ================= */}
-      <section className="py-24 bg-gradient-to-br from-purple-950 to-gray-950">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold mb-16">
-            Our Core Values
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Accessibility",
-                desc: "Learning should not depend on money.",
-              },
-              {
-                title: "Trust",
-                desc: "AI verification ensures real skills.",
-              },
-              {
-                title: "Empowerment",
-                desc: "Everyone has something valuable to teach.",
-              },
-            ].map((v, i) => (
-              <div
-                key={i}
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8"
-              >
-                <h3 className="text-xl font-semibold text-pink-400 mb-3">
-                  {v.title}
-                </h3>
-                <p className="text-white/70">{v.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ================= CTA ================= */}
-      <section className="py-24 bg-gradient-to-r from-pink-600 to-purple-600 text-center">
-        <h2 className="text-4xl md:text-5xl font-extrabold mb-6">
-          Start Swapping Skills Today
-        </h2>
-        <p className="text-white/90 mb-10 text-lg">
-          Join a community where skills matter more than money.
-        </p>
-        <a
-          href="/signup"
-          className="inline-block bg-white text-gray-900 px-10 py-4 rounded-full font-semibold hover:scale-105 transition"
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      {[
+        {
+          icon: Target,
+          title: "Smart Matching",
+          desc: "AI connects the right learners and teachers",
+        },
+        {
+          icon: Users,
+          title: "Peer-to-Peer",
+          desc: "Direct learning without middlemen",
+        },
+        {
+          icon: Globe,
+          title: "Global Reach",
+          desc: "Learn from anywhere in the world",
+        },
+        {
+          icon: Heart,
+          title: "Community First",
+          desc: "Growth through collaboration",
+        },
+      ].map((item, i) => (
+        <div
+          key={i}
+          className="
+            group relative p-8 rounded-3xl
+            bg-white/10 backdrop-blur-xl
+            border-2 border-transparent
+            shadow-[0_8px_40px_rgba(0,0,0,0.05)]
+            transition-all duration-500
+            hover:-translate-y-3
+            hover:shadow-[0_0_60px_rgba(236,72,153,0.3)]
+            hover:border-pink-400/50
+          "
         >
-          Join SkillSwap Free
-        </a>
-      </section>
+          {/* Neon Glow */}
+          <div className="absolute -inset-1 rounded-3xl opacity-0 group-hover:opacity-100 transition-all duration-500 animate-pulse
+                          bg-gradient-to-tr from-pink-500/30 via-purple-500/30 to-blue-500/30 blur-3xl" />
+
+          {/* Icon Container */}
+          <div className="relative z-10 flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full
+                          bg-gradient-to-tr from-pink-400/20 via-purple-400/20 to-blue-400/20
+                          shadow-lg shadow-pink-300/30
+                          group-hover:scale-125 transition-transform duration-500">
+            <item.icon className="w-10 h-10 text-pink-500 group-hover:text-pink-600 transition-colors duration-300" />
+          </div>
+
+          {/* Content */}
+          <h3 className="relative z-10 text-xl font-bold text-center text-gray-900 group-hover:text-pink-500 transition-colors duration-300">
+            {item.title}
+          </h3>
+          <p className="relative z-10 text-gray-700/90 text-sm text-center mt-2 leading-relaxed">
+            {item.desc}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
 
       <Footer />
     </main>

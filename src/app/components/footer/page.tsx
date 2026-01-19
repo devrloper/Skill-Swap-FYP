@@ -12,7 +12,7 @@ export default function Footer() {
       ></div>
 
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-purple-700/80 via-purple-600/70 to-pink-500/70"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-purple-950 to-pink-950/70"></div>
 
       {/* Footer Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 space-y-16">
