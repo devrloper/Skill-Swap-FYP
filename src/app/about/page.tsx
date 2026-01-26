@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Navbar from "@/app/components/navbar/page";
+import Navbar from "@/app/components/innernavbar/page";
 import Footer from "@/app/components/footer/page";
 import Image from "next/image";
 import { Target, Heart, Users, Globe } from "lucide-react";

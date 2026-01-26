@@ -1,4 +1,4 @@
-import Navbar from "@/app/components/navbar/page";
+import Navbar from "@/app/components/innernavbar/page";
 import SearchBar from "@/app/components/searchbar/page";
 import MatchCard from "@/app/components/matchcard/page";
 import SidebarFilters from "@/app/components/sidebarfilters/page";

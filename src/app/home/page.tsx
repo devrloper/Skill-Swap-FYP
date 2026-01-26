@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Navbar from "@/app/components/navbar/page";
+import Navbar from "@/app/components/innernavbar/page";
 import Landing from "@/app/components/landing/page";
 import Image from "next/image";
 import Footer from "@/app/components/footer/page";
@@ -183,7 +183,7 @@ export default function Home() {
       </section>
       {/* FAq's */}
       <section className="relative py-16 px-6 md:px-12 lg:px-20 flex flex-col lg:flex-row items-center justify-between bg-white">
-        {/*LEFT CONTENT  */}
+        {/* ===== LEFT CONTENT ===== */}
         <div className="w-full lg:w-1/2 space-y-5">
           <p className="text-pink-600 font-semibold uppercase tracking-wide text-3xl">
             Faq
@@ -224,7 +224,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/*  RIGHT IMAGE */}
+        {/* ===== RIGHT IMAGE ===== */}
         <div className="relative mt-10 lg:mt-0 lg:w-1/2 flex justify-center">
           <div className="relative w-80 h-80 sm:w-96 sm:h-96 md:w-[420px] md:h-[420px] lg:w-[480px] lg:h-[480px]">
             {/* Background circle */}

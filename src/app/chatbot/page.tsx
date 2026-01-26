@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import NavBar from "@/app/components/navbar/page";
+import NavBar from "@/app/components/innernavbar/page";
 import Footer from "@/app/components/footer/page";
 import  Button  from "@/app/ui/button";
-import { Send, X } from "lucide-react";
+import { Send, X ,Mic, MicOff,Trash2, Pencil} from "lucide-react";
 import { ChatMessage } from "@/app/lib/types";
-import { Mic, MicOff } from "lucide-react";
-import { Trash2, Pencil } from "lucide-react";
+
 
 type Chat = {
   id: string;
