@@ -1,97 +1,102 @@
 "use client";
 
-import Image from "next/image";
-import Navbar from "@/app/components/navbar/page";
-
-export default function Hero() {
+import Link from "next/link";
+import { useState } from "react";
+export default function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
   return (
-    <section className="relative min-h-screen overflow-hidden mt-18">
-
-      {/* ===== Background Image ===== */}
-      <Image
-        src="/main.png"
-        alt="Hero Background"
-        fill
-        priority
-        className="object-cover"
-      />
-
-      {/* ===== Gradient Overlay ===== */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-950/80 to-pink-600/70"></div>
-
-      {/* ===== Content ===== */}
-      <div className="relative z-10">
-        <Navbar />
-
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-16">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-
-            {/* ================= LEFT CONTENT ================= */}
-            <div className="space-y-6 text-center lg:text-left text-white">
-
-              <span className="inline-block text-sm font-semibold bg-white/20 px-4 py-1 rounded-full">
-                Online Learning Course
-              </span>
-
-              <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
-                Online Education <br />
-                <span className="bg-gradient-to-r from-pink-300 to-purple-300 bg-clip-text text-transparent">
-                  Feels Like Real Classroom
-                </span>
-              </h1>
-
-              <p className="text-gray-200 max-w-lg mx-auto lg:mx-0">
-                Get certified, gain job-ready skills, and enjoy a flexible learning
-                experience from anywhere in the world.
-              </p>
-
-              {/* Buttons */}
-              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-                <button className="bg-gradient-to-r from-purple-950 to-pink-600 text-white px-6 py-3 rounded-lg font-medium shadow hover:opacity-90 transition">
-                  Get Started
-                </button>
-
-                <button className="border border-white text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition">
-                  Our Courses
-                </button>
-              </div>
-
-              {/* Stats */}
-              <div className="flex flex-wrap justify-center lg:justify-start gap-6 pt-6">
-                {[
-                  "20k+ Online Courses",
-                  "Lifetime Access",
-                  "Community Support",
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2"
-                  >
-                    <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-purple-950 to-pink-600 text-white font-bold">
-                      ✓
-                    </div>
-                    <span className="text-sm text-gray-200">
-                      {item}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ================= RIGHT IMAGE ================= */}
-            <div className="relative flex justify-center">
-              <Image
-                src="/homeimg.png"
-                alt="Student"
-                width={920}
-                height={920}
-                priority
-              />
-            </div>
-
+    <header className="fixed top-0 left-0 w-full bg-white/70 backdrop-blur-md z-50 shadow-sm">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 py-4 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center space-x-3">
+          <div className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg w-10 h-10 flex items-center justify-center rounded-full">
+            S
           </div>
+          <span className="text-lg sm:text-xl font-semibold text-gray-800 whitespace-nowrap">
+            Skill Swap
+          </span>
         </div>
-      </div>
-    </section>
+
+        {/* Desktop Links */}
+        <div className="hidden lg:flex items-center space-x-8"></div>
+
+        {/* Desktop Right Section */}
+        <div className="hidden lg:flex items-center gap-4">
+          <button className="relative">
+            <Link
+              href="/signin"
+              className="text-purple-600 font-medium hover:text-purple-700 transition"
+            >
+              Sign In
+            </Link>
+          </button>
+          <button className="relative">
+            <Link
+              href="signup"
+              className="bg-gradient-to-r from-purple-950 to-pink-600 text-white px-4 py-2 rounded-md font-medium shadow-md hover:opacity-90 transition"
+            >
+              Sign Up
+            </Link>
+          </button>
+        </div>
+
+        {/* Mobile Right Section */}
+        <div className="flex items-center gap-3 lg:hidden">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="text-gray-700 focus:outline-none"
+            aria-label="Toggle Menu"
+          >
+            {isOpen ? (
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile / Tablet Menu */}
+      {isOpen && (
+        <div className=" lg:hidden  bg-white/90 backdrop-blur-md  px-4 sm:px-6  py-4 border-t border-gray-200 flex flex-col items-center gap-3">
+          <Link
+            href="/signin"
+            className=" text-purple-600 font-medium px-6 py-2 rounded-md hover:text-purple-700  hover:bg-purple-50 transition "
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/signup"
+            className="bg-gradient-to-r from-purple-950 to-pink-600 text-white  px-6 py-2 rounded-md  font-medium shadow-md hover:opacity-90 transition"
+          >
+            Sign Up
+          </Link>
+        </div>
+      )}
+    </header>
   );
 }
