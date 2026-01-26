@@ -134,53 +134,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      {/* trendingskills */}
-      <section className="relative w-full text-white overflow-hidden">
-        {/* Fixed (sticky) background image */}
-        <div
-          className="absolute inset-0 bg-fixed bg-center bg-cover opacity-40"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1500&q=80')",
-          }}
-        ></div>
-
-        {/* Overlay content */}
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between px-6 md:px-16 py-20 md:py-28 space-y-6 md:space-y-0 bg-black/40 ">
-          {/* Left Text */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center md:text-left max-w-2xl"
-          >
-            <div className="flex items-center gap-2 bg-gradient-to-r  text-pink-900 font-bold text-2xl">
-              <Sparkle size={30} />
-              <span>DISCOVER WITH AI</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-bold leading-snug">
-              Explore the Top Trending Skills of 2025
-            </h2>
-            <p className="mt-4 text-gray-300 text-base md:text-lg">
-              Get AI-generated insights on which tech skills are in demand —
-              updated weekly to keep your knowledge ahead of the curve.
-            </p>
-          </motion.div>
-
-          {/* Right Button */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <Link href="/trendingskills">
-              <button className="bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 transition-opacity text-white px-8 py-3 rounded-lg font-semibold shadow-lg">
-                Explore by AI →
-              </button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
+     
       {/* FAq's */}
       <section className="relative py-16 px-6 md:px-12 lg:px-20 flex flex-col lg:flex-row items-center justify-between bg-white">
         {/*LEFT CONTENT  */}
@@ -196,7 +150,7 @@ export default function Home() {
             libero sit amet adipiscing neque.
           </p>
 
-          {/* ===== ACCORDION ===== */}
+          {/* ACCORDION  */}
           <div className="space-y-3">
             {faqs.map((faq, index) => (
               <div

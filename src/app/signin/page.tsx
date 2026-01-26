@@ -7,7 +7,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { auth } from "@/app/lib/firebase";
+import { auth, db } from "@/app/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 const LoginPage = () => {
@@ -24,19 +25,33 @@ const LoginPage = () => {
     setError("");
 
     try {
-      // Set persistence
-
       // Sign in
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      // Check if admin
+      // Admin check
       if (email === "aroobaadmin123@gmail.com" && password === "admin123") {
-        router.push("/admin-dashboard"); // Admin dashboard
+        router.push("/admin-dashboard");
+        return;
+      }
+
+      // Get user role from Firestore
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      if (!userSnap.exists()) {
+        throw new Error("User data not found");
+      }
+
+      const { role } = userSnap.data();
+
+      // Role-based redirect
+      if (role === "learner") {
+        router.push("/pricing");
       } else {
-        router.push("/dashboard"); // User dashboard
+        router.push("/dashboard"); // or "/" if you want home page
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error("LOGIN ERROR:", err);
+      setError("Invalid email or password");
     }
   };
 
@@ -46,9 +61,36 @@ const LoginPage = () => {
     const provider = new GoogleAuthProvider();
 
     try {
-      await signInWithPopup(auth, provider);
-      router.push("/dashboard");
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check Firestore if user exists
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // First-time Google login → default role as 'exchanger' or show role selection modal
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName || "",
+          email: user.email,
+          role: "exchanger", // default role
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      const { role } = (await getDoc(userRef)).data();
+
+      // Role-based redirect
+      if (user.email === "aroobaadmin123@gmail.com") {
+        router.push("/admin-dashboard");
+      } else if (role === "learner") {
+        router.push("/pricing");
+      } else {
+        router.push("/dashboard"); // or "/"
+      }
     } catch (err: any) {
+      console.error("GOOGLE LOGIN ERROR:", err);
       setError(err.message);
     }
   };
