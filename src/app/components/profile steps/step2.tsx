@@ -1,48 +1,119 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect, ChangeEvent } from "react";
+import { db, auth } from "@/app/lib/firebase";
+import { doc, setDoc, getDoc, DocumentData } from "firebase/firestore";
 import { X } from "lucide-react";
 
-export default function EducationStep({ onNext }) {
-  const [educations, setEducations] = useState([]); // table rows
-  const [newEdu, setNewEdu] = useState({
+interface Education {
+  degree: string;
+  institute: string;
+  start: string;
+  end: string;
+}
+
+interface EducationStepProps {
+  onNext: () => void;
+}
+
+export default function EducationStep({ onNext }: EducationStepProps) {
+  const [educations, setEducations] = useState<Education[]>([]);
+  const [newEdu, setNewEdu] = useState<Education>({
     degree: "",
     institute: "",
     start: "",
     end: "",
   });
+  const [saving, setSaving] = useState(false);
 
-  // Update the input fields
-  const updateNewEdu = (field, value) => {
+  const userId = auth.currentUser?.uid;
+
+  // Load existing education data
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadEducation = async () => {
+      try {
+        const docRef = doc(db, "profiles", userId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data() as DocumentData;
+          if (data.educations) setEducations(data.educations as Education[]);
+        }
+      } catch (err) {
+        console.error("Error loading education:", err);
+      }
+    };
+
+    loadEducation();
+  }, [userId]);
+
+  const updateNewEdu = (field: keyof Education, value: string) => {
     setNewEdu({ ...newEdu, [field]: value });
   };
 
-  // Add new education to table
+  const saveEducation = async (data: Education[]) => {
+    if (!userId) return;
+    try {
+      await setDoc(
+        doc(db, "profiles", userId),
+        { educations: data },
+        { merge: true },
+      );
+    } catch (err) {
+      console.error("Error saving education:", err);
+    }
+  };
+
   const addEducation = () => {
     const { degree, institute, start, end } = newEdu;
     if (!degree || !institute || !start || !end) {
       alert("Please fill all fields!");
       return;
     }
-    setEducations([...educations, newEdu]);
+    const updatedEducations = [...educations, newEdu];
+    setEducations(updatedEducations);
     setNewEdu({ degree: "", institute: "", start: "", end: "" });
+    saveEducation(updatedEducations);
   };
 
-  // Delete row from table
-  const deleteEducation = (index) => {
-    setEducations(educations.filter((_, i) => i !== index));
+  const deleteEducation = (index: number) => {
+    const updatedEducations = educations.filter((_, i) => i !== index);
+    setEducations(updatedEducations);
+    saveEducation(updatedEducations);
   };
 
-  // Update value directly in table
-  const updateTableEdu = (index, field, value) => {
+  const updateTableEdu = (
+    index: number,
+    field: keyof Education,
+    value: string,
+  ) => {
     const updated = [...educations];
     updated[index][field] = value;
     setEducations(updated);
+    saveEducation(updated);
+  };
+
+  // Validation: check if all newEdu fields and table fields are filled
+  const isFormValid =
+    educations.length > 0 && // must have at least one education
+    educations.every(
+      (edu) => edu.degree && edu.institute && edu.start && edu.end,
+    );
+
+  const handleNext = () => {
+    if (!isFormValid) {
+      alert("Please fill all education fields before continuing!");
+      return;
+    }
+    onNext();
   };
 
   return (
     <div className="space-y-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <h3 className="text-2xl font-semibold text-gray-900">Education</h3>
 
-      {/* Input Fields for New Education */}
+      {/* Input Fields */}
       <div className="rounded-2xl p-6 bg-gradient-to-br from-indigo-50/70 via-purple-50/60 to-pink-50/70 border border-purple-100 shadow-sm space-y-4">
         <h4 className="text-xs font-semibold tracking-widest text-gray-600 uppercase">
           Add New Education
@@ -80,58 +151,80 @@ export default function EducationStep({ onNext }) {
         </button>
       </div>
 
-      {/* Table of Educations */}
+      {/* Table */}
       {educations.length > 0 && (
         <div className="overflow-x-auto mt-6">
           <table className="min-w-full bg-white border border-gray-200 rounded-xl overflow-hidden">
             <thead className="bg-purple-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">#</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Degree</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Institute</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Start Year</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">End Year</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+                  #
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+                  Degree
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+                  Institute
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+                  Start Year
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+                  End Year
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
               {educations.map((edu, index) => (
                 <tr key={index} className="border-t border-gray-100">
-                  <td className="px-4 py-2 text-sm text-gray-700">{index + 1}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    {index + 1}
+                  </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
                     <input
                       value={edu.degree}
-                      onChange={(e) => updateTableEdu(index, "degree", e.target.value)}
+                      onChange={(e) =>
+                        updateTableEdu(index, "degree", e.target.value)
+                      }
                       className="w-full px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
                     <input
                       value={edu.institute}
-                      onChange={(e) => updateTableEdu(index, "institute", e.target.value)}
+                      onChange={(e) =>
+                        updateTableEdu(index, "institute", e.target.value)
+                      }
                       className="w-full px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
                     <input
                       value={edu.start}
-                      onChange={(e) => updateTableEdu(index, "start", e.target.value)}
+                      onChange={(e) =>
+                        updateTableEdu(index, "start", e.target.value)
+                      }
                       className="w-full px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
                     <input
                       value={edu.end}
-                      onChange={(e) => updateTableEdu(index, "end", e.target.value)}
+                      onChange={(e) =>
+                        updateTableEdu(index, "end", e.target.value)
+                      }
                       className="w-full px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
                     <button
                       onClick={() => deleteEducation(index)}
-                      className="text-red-500 hover:underline"
+                      className="text-red-500 hover:underline flex items-center gap-1"
                     >
-                      Delete
+                      <X size={16} /> Delete
                     </button>
                   </td>
                 </tr>
@@ -150,7 +243,9 @@ export default function EducationStep({ onNext }) {
           <span className="text-sm text-gray-600">
             Drag & drop your CV or click to upload
           </span>
-          <span className="text-xs text-gray-400">PDF, DOC, DOCX (Max 5MB)</span>
+          <span className="text-xs text-gray-400">
+            PDF, DOC, DOCX (Max 5MB)
+          </span>
           <input type="file" accept=".pdf,.doc,.docx" className="hidden" />
         </label>
       </div>
@@ -158,17 +253,35 @@ export default function EducationStep({ onNext }) {
       {/* Continue Button */}
       <div className="flex justify-end">
         <button
-          onClick={onNext}
-          className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold shadow-md hover:scale-[1.03] transition"
+          onClick={handleNext}
+          disabled={saving || !isFormValid} // disabled if not valid
+          className={`px-8 py-3 rounded-xl text-white font-semibold shadow-md transition ${
+            saving || !isFormValid
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-purple-600 to-pink-500 hover:scale-[1.03]"
+          }`}
         >
-          Continue →
+          {saving ? "Saving..." : "Continue →"}
         </button>
       </div>
     </div>
   );
 }
 
-function SoftInput({ placeholder, value, onChange, type = "text" }) {
+// Soft Input
+interface SoftInputProps {
+  placeholder: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+}
+
+function SoftInput({
+  placeholder,
+  value,
+  onChange,
+  type = "text",
+}: SoftInputProps) {
   return (
     <input
       type={type}

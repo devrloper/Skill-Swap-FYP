@@ -75,17 +75,7 @@ export default function SkillSwapDashboard() {
               />
             </div>
 
-            <div className="relative">
-              <Bell />
-              <span className="absolute -top-2 -right-2 text-xs bg-red-500 w-5 h-5 rounded-full flex items-center justify-center">
-                3
-              </span>
-            </div>
-
-            <img
-              src="https://i.pravatar.cc/150?img=32"
-              className="w-10 h-10 rounded-full border-2 border-purple-500"
-            />
+          
           </div>
         </div>
 

@@ -45,33 +45,55 @@ export default function Home() {
 
         <div className="max-w-6xl mx-auto px-6 text-center relative z-10">
           {/* Title */}
-          <p className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 font-semibold mb-3 uppercase tracking-wide">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: false, amount: 0.3 }}
+            className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 font-semibold mb-3 uppercase tracking-wide"
+          >
             Our Work Process
-          </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
+          </motion.p>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: false, amount: 0.3 }}
+            className="text-3xl md:text-4xl font-bold text-gray-800"
+          >
             Our Proven{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
               Work Process
             </span>
-          </h2>
+          </motion.h2>
 
-          <p className="max-w-2xl mx-auto text-gray-500 text-sm md:text-base mt-4 mb-16">
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            viewport={{ once: false, amount: 0.3 }}
+            className="max-w-2xl mx-auto text-gray-500 text-sm md:text-base mt-4 mb-16"
+          >
             We follow a structured, proven process to ensure quality
             collaboration, learning, and growth for every Skill Swap member.
-          </p>
+          </motion.p>
 
           {/* Process Steps */}
           <div className="relative flex flex-col md:flex-row items-center justify-between gap-12 md:gap-6">
-            {/* Connecting Line (background) */}
+            {/* Connecting Line */}
             <div className="hidden md:block absolute top-[48px] left-0 right-0 mx-auto h-[3px] bg-gradient-to-r from-purple-600 to-pink-500 w-[85%]"></div>
 
-            {/* Moving Dot Animation */}
+            {/* Moving Dot */}
             <div className="hidden md:block absolute top-[40px] left-[7.5%] w-4 h-4 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 animate-moveDot shadow-lg shadow-pink-400"></div>
 
             {/* Step 1 */}
-            <div
-              className="flex flex-col items-center text-center flex-1 z-10 fade-up"
-              style={{ animationDelay: "0.2s" }}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              viewport={{ once: false, amount: 0.3 }}
+              className="flex flex-col items-center text-center flex-1 z-10"
             >
               <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-[2px] lg:mr-6 rounded-full mb-4 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-pink-300/50">
                 <div className="bg-white p-6 rounded-full">💬</div>
@@ -82,14 +104,17 @@ export default function Home() {
               <p className="text-gray-600 text-sm max-w-xs">
                 Discuss your goals and what you want to learn or teach.
               </p>
-            </div>
+            </motion.div>
 
             {/* Step 2 */}
-            <div
-              className="flex flex-col items-center text-center flex-1 z-10 fade-up"
-              style={{ animationDelay: "0.4s" }}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.25 }}
+              viewport={{ once: false, amount: 0.3 }}
+              className="flex flex-col items-center text-center flex-1 z-10"
             >
-              <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-[2px]  rounded-full mb-4 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-pink-300/50">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-[2px] rounded-full mb-4 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-pink-300/50">
                 <div className="bg-white p-6 rounded-full">🧠</div>
               </div>
               <h3 className="text-xl font-semibold mb-2 text-gray-800">
@@ -98,12 +123,15 @@ export default function Home() {
               <p className="text-gray-600 text-sm max-w-xs">
                 We match your skills with people who complement your interests.
               </p>
-            </div>
+            </motion.div>
 
             {/* Step 3 */}
-            <div
-              className="flex flex-col items-center text-center flex-1 z-10 fade-up"
-              style={{ animationDelay: "0.6s" }}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              viewport={{ once: false, amount: 0.3 }}
+              className="flex flex-col items-center text-center flex-1 z-10"
             >
               <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-[2px] rounded-full mb-4 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-pink-300/50">
                 <div className="bg-white p-6 rounded-full">⚙️</div>
@@ -114,12 +142,15 @@ export default function Home() {
               <p className="text-gray-600 text-sm max-w-xs">
                 Connect, communicate, and start exchanging skills effectively.
               </p>
-            </div>
+            </motion.div>
 
             {/* Step 4 */}
-            <div
-              className="flex flex-col items-center text-center flex-1 z-10 fade-up"
-              style={{ animationDelay: "0.8s" }}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.55 }}
+              viewport={{ once: false, amount: 0.3 }}
+              className="flex flex-col items-center text-center flex-1 z-10"
             >
               <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-[2px] lg:ml-6 rounded-full mb-4 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-pink-300/50">
                 <div className="bg-white p-6 rounded-full">🎯</div>
@@ -130,74 +161,74 @@ export default function Home() {
               <p className="text-gray-600 text-sm max-w-xs">
                 Achieve new skills, grow together, and expand your network.
               </p>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
-     
-      {/* FAq's */}
-      <section className="relative py-16 px-6 md:px-12 lg:px-20 flex flex-col lg:flex-row items-center justify-between bg-white">
-        {/*LEFT CONTENT  */}
-        <div className="w-full lg:w-1/2 space-y-5">
-          <p className="text-pink-600 font-semibold uppercase tracking-wide text-3xl">
-            Faq
-          </p>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-snug">
+
+      {/* FAQ */}
+      <section className="relative py-16 px-6 lg:px-20 flex flex-col lg:flex-row items-center justify-between bg-white overflow-x-hidden">
+        <motion.div
+          initial={{ opacity: 0, x: -60 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: false, amount: 0.3 }}
+          className="w-full lg:w-1/2 space-y-5"
+        >
+          <p className="text-pink-600 font-semibold uppercase text-3xl">Faq</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">
             Know more about our <br /> IT solution
           </h2>
-          <p className="text-gray-500 text-base md:text-lg">
-            Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper
-            libero sit amet adipiscing neque.
-          </p>
 
-          {/* ACCORDION  */}
           <div className="space-y-3">
             {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className="bg-blue-50 rounded-lg shadow-sm overflow-hidden transition-all duration-300"
-              >
+              <div key={index} className="bg-blue-50 rounded-lg shadow">
                 <button
                   onClick={() =>
                     setOpenIndex(openIndex === index ? null : index)
                   }
-                  className="w-full flex justify-between items-center text-left px-5 py-4 font-semibold text-gray-800 focus:outline-none"
+                  className="w-full flex justify-between px-5 py-4 font-semibold"
                 >
                   {faq.question}
-                  <span className="text-xl text-gray-600">
-                    {openIndex === index ? "−" : "+"}
-                  </span>
+                  <span>{openIndex === index ? "−" : "+"}</span>
                 </button>
                 {openIndex === index && (
-                  <div className="px-5 pb-4 text-gray-600 text-sm md:text-base">
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="px-5 pb-4 text-gray-600"
+                  >
                     {faq.answer}
-                  </div>
+                  </motion.div>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/*  RIGHT IMAGE */}
-        <div className="relative mt-10 lg:mt-0 lg:w-1/2 flex justify-center">
-          <div className="relative w-80 h-80 sm:w-96 sm:h-96 md:w-[420px] md:h-[420px] lg:w-[480px] lg:h-[480px]">
-            {/* Background circle */}
-            <div className="absolute inset-0 rounded-full -z-10"></div>
-
-            {/* FAQ image */}
-            <Image
-              src="/FAQ.png"
-              alt="FAQ illustration"
-              fill
-              className="object-contain"
-            />
-
-            {/* Animated question mark */}
-            <div className="absolute top-6 left-25 sm:left-25 text-black text-5xl sm:text-6xl md:text-7xl  lg:text-8xl font-bold animate-bounce">
+        {/* FAQ IMAGE */}
+        <motion.div
+          initial={{ opacity: 0, x: 80 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: false, amount: 0.3 }}
+          className="relative mt-10 lg:mt-0 lg:w-1/2 flex justify-center"
+        >
+          <motion.div
+            animate={{ y: [0, -12, 0] }}
+            transition={{ repeat: Infinity, duration: 4 }}
+            className="relative w-80 h-80 md:w-[420px] md:h-[420px]"
+          >
+            <Image src="/FAQ.png" alt="FAQ" fill className="object-contain" />
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="absolute top-6 left-24 text-6xl font-bold"
+            >
               ?
-            </div>
-          </div>
-        </div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
       </section>
       <Footer />
     </div>

@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { FaUser, FaRegEye, FaExchangeAlt, FaGraduationCap } from "react-icons/fa";
+import {
+  FaUser,
+  FaRegEye,
+  FaExchangeAlt,
+  FaGraduationCap,
+} from "react-icons/fa";
 import { auth, db } from "@/app/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc,serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { updateProfile } from "firebase/auth";
+
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -20,33 +27,36 @@ export default function SignupPage() {
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("");
     setIsError(false);
-  
+
     if (!name || !email || !password || !confirmPassword) {
       setMessage("Please fill all fields.");
       setIsError(true);
       return;
     }
-  
+
     if (password !== confirmPassword) {
       setMessage("Passwords do not match!");
       setIsError(true);
       return;
     }
-  
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
-  
+
       const user = userCredential.user;
-  
+
+      await updateProfile(user, {
+        displayName: name, // yehi avatar ke first letter ke liye use hoga
+      });
+
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
@@ -54,25 +64,24 @@ export default function SignupPage() {
         role,
         createdAt: serverTimestamp(),
       });
-  
+
       setMessage("Account created successfully! Redirecting to signin...");
       setIsError(false);
-  
+
       setTimeout(() => router.push("/signin"), 1500);
-    }  catch (err: any) {
+    } catch (err: any) {
       console.error("FULL SIGNUP ERROR:", err);
-    
+
       if (err.code) {
         setErrorMessage(err.code.replace("auth/", "").replaceAll("-", " "));
       } else {
         setErrorMessage("Something went wrong. Try again.");
       }
-    
+
       setIsError(true);
     }
-    
   };
-  
+
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center bg-[#F0F4F8] font-sans overflow-hidden">
       {/* Background */}
@@ -92,12 +101,17 @@ export default function SignupPage() {
           </h2>
 
           {message && (
-            <p className={`${isError ? "text-red-500" : "text-green-500"} text-sm mb-2`}>
+            <p
+              className={`${isError ? "text-red-500" : "text-green-500"} text-sm mb-2`}
+            >
               {message}
             </p>
           )}
 
-          <form className="w-full space-y-3 sm:space-y-4" onSubmit={handleSignup}>
+          <form
+            className="w-full space-y-3 sm:space-y-4"
+            onSubmit={handleSignup}
+          >
             {/* Name */}
             <div className="relative">
               <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm" />

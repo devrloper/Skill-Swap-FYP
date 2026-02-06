@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
@@ -24,10 +26,18 @@ export default function AboutUs() {
     },
   ];
 
+  const animations = [
+    { initial: { opacity: 0, x: -60 }, animate: { opacity: 1, x: 0 } },
+    { initial: { opacity: 0, x: 60 }, animate: { opacity: 1, x: 0 } },
+    { initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 } },
+    { initial: { opacity: 0, y: 60, rotate: -4 }, animate: { opacity: 1, y: 0, rotate: 0 } },
+  ];
+
   return (
     <section className="py-16 px-6 md:px-12 lg:px-24 bg-white">
       <div className="max-w-7xl mx-auto flex flex-col-reverse md:flex-row items-center gap-10">
-        {/* Left Content */}
+        
+        {/* LEFT CONTENT */}
         <div className="w-full md:w-1/2 text-center md:text-left">
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
             About Us
@@ -38,16 +48,17 @@ export default function AboutUs() {
             skill at a time.
           </p>
 
-          {/* ==== Simple Gradient Points for Mobile/Tablet ==== */}
+          {/* ==== MOBILE / TABLET ==== */}
           <div className="block lg:hidden space-y-6">
             {points.map((point, index) => (
-              <div key={index} className="flex flex-col sm:flex-row sm:items-start sm:gap-4 text-center sm:text-left">
-                {/* Gradient Number Box */}
+              <div
+                key={index}
+                className="flex flex-col sm:flex-row sm:items-start sm:gap-4 text-center sm:text-left"
+              >
                 <div className="mx-auto sm:mx-0 mb-3 sm:mb-0 w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-md">
                   {index + 1}
                 </div>
 
-                {/* Text Content */}
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-1 text-lg">
                     {point.title}
@@ -60,31 +71,35 @@ export default function AboutUs() {
             ))}
           </div>
 
-          {/* ==== Box Style Only for Laptop/Desktop ==== */}
+          {/* ==== DESKTOP ANIMATED BOXES ==== */}
           <div className="hidden lg:grid grid-cols-2 gap-6">
             {points.map((point, index) => (
               <motion.div
                 key={index}
                 onClick={() => setActiveIndex(index)}
                 onHoverStart={() => setActiveIndex(index)}
+                initial={animations[index].initial}
+                whileInView={animations[index].animate}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                viewport={{ once: false, amount: 0.3 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
                 className={`relative cursor-pointer rounded-2xl border p-6 transition-all duration-300 shadow-sm bg-white ${
                   activeIndex === index
                     ? "border-purple-400 shadow-lg"
                     : "border-gray-200 hover:border-purple-300 hover:shadow-md"
                 }`}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
               >
                 {activeIndex === index && (
                   <motion.div
                     layoutId="activeGlow"
                     className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 opacity-70"
-                    transition={{ type: "spring", stiffness: 250, damping: 25 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 25 }}
                   />
                 )}
 
                 <div className="relative z-10">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold mb-3 mx-auto lg:mx-0">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold mb-3">
                     {index + 1}
                   </div>
                   <h3 className="font-semibold text-gray-800 mb-2 text-lg">
@@ -99,8 +114,14 @@ export default function AboutUs() {
           </div>
         </div>
 
-        {/* Right Image */}
-        <div className="w-full md:w-1/2 flex justify-center">
+        {/* RIGHT IMAGE */}
+        <motion.div
+          className="w-full md:w-1/2 flex justify-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          viewport={{ once: false }}
+        >
           <div className="relative w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl">
             <Image
               src="/Aboutimg.png"
@@ -110,7 +131,7 @@ export default function AboutUs() {
               className="w-full h-auto rounded-2xl object-cover"
             />
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

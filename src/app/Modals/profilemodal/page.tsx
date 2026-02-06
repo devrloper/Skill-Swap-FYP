@@ -1,14 +1,35 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import Step1 from "@/app/components/profile steps/step1";
 import Step2 from "@/app/components/profile steps/step2";
-import Step3 from  "@/app/components/profile steps/step3";
-export default function ProfileStepModal({ open, setOpen }) {
-  const [step, setStep] = useState(0);
+import Step3 from "@/app/components/profile steps/step3";
+import Step4 from "@/app/components/profile steps/step4";
+import Image from "next/image";
+import { db, auth } from "@/app/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
+interface ProfileStepModalProps {
+  readonly open: boolean;
+  readonly setOpen: (value: boolean) => void;
+}
+
+export default function ProfileStepModal({
+  open,
+  setOpen,
+}: ProfileStepModalProps) {  const [step, setStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+
+  const userId = auth.currentUser?.uid;
+
+  // Lock scroll when modal is open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "auto";
-    return () => (document.body.style.overflow = "auto");
+    return () => {
+      document.body.style.overflow = "auto";
+    };
   }, [open]);
 
   if (!open) return null;
@@ -18,18 +39,37 @@ export default function ProfileStepModal({ open, setOpen }) {
     { step: "STEP 1", title: "Bio data" },
     { step: "STEP 2", title: "Education" },
     { step: "STEP 3", title: "Skills" },
-    { step: "STEP 4", title: "Interv AI" },
+    { step: "STEP 4", title: "AI Interview" },
   ];
+
+  // Save step completion to Firestore
+  const saveStepToDB = async (stepNumber) => {
+    if (!userId) return;
+    try {
+      await setDoc(
+        doc(db, "profiles", userId),
+        { completedSteps: [stepNumber] },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error("Error saving step:", err);
+    }
+  };
+
+  // Called when moving to the next step
+  const handleNextStep = (skills?: string[]) => {
+    setCompletedSteps((prev) => [...prev, step]);
+    saveStepToDB(step); // Save to DB
+    if (skills) setSelectedSkills(skills);
+    setStep(step + 1);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 px-4 overflow-y-auto">
       <div className="min-h-screen flex items-center justify-center">
-        <div
-          className="w-full max-w-4xl rounded-2xl shadow-xl relative p-6 md:p-10 max-h-[90vh] overflow-y-auto
-bg-gradient-to-br from-indigo-50/80 via-purple-50/70 to-pink-50/80
-border border-purple-100 backdrop-blur-xl"
-        >
-          {/* Close */}
+        <div className="w-full max-w-4xl rounded-2xl shadow-xl relative p-6 md:p-10 max-h-[90vh] overflow-y-auto bg-gradient-to-br from-indigo-50/80 via-purple-50/70 to-pink-50/80 border border-purple-100 backdrop-blur-xl">
+          
+          {/* Close button */}
           <button
             onClick={() => setOpen(false)}
             className="absolute top-4 right-4 text-gray-400 hover:text-black"
@@ -45,7 +85,7 @@ border border-purple-100 backdrop-blur-xl"
             Follow the steps to complete your profile
           </p>
 
-          {/* ================= MOBILE STEPPER ================= */}
+          {/* MOBILE STEPPER */}
           <div className="md:hidden mb-8 text-center">
             <p className="text-sm text-gray-500 font-medium">
               Step {step} of {steps.length - 1}
@@ -61,13 +101,15 @@ border border-purple-100 backdrop-blur-xl"
             </div>
           </div>
 
-          {/* ================= DESKTOP/TABLET STEPPER ================= */}
+          {/* DESKTOP/TABLET STEPPER */}
           <div className="hidden md:flex justify-between items-start mb-12 relative gap-2">
             {steps.map((item, index) => {
               const current = index === step;
+              const isDisabled = index > 0 && !completedSteps.includes(index - 1);
+
               return (
                 <div
-                  key={index}
+                  key={item.step}
                   className="flex-1 min-w-[90px] flex flex-col items-center relative"
                 >
                   <span className="text-sm font-semibold text-gray-500 mb-2">
@@ -75,13 +117,14 @@ border border-purple-100 backdrop-blur-xl"
                   </span>
 
                   <button
-                    onClick={() => setStep(index)}
+                    onClick={() => !isDisabled && setStep(index)}
+                    disabled={isDisabled}
                     className={`w-full px-4 md:px-6 py-2 rounded-md font-semibold shadow transition
                       ${
                         current
                           ? "bg-gradient-to-r from-purple-700 to-pink-600 text-white"
                           : "bg-gray-200 text-gray-600"
-                      }`}
+                      } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     {item.title}
                   </button>
@@ -94,22 +137,22 @@ border border-purple-100 backdrop-blur-xl"
             })}
           </div>
 
-          {/* ================= STEP CONTENT ================= */}
-
-          {/* STEP 0 – OVERVIEW */}
+          {/* STEP CONTENT */}
           {step === 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 text-center ">
               {[
                 { img: "/bio1.png", text: "Profile Info" },
                 { img: "/edu6.png", text: "Education" },
                 { img: "/exp.png", text: "Experience" },
                 { img: "/ai.png", text: "AI Interview" },
-              ].map((item, i) => (
-                <div key={i}>
-                  <img
+              ].map((item) => (
+                <div key={item.text}>
+                  <Image
                     src={item.img}
                     alt={item.text}
-                    className="mx-auto w-36 h-32"
+                    width={144}
+                    height={128}
+                    className="mx-auto object-cover"
                   />
                   <p className="mt-4 font-medium text-gray-700">{item.text}</p>
                 </div>
@@ -117,7 +160,7 @@ border border-purple-100 backdrop-blur-xl"
 
               <div className="col-span-full text-center mt-6">
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={handleNextStep}
                   className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-8 py-3 rounded-lg font-semibold"
                 >
                   Start →
@@ -126,26 +169,12 @@ border border-purple-100 backdrop-blur-xl"
             </div>
           )}
 
-          {step === 1 && <Step1 onNext={() => setStep(2)} />}
-
-          {/* STEP 2 – EDUCATION */}
-          {step === 2 && <Step2 onNext={() => setStep(3)} />}
-
-          {/* STEP 3 – Skills */}
-          {step === 3 && <Step3 onNext={() => setStep(4)} /> }
-
-          {/* STEP 4 – AI INTERVIEW */}
-          {step === 4 && (
-            <div className="text-center space-y-6">
-              <h3 className="text-2xl font-bold">AI Interview</h3>
-              <p className="text-gray-600">
-                Answer a few AI-powered questions to complete your profile.
-              </p>
-              <button className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-8 py-3 rounded-lg font-semibold">
-                Start Interview
-              </button>
-            </div>
-          )}
+          {step === 1 && <Step1 onNext={handleNextStep} />}
+          {step === 2 && <Step2 onNext={handleNextStep} />}
+          {step === 3 && <Step3 onNext={handleNextStep} />}
+          {step === 4 && <Step4 skills={selectedSkills} /> 
+            
+          }
         </div>
       </div>
     </div>
