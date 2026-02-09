@@ -5,11 +5,11 @@ import Navbar from "@/app/components/innernavbar/page";
 import SearchBar from "@/app/components/searchbar/page";
 import MatchCard from "@/app/components/matchcard/page";
 import SidebarFilters from "@/app/components/sidebarfilters/page";
-import { auth, db } from "@/app/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/app/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 interface ProfileData {
+  id: string;
   fullName?: string;
   location?: string;
   photoURL?: string | null;
@@ -23,49 +23,42 @@ interface ProfileData {
 }
 
 export default function FindMatchPage() {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [profiles, setProfiles] = useState<ProfileData[]>([]);
+  const [currentUserProfile, setCurrentUserProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
+
       if (!user) {
-        setProfile(null);
+        setProfiles([]);
+        setLoading(false);
         return;
       }
 
       try {
-        const snap = await getDoc(doc(db, "profiles", user.uid));
-        setProfile(snap.exists() ? (snap.data() as ProfileData) : null);
+        const res = await fetch("/api/profiles", { cache: "no-store" });
+        const data = await res.json();
+        const allProfiles: ProfileData[] = Array.isArray(data?.profiles)
+          ? data.profiles
+          : [];
+
+        const me = allProfiles.find((p) => p.id === user.uid) || null;
+        const others = allProfiles.filter((p) => p.id !== user.uid);
+        setCurrentUserProfile(me);
+        setProfiles(others);
       } catch (err) {
-        console.error("Error loading profile:", err);
-        setProfile(null);
+        console.error("Error loading profiles:", err);
+        setCurrentUserProfile(null);
+        setProfiles([]);
+      } finally {
+        setLoading(false);
       }
     });
 
     return () => unsub();
   }, []);
-
-  const learnSkills = [
-    ...(profile?.skills?.learnSkills || []),
-    ...(profile?.skills?.customLearnSkills || []),
-  ];
-  const teachSkills = [
-    ...(profile?.skills?.teachSkills || []),
-    ...(profile?.skills?.customTeachSkills || []),
-  ];
-
-  const tags = Array.from(new Set([...learnSkills, ...teachSkills]));
-  const offer = teachSkills.length ? teachSkills.join(", ") : "Not set";
-  const seek = learnSkills.length ? learnSkills.join(", ") : "Not set";
-  const education = profile?.educations?.length
-    ? profile.educations
-        .map((e) => e.degree || e.institute)
-        .filter(Boolean)
-        .join(", ")
-    : "";
-  const photoUrl =
-    profile?.photoURL && !profile.photoURL.startsWith("blob:")
-      ? profile.photoURL
-      : undefined;
 
   return (
     <div className="relative min-h-screen">
@@ -103,17 +96,106 @@ export default function FindMatchPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Matches */}
             <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {profile && (
-                <MatchCard
-                  name={profile.fullName || "Your Profile"}
-                  offer={offer}
-                  seek={seek}
-                  location={profile.location || "Location not set"}
-                  tags={tags.length ? tags : ["No skills set"]}
-                  education={education}
-                  imageUrl={photoUrl}
-                />
+              {loading && (
+                <div className="text-white/80">Loading profiles...</div>
               )}
+
+              {!loading && profiles.length === 0 && (
+                <div className="text-white/80">
+                  No other profiles found yet.
+                </div>
+              )}
+
+              {!loading && currentUserProfile && (
+                (() => {
+                  const learnSkills = [
+                    ...(currentUserProfile.skills?.learnSkills || []),
+                    ...(currentUserProfile.skills?.customLearnSkills || []),
+                  ];
+                  const teachSkills = [
+                    ...(currentUserProfile.skills?.teachSkills || []),
+                    ...(currentUserProfile.skills?.customTeachSkills || []),
+                  ];
+                  const tags = Array.from(
+                    new Set([...learnSkills, ...teachSkills])
+                  );
+                  const offer = teachSkills.length
+                    ? teachSkills.join(", ")
+                    : "Not set";
+                  const seek = learnSkills.length
+                    ? learnSkills.join(", ")
+                    : "Not set";
+                  const education = currentUserProfile.educations?.length
+                    ? currentUserProfile.educations
+                        .map((e) => e.degree || e.institute)
+                        .filter(Boolean)
+                        .join(", ")
+                    : "";
+                  const photoUrl =
+                    currentUserProfile.photoURL &&
+                    !currentUserProfile.photoURL.startsWith("blob:")
+                      ? currentUserProfile.photoURL
+                      : undefined;
+
+                  return (
+                    <MatchCard
+                      key={currentUserProfile.id}
+                      name={currentUserProfile.fullName || "Your Profile"}
+                      offer={offer}
+                      seek={seek}
+                      location={currentUserProfile.location || "Location not set"}
+                      tags={tags.length ? tags : ["No skills set"]}
+                      education={education}
+                      imageUrl={photoUrl}
+                    />
+                  );
+                })()
+              )}
+
+              {!loading &&
+                profiles.map((profile) => {
+                  const learnSkills = [
+                    ...(profile.skills?.learnSkills || []),
+                    ...(profile.skills?.customLearnSkills || []),
+                  ];
+                  const teachSkills = [
+                    ...(profile.skills?.teachSkills || []),
+                    ...(profile.skills?.customTeachSkills || []),
+                  ];
+
+                  const tags = Array.from(
+                    new Set([...learnSkills, ...teachSkills])
+                  );
+                  const offer = teachSkills.length
+                    ? teachSkills.join(", ")
+                    : "Not set";
+                  const seek = learnSkills.length
+                    ? learnSkills.join(", ")
+                    : "Not set";
+                  const education = profile.educations?.length
+                    ? profile.educations
+                        .map((e) => e.degree || e.institute)
+                        .filter(Boolean)
+                        .join(", ")
+                    : "";
+                  const photoUrl =
+                    profile.photoURL && !profile.photoURL.startsWith("blob:")
+                      ? profile.photoURL
+                      : undefined;
+
+                  return (
+                    <MatchCard
+                      key={profile.id}
+                      name={profile.fullName || "Profile"}
+                      offer={offer}
+                      seek={seek}
+                      location={profile.location || "Location not set"}
+                      tags={tags.length ? tags : ["No skills set"]}
+                      education={education}
+                      imageUrl={photoUrl}
+                    />
+                  );
+                })}
             </div>
 
             {/* Sidebar */}
