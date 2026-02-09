@@ -10,37 +10,40 @@ export async function POST(req: NextRequest) {
 
     let prompt = "";
 
+    const jsonFormat =
+      'Return ONLY a JSON array (no markdown) in this format: [{"question":"...","options":["...","...","...","..."],"answer":"..."}]. The "answer" must exactly match one of the options.';
+
     switch (partType) {
       case "skill":
         prompt = cleanSkills.length
           ? `Generate 3 interview questions based on these skills: ${cleanSkills.join(
               ", ",
-            )}. Return them as a numbered list.`
-          : "Generate 3 general interview questions as a numbered list.";
+            )}. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`
+          : `Generate 3 general interview questions. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`;
         break;
 
       case "logical":
         prompt = cleanSkills.length
           ? `Generate 3 logical reasoning questions related to these skills: ${cleanSkills.join(
               ", ",
-            )}. Return them as a numbered list.`
-          : "Generate 3 general logical reasoning questions as a numbered list.";
+            )}. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`
+          : `Generate 3 general logical reasoning questions. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`;
         break;
 
       case "math":
         prompt = cleanSkills.length
           ? `Generate 3 math/quantitative questions related to these skills: ${cleanSkills.join(
               ", ",
-            )}. Return them as a numbered list.`
-          : "Generate 3 basic math/quantitative questions as a numbered list.";
+            )}. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`
+          : `Generate 3 basic math/quantitative questions. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`;
         break;
 
       case "scenario":
         prompt = cleanSkills.length
           ? `Generate 2 scenario-based questions related to these skills: ${cleanSkills.join(
               ", ",
-            )}. Return them as a numbered list.`
-          : "Generate 2 general scenario-based questions as a numbered list.";
+            )}. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`
+          : `Generate 2 general scenario-based questions. Provide 4 clear multiple-choice options for each question. ${jsonFormat}`;
         break;
 
       default:
@@ -81,11 +84,36 @@ export async function POST(req: NextRequest) {
     const questionsText = data.candidates[0].content.parts[0].text;
     console.log("Raw response from Gemini:", questionsText);
 
-    // Split questions by numbered list pattern
-    const questions = questionsText
-      .split(/\d+\.\s+/)
-      .map((q: string) => q.trim())
-      .filter((q: string) => q.length > 0);
+    // Try to parse JSON array
+    let questions: Array<{ question: string; options: string[]; answer?: string }> = [];
+    try {
+      const cleaned = questionsText
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+      if (Array.isArray(parsed)) {
+        questions = parsed
+          .filter((q) => q && typeof q.question === "string")
+          .map((q) => ({
+            question: q.question,
+            options: Array.isArray(q.options) ? q.options : [],
+            answer: typeof q.answer === "string" ? q.answer : undefined,
+          }));
+      }
+    } catch (e) {
+      console.error("JSON parse error:", e);
+    }
+
+    // Fallback: Split by numbered list pattern
+    if (questions.length === 0) {
+      const fallback = questionsText
+        .split(/\d+\.\s+/)
+        .map((q: string) => q.trim())
+        .filter((q: string) => q.length > 0);
+      questions = fallback.map((q) => ({ question: q, options: [] }));
+    }
 
     return NextResponse.json({ questions });
   } catch (error) {

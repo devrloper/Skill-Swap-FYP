@@ -1,42 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 
+interface QuestionItem {
+  question: string;
+  options: string[];
+  answer?: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { skills = [], answers = [] } = await req.json();
+    const { answers = [], questions = [] } = await req.json();
 
-    const prompt = `Evaluate the following answers for skills: ${skills.join(", ")}. Answers: ${answers.join(
-      "; "
-    )}. Provide a clear Pass or Fail based on correctness.`;
+    const safeQuestions: QuestionItem[] = Array.isArray(questions) ? questions : [];
+    const safeAnswers: string[] = Array.isArray(answers) ? answers : [];
 
-  const geminiResponse = await fetch(
-  `https://generativelanguage.googleapis.com/v1/models/gemini-3-flash-preview:generateContent?key=${process.env.GEMINI_API_KEY}`,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 300,
-      },
-    }),
-  }
-);
+    const total = Math.min(safeQuestions.length, safeAnswers.length);
+    let correct = 0;
 
+    for (let i = 0; i < total; i += 1) {
+      const expected = safeQuestions[i]?.answer;
+      const given = safeAnswers[i];
+      if (expected && given && expected.trim() === given.trim()) {
+        correct += 1;
+      }
+    }
 
-    const data = await geminiResponse.json();
-    const result = data.candidates?.[0]?.content?.trim() ?? "Fail";
+    const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const result = total > 0 && correct / total >= 0.5 ? "Pass" : "Fail";
 
-    return NextResponse.json({ result });
+    return NextResponse.json({ result, score, correct, total });
   } catch (error) {
-    console.error("Gemini Evaluation Error:", error);
-    return NextResponse.json({ result: "Fail", error: "Server error" }, { status: 500 });
+    console.error("Evaluation Error:", error);
+    return NextResponse.json(
+      { result: "Fail", score: 0, correct: 0, total: 0, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
