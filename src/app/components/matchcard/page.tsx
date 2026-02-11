@@ -14,9 +14,12 @@ export default function MatchCard({
   return (
     <div
       className="
-        bg-white rounded-xl shadow-sm p-4
+        bg-white/30 backdrop-blur-lg border border-white/30
+        rounded-xl shadow-lg p-4
         h-auto lg:max-h-[220px]
         flex flex-col
+        hover:shadow-2xl hover:scale-[1.02]
+        transition-all duration-300 cursor-pointer
       "
     >
       {/* Top Section */}
@@ -27,30 +30,49 @@ export default function MatchCard({
           height={64}
           alt="profile"
           className="
-    h-16 w-16 rounded-full object-cover flex-shrink-0
-    ring-2 ring-purple-950 ring-offset-2 ring-offset-white
-  "
+            h-16 w-16 rounded-full object-cover flex-shrink-0
+            ring-2 ring-black/40 ring-offset-2 ring-offset-transparent
+          "
         />
 
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-800">{name}</h3>
+        <div className="flex-1 ">
+          {/* Name */}
+          <h3 className="font-semibold text-black text-lg">
+            {name}
+          </h3>
 
-          <p className="text-sm text-gray-500">Offering: {offer}</p>
+          {/* Offer */}
+          <p className="text-sm text-black">
+            <span className="font-semibold">Offering:</span> {offer}
+          </p>
 
-          <p className="text-sm text-gray-500">Seeking: {seek}</p>
+          {/* Seek */}
+          <p className="text-sm text-black">
+            <span className="font-semibold">Seeking:</span> {seek}
+          </p>
 
+          {/* Education */}
           {education && (
-            <p className="text-sm text-gray-500">Education: {education}</p>
+            <p className="text-sm text-black">
+              <span className="font-semibold">Education:</span> {education}
+            </p>
           )}
         </div>
       </div>
 
-      {/* Tags (height controlled) */}
+      {/* Tags */}
       <div className="flex flex-wrap gap-2 mt-3 max-h-[90px] overflow-y-auto">
         {tags.map((tag, i) => (
           <span
             key={i}
-            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-md"
+            className="
+              text-xs
+              bg-black/10
+              text-black
+              px-2 py-1 rounded-md
+              hover:bg-black/20
+              transition
+            "
           >
             {tag}
           </span>
@@ -59,9 +81,13 @@ export default function MatchCard({
 
       {/* Bottom */}
       <div className="flex justify-between items-center mt-auto pt-4">
-        <span className="text-xs text-gray-400">{location}</span>
+        <span className="text-xs text-black/70">
+          {location}
+        </span>
 
-        <Button>Connect</Button>
+        <Button className="bg-black text-white hover:scale-105 transition">
+          Connect
+        </Button>
       </div>
     </div>
   );

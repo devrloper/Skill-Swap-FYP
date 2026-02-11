@@ -224,7 +224,7 @@ export default function ChatbotPage() {
       <NavBar />
 
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 mt-16">
-        <div className="h-[75vh] flex rounded-3xl overflow-hidden bg-white/40 backdrop-blur-2xl shadow-2xl relative">
+        <div className="h-[85vh] flex rounded-3xl overflow-hidden bg-white/40 backdrop-blur-2xl shadow-2xl relative">
           {/*  OVERLAY (CLICK TO CLOSE) */}
           {showSidebar && (
             <div
@@ -412,7 +412,6 @@ export default function ChatbotPage() {
           </div>
         </div>
       )}
-      <Footer />
     </div>
   );
 }

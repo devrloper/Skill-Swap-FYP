@@ -72,9 +72,7 @@ export default function Navbar() {
             <Link href="/about" className={navLinkClass}>
               About
             </Link>
-            <Link href="/trendingskills" className={navLinkClass}>
-              Trending Skills
-            </Link>
+
             <Link href="/matching" className={navLinkClass}>
               Matching
             </Link>
@@ -83,6 +81,10 @@ export default function Navbar() {
             </Link>
             <Link href="/chatbot" className={navLinkClass}>
               AI Chat Bot
+            </Link>
+
+            <Link href="/contact" className={navLinkClass}>
+              Contact
             </Link>
             <Link href="/dashboard" className={navLinkClass}>
               Dashboard
@@ -275,17 +277,25 @@ export default function Navbar() {
             >
               Chating
             </Link>
-            <Link
-              href="/dashboard"
-              className="block text-gray-700 hover:text-purple-600 font-medium text-lg sm:text-xl md:text-2xl"
-            >
-              Dashboard
-            </Link>
+
             <Link
               href="/chatbot"
               className="block text-gray-700 hover:text-purple-600 font-medium text-lg sm:text-xl md:text-2xl"
             >
               AI Chat Bot
+            </Link>
+
+            <Link
+              href="/contact"
+              className="block text-gray-700 hover:text-purple-600 font-medium text-lg sm:text-xl md:text-2xl"
+            >
+              Contact
+            </Link>
+            <Link
+              href="/dashboard"
+              className="block text-gray-700 hover:text-purple-600 font-medium text-lg sm:text-xl md:text-2xl"
+            >
+              Dashboard
             </Link>
 
             {/* Enroll Now Button for mobile/tablet */}

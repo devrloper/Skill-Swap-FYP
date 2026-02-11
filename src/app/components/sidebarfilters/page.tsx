@@ -1,6 +1,7 @@
 export default function SidebarFilters() {
     return (
-      <aside className="bg-white rounded-xl shadow-sm p-4 h-fit">
+      <aside className="    bg-white/30 backdrop-blur-lg
+    border border-white/30 rounded-xl shadow-sm p-4 h-fit">
         <h3 className="font-semibold mb-4">Refine Your Search</h3>
   
         <div className="space-y-4 text-sm">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import Navbar from "@/app/components/innernavbar/page";
 import SearchBar from "@/app/components/searchbar/page";
 import MatchCard from "@/app/components/matchcard/page";
@@ -24,7 +25,8 @@ interface ProfileData {
 
 export default function FindMatchPage() {
   const [profiles, setProfiles] = useState<ProfileData[]>([]);
-  const [currentUserProfile, setCurrentUserProfile] = useState<ProfileData | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] =
+    useState<ProfileData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -60,6 +62,12 @@ export default function FindMatchPage() {
     return () => unsub();
   }, []);
 
+  // Animation variants for cards
+  const cardVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
     <div className="relative min-h-screen">
       {/* Background */}
@@ -67,8 +75,6 @@ export default function FindMatchPage() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/study1.png')" }}
       />
-
-      {/* Dark overlay for readability */}
       <div className="absolute inset-0 bg-black/60" />
 
       {/* Content */}
@@ -77,20 +83,40 @@ export default function FindMatchPage() {
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Heading */}
-          <div className="text-center mb-10 text-white">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">
+          <motion.div
+            className="text-center mb-10 text-white font-extrabold mt-14 px-4"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <motion.h1
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+            >
               Find a Match
-            </h1>
-            <p className="mt-3 text-5xl sm:text-xl font-extrabold text-white/80 max-w-xl mx-auto">
+            </motion.h1>
+            <motion.p
+              className="mt-3 text-sm sm:text-base md:text-lg lg:text-xl text-white/80 max-w-xl mx-auto leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
               Connect with skilled professionals to exchange services and learn
               from each other.
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
 
           {/* Search */}
-          <div className="mb-8">
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.7 }}
+          >
             <SearchBar />
-          </div>
+          </motion.div>
 
           {/* Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -106,7 +132,8 @@ export default function FindMatchPage() {
                 </div>
               )}
 
-              {!loading && currentUserProfile && (
+              {!loading &&
+                currentUserProfile &&
                 (() => {
                   const learnSkills = [
                     ...(currentUserProfile.skills?.learnSkills || []),
@@ -117,7 +144,7 @@ export default function FindMatchPage() {
                     ...(currentUserProfile.skills?.customTeachSkills || []),
                   ];
                   const tags = Array.from(
-                    new Set([...learnSkills, ...teachSkills])
+                    new Set([...learnSkills, ...teachSkills]),
                   );
                   const offer = teachSkills.length
                     ? teachSkills.join(", ")
@@ -138,22 +165,30 @@ export default function FindMatchPage() {
                       : undefined;
 
                   return (
-                    <MatchCard
+                    <motion.div
                       key={currentUserProfile.id}
-                      name={currentUserProfile.fullName || "Your Profile"}
-                      offer={offer}
-                      seek={seek}
-                      location={currentUserProfile.location || "Location not set"}
-                      tags={tags.length ? tags : ["No skills set"]}
-                      education={education}
-                      imageUrl={photoUrl}
-                    />
+                      variants={cardVariants}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ duration: 0.5 }}
+                    >
+                      <MatchCard
+                        name={currentUserProfile.fullName || "Your Profile"}
+                        offer={offer}
+                        seek={seek}
+                        location={
+                          currentUserProfile.location || "Location not set"
+                        }
+                        tags={tags.length ? tags : ["No skills set"]}
+                        education={education}
+                        imageUrl={photoUrl}
+                      />
+                    </motion.div>
                   );
-                })()
-              )}
+                })()}
 
               {!loading &&
-                profiles.map((profile) => {
+                profiles.map((profile, i) => {
                   const learnSkills = [
                     ...(profile.skills?.learnSkills || []),
                     ...(profile.skills?.customLearnSkills || []),
@@ -164,7 +199,7 @@ export default function FindMatchPage() {
                   ];
 
                   const tags = Array.from(
-                    new Set([...learnSkills, ...teachSkills])
+                    new Set([...learnSkills, ...teachSkills]),
                   );
                   const offer = teachSkills.length
                     ? teachSkills.join(", ")
@@ -184,26 +219,39 @@ export default function FindMatchPage() {
                       : undefined;
 
                   return (
-                    <MatchCard
+                    <motion.div
                       key={profile.id}
-                      name={profile.fullName || "Profile"}
-                      offer={offer}
-                      seek={seek}
-                      location={profile.location || "Location not set"}
-                      tags={tags.length ? tags : ["No skills set"]}
-                      education={education}
-                      imageUrl={photoUrl}
-                    />
+                      variants={cardVariants}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ duration: 0.5, delay: 0.1 * i }}
+                      whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0,0,0,0.2)" }}
+                    >
+                      <MatchCard
+                        name={profile.fullName || "Profile"}
+                        offer={offer}
+                        seek={seek}
+                        location={profile.location || "Location not set"}
+                        tags={tags.length ? tags : ["No skills set"]}
+                        education={education}
+                        imageUrl={photoUrl}
+                      />
+                    </motion.div>
                   );
                 })}
             </div>
 
             {/* Sidebar */}
-            <div className="hidden lg:block lg:col-span-1">
+            <motion.div
+              className="hidden lg:block lg:col-span-1"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+            >
               <div className="sticky top-24">
                 <SidebarFilters />
               </div>
-            </div>
+            </motion.div>
           </div>
         </main>
       </div>
