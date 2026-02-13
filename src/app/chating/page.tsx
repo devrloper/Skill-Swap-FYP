@@ -1,487 +1,382 @@
 "use client";
-
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "@/app/lib/firebase";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { Send, Search, Phone, Video, MoreVertical } from "lucide-react";
+  Home,
+  Users,
+  MessageSquare,
+  FileText,
+  Video,
+  Bell,
+  Settings,
+  Search,
+  Phone,
+  VideoIcon,
+  MoreHorizontal,
+  Send,
+  Mic,
+  Paperclip,
+  Smile,
+  MapPin,
+  ChevronLeft,
+} from "lucide-react";
 import Navbar from "@/app/components/innernavbar/page";
-type ChatDoc = {
-  participants: string[];
-  lastMessage?: string;
-  updatedAt?: Timestamp;
-};
+import ChipLoader from "@/app/components/loader/page";
+import { motion, AnimatePresence } from "framer-motion";
+const CONTACTS = [
+  {
+    id: 1,
+    name: "Sayali Sontakke",
+    role: "Web Designer",
+    loc: "Pune, India",
+    lastMsg: "Lorem ipsum dolor sit amet...",
+    time: "11m ago",
+    avatar: "https://i.pravatar.cc/150?u=sayali",
+    email: "sayali@gmail.com",
+  },
+  {
+    id: 2,
+    name: "Rohit Agarwal",
+    role: "UI Developer",
+    loc: "Mumbai, India",
+    lastMsg: "The design is ready!",
+    time: "3h ago",
+    avatar: "https://i.pravatar.cc/150?u=rohit",
+    email: "rohit@gmail.com",
+  },
+  {
+    id: 3,
+    name: "John Alex",
+    role: "Product Manager",
+    loc: "London, UK",
+    lastMsg: "Meeting at 5 PM?",
+    time: "5h ago",
+    avatar: "https://i.pravatar.cc/150?u=john",
+    email: "john@alex.com",
+  },
+  {
+    id: 4,
+    name: "Rosy Done",
+    role: "QA Engineer",
+    loc: "Berlin, Germany",
+    lastMsg: "Bugs have been fixed.",
+    time: "7h ago",
+    avatar: "https://i.pravatar.cc/150?u=rosy",
+    email: "rosy@done.com",
+  },
+];
 
-type MessageDoc = {
-  senderId: string;
-  text: string;
-  createdAt?: Timestamp;
-};
+export default function WorkableChat() {
+  const [activeTab, setActiveTab] = useState(1);
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+      sender: "other",
+      time: "10:20 AM",
+    },
+  ]);
+  const [inputText, setInputText] = useState("");
 
-type UserDoc = {
-  name?: string;
-  email?: string;
-  photoURL?: string;
-  status?: "online" | "offline" | "away";
-  lastSeen?: Timestamp;
-};
+  const activeUser = CONTACTS.find((u) => u.id === activeTab) || CONTACTS[0];
 
-type ChatItem = {
-  id: string;
-  otherUserId: string;
-  lastMessage?: string;
-  updatedAt?: Timestamp;
-};
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
 
-const formatTime = (value?: Timestamp) => {
-  if (!value) return "";
-  const date = value.toDate();
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-};
-
-const formatLastSeen = (value?: Timestamp) => {
-  if (!value) return "offline";
-  const date = value.toDate();
-  return `last seen ${date.toLocaleString()}`;
-};
-
-const getChatIdForUsers = (a: string, b: string) => {
-  return [a, b].sort().join("_");
-};
-
-export default function ChatPage() {
-  const { user, userData, loading } = useAuth();
-  const [message, setMessage] = useState("");
-  const [chats, setChats] = useState<ChatItem[]>([]);
-  const [messages, setMessages] = useState<MessageDoc[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string>("");
-  const [userInfo, setUserInfo] = useState<Record<string, UserDoc>>({});
-  const [newChatUserId, setNewChatUserId] = useState("");
-  const [sending, setSending] = useState(false);
-  const [search, setSearch] = useState("");
-  const messageEndRef = useRef<HTMLDivElement | null>(null);
-
-  const activeChat = chats.find((c) => c.id === activeChatId);
-  const activeOtherUser = activeChat ? userInfo[activeChat.otherUserId] : null;
-
-  const filteredChats = useMemo(() => {
-    if (!search.trim()) return chats;
-    const term = search.toLowerCase();
-    return chats.filter((c) => {
-      const info = userInfo[c.otherUserId];
-      const name = info?.name || info?.email || c.otherUserId;
-      return name.toLowerCase().includes(term);
-    });
-  }, [chats, search, userInfo]);
-
-  useEffect(() => {
-    if (!user) return;
-    const userRef = doc(db, "users", user.uid);
-
-    const setOnline = () =>
-      setDoc(
-        userRef,
-        { status: "online", lastSeen: serverTimestamp() },
-        { merge: true }
-      );
-
-    const setOffline = () =>
-      setDoc(
-        userRef,
-        { status: "offline", lastSeen: serverTimestamp() },
-        { merge: true }
-      );
-
-    setOnline();
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        setOnline();
-      } else {
-        setOffline();
-      }
+    const newMsg = {
+      id: Date.now(),
+      text: inputText,
+      sender: "me",
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
-    window.addEventListener("beforeunload", setOffline);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      window.removeEventListener("beforeunload", setOffline);
-      document.removeEventListener("visibilitychange", handleVisibility);
-      setOffline();
-    };
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, "chats"),
-      where("participants", "array-contains", user.uid),
-      orderBy("updatedAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as ChatDoc;
-        const otherUserId =
-          data.participants.find((id) => id !== user.uid) || user.uid;
-        return {
-          id: docSnap.id,
-          otherUserId,
-          lastMessage: data.lastMessage,
-          updatedAt: data.updatedAt,
-        };
-      });
-      setChats(items);
-      if (!activeChatId && items.length > 0) {
-        setActiveChatId(items[0].id);
-      }
-      if (activeChatId && items.every((c) => c.id !== activeChatId)) {
-        setActiveChatId(items[0]?.id || "");
-      }
-    });
-
-    return () => unsubscribe();
-  }, [user, activeChatId]);
-
-  useEffect(() => {
-    if (chats.length === 0) return;
-    const unsubscribers: Array<() => void> = [];
-    const uniqueIds = Array.from(
-      new Set(chats.map((c) => c.otherUserId))
-    );
-
-    uniqueIds.forEach((id) => {
-      const userRef = doc(db, "users", id);
-      const unsub = onSnapshot(userRef, (snap) => {
-        if (snap.exists()) {
-          setUserInfo((prev) => ({
-            ...prev,
-            [id]: snap.data() as UserDoc,
-          }));
-        }
-      });
-      unsubscribers.push(unsub);
-    });
-
-    return () => unsubscribers.forEach((u) => u());
-  }, [chats]);
-
-  useEffect(() => {
-    if (!activeChatId) return;
-    const q = query(
-      collection(db, "chats", activeChatId, "messages"),
-      orderBy("createdAt", "asc")
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map((docSnap) => docSnap.data() as MessageDoc);
-      setMessages(items);
-      requestAnimationFrame(() => {
-        messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      });
-    });
-    return () => unsubscribe();
-  }, [activeChatId]);
-
-  const createOrOpenChat = async () => {
-    if (!user) return;
-    const targetId = newChatUserId.trim();
-    if (!targetId || targetId === user.uid) return;
-
-    const chatId = getChatIdForUsers(user.uid, targetId);
-    await setDoc(
-      doc(db, "chats", chatId),
-      {
-        participants: [user.uid, targetId],
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-    setActiveChatId(chatId);
-    setNewChatUserId("");
+    setMessages([...messages, newMsg]);
+    setInputText("");
   };
 
-  const sendMessage = async () => {
-    if (!user || !activeChatId || !message.trim()) return;
-    const text = message.trim();
-    setMessage("");
-    setSending(true);
-    try {
-      await addDoc(collection(db, "chats", activeChatId, "messages"), {
-        senderId: user.uid,
-        text,
-        createdAt: serverTimestamp(),
-      });
+  const [isLoading, setIsLoading] = useState(true);
 
-      await setDoc(
-        doc(db, "chats", activeChatId),
-        {
-          lastMessage: text,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-    } finally {
-      setSending(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="h-screen w-full bg-[#0b141a] flex items-center justify-center text-white/80">
-        Loading chat...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="h-screen w-full bg-[#0b141a] flex items-center justify-center text-white/80">
-        Please sign in to use chat.
-      </div>
-    );
-  }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <div className="h-screen w-full bg-[radial-gradient(circle_at_top_left,_#1a2b34_0%,_#0b141a_45%,_#081117_100%)] flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <div className="hidden md:flex md:w-[32%] lg:w-[26%] bg-[linear-gradient(180deg,_#0f1c23,_#0b141a)] border-r border-white/10 flex-col mt-19">
-          {/* Sidebar Header */}
-          <div className="p-5 flex items-center justify-between bg-[#121f26] border-b border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-[linear-gradient(135deg,_#0ea5a4,_#00d2a1)] flex items-center justify-center text-white font-semibold shadow-lg shadow-emerald-500/20">
-                {(userData?.name || user.displayName || user.email || "U")
-                  .trim()
-                  .charAt(0)
-                  .toUpperCase()}
-              </div>
-              <div>
-                <h3 className="text-white font-semibold tracking-wide">
-                  Conversations
-                </h3>
-                <p className="text-[11px] text-white/60 truncate max-w-[180px]">
-                  {userData?.name || user.displayName || user.email}
-                </p>
-              </div>
+    <>
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          >
+            <div className="w-full max-w-md">
+              <ChipLoader />
             </div>
-            <MoreVertical className="text-white/70" />
+          </motion.div>
+        )}
+      </AnimatePresence>{" "}
+      <div className="flex h-screen w-full bg-[#E5D9F2] p-2 lg:p-4 gap-2 lg:gap-4 overflow-hidden font-sans text-slate-800 mt-16">
+        <Navbar />
+        {/* --- 1. LEFT ICON SIDEBAR --- 
+          Hidden on mobile, visible from Large screens (lg) up */}
+        <aside className="hidden lg:flex w-20 bg-[#4B164C] rounded-[40px] flex-col items-center py-8 relative shadow-2xl shrink-0">
+          <div className="flex flex-col gap-8 text-white/50">
+            <Home className="w-6 h-6 cursor-pointer hover:text-white" />
+            <Users className="w-6 h-6 cursor-pointer hover:text-white" />
+            <div className="bg-[#F3F4F6] p-4 rounded-l-[30px] -mr-4 text-[#4B164C] z-10 relative">
+              <MessageSquare className="w-6 h-6" />
+            </div>
+            <FileText className="w-6 h-6 cursor-pointer hover:text-white" />
+            <Video className="w-6 h-6 cursor-pointer hover:text-white" />
+            <Bell className="w-6 h-6 cursor-pointer hover:text-white" />
+            <Settings className="w-6 h-6 cursor-pointer hover:text-white" />
           </div>
+          <div className="mt-auto flex flex-col items-center gap-2">
+            <img
+              src="https://i.pravatar.cc/150?u=admin"
+              className="w-10 h-10 rounded-full border-2 border-orange-400 p-0.5"
+              alt="Admin"
+            />
+            <span className="text-[10px] text-white/50 text-center leading-tight">
+              Biplab
+              <br />
+              Patra
+            </span>
+          </div>
+        </aside>
 
-          {/* Search */}
-          <div className="p-4 space-y-3">
-            <div className="flex items-center bg-[#13222a] rounded-2xl px-3 ring-1 ring-white/5 focus-within:ring-emerald-400/40">
-              <Search className="text-white/50 w-4" />
+        {/* --- 2. CONTACTS LIST PANEL --- 
+          Full width on mobile if view is 'list', 80 units wide on desktop */}
+        <section
+          className={`${mobileView === "list" ? "flex" : "hidden"} md:flex w-full md:w-72 lg:w-80 flex-col gap-4 shrink-0`}
+        >
+          <div className="bg-white rounded-[32px] p-6 flex-1 shadow-sm flex flex-col overflow-hidden">
+            <h2 className="text-xl font-bold mb-4">Chat</h2>
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search conversations"
-                className="bg-transparent outline-none text-sm text-white px-2 py-2.5 w-full placeholder:text-white/40"
+                className="w-full bg-[#F8F9FB] rounded-xl py-2.5 pl-10 text-sm focus:outline-none border border-slate-100 placeholder:text-slate-400"
+                placeholder="Search..."
               />
             </div>
-            <div className="flex gap-2">
-              <input
-                value={newChatUserId}
-                onChange={(e) => setNewChatUserId(e.target.value)}
-                placeholder="Enter user id to start"
-                className="flex-1 bg-[#13222a] rounded-2xl px-3 py-2.5 text-xs text-white outline-none ring-1 ring-white/5 placeholder:text-white/40"
-              />
-              <button
-                onClick={createOrOpenChat}
-                className="px-4 py-2.5 text-xs rounded-2xl bg-[#00a884] text-white hover:bg-[#02c39a] shadow-lg shadow-emerald-500/20"
-              >
-                Start
-              </button>
-            </div>
-          </div>
 
-          {/* Chat List */}
-          <div className="flex-1 overflow-y-auto px-2 pb-4">
-            {filteredChats.length === 0 ? (
-              <div className="px-4 py-6 text-sm text-white/50">
-                No chats yet. Start by entering a user id.
-              </div>
-            ) : (
-              filteredChats.map((chat) => {
-                const info = userInfo[chat.otherUserId];
-                const name = info?.name || info?.email || chat.otherUserId;
-                const status = info?.status || "offline";
-                return (
-                  <button
-                    key={chat.id}
-                    onClick={() => setActiveChatId(chat.id)}
-                    className={`w-full text-left flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/5 transition ${
-                      activeChatId === chat.id ? "bg-white/5" : ""
-                    }`}
-                  >
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-2xl bg-[#16232b] flex items-center justify-center text-white font-semibold ring-1 ring-white/5">
-                        {name.trim().charAt(0).toUpperCase()}
-                      </div>
-                      <span
-                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0f1c23] ${
-                          status === "online" ? "bg-green-400" : "bg-gray-400"
-                        }`}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">{name}</p>
-                      <p className="text-white/50 text-sm truncate">
-                        {chat.lastMessage || "Say hello to start conversation"}
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-white/40">
-                      {formatTime(chat.updatedAt)}
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col mt-19">
-          {/* Chat Header */}
-          <div className="h-16 bg-[#121f26] flex items-center justify-between px-5 border-b border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-2xl bg-[#16232b] flex items-center justify-center text-white font-semibold ring-1 ring-white/5">
-                  {(activeOtherUser?.name ||
-                    activeOtherUser?.email ||
-                    activeChat?.otherUserId ||
-                    "U")
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
-                <span
-                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#121f26] ${
-                    activeOtherUser?.status === "online"
-                      ? "bg-green-400"
-                      : "bg-gray-400"
-                  }`}
-                />
-              </div>
-              <div>
-                <p className="text-white font-semibold">
-                  {activeOtherUser?.name ||
-                    activeOtherUser?.email ||
-                    activeChat?.otherUserId ||
-                    "Select a chat"}
-                </p>
-                <p className="text-xs text-white/50 flex items-center gap-2">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] tracking-wide ${
-                      activeOtherUser?.status === "online"
-                        ? "bg-emerald-500/15 text-emerald-200"
-                        : "bg-white/10 text-white/60"
-                    }`}
-                  >
-                    {activeOtherUser?.status === "online"
-                      ? "online"
-                      : "offline"}
-                  </span>
-                  <span className="hidden sm:inline">
-                    {activeOtherUser?.status === "online"
-                      ? "available now"
-                      : formatLastSeen(activeOtherUser?.lastSeen)}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-white/70">
-              <button className="p-2 rounded-xl hover:bg-white/5 transition">
-                <Video />
-              </button>
-              <button className="p-2 rounded-xl hover:bg-white/5 transition">
-                <Phone />
-              </button>
-              <button className="p-2 rounded-xl hover:bg-white/5 transition">
-                <MoreVertical />
-              </button>
-            </div>
-          </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3 bg-[radial-gradient(circle_at_top,_rgba(0,210,161,0.08),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(72,99,200,0.12),_transparent_55%)]">
-          {activeChatId ? (
-            messages.length === 0 ? (
-              <div className="text-white/60 text-sm">
-                No messages yet. Send the first message.
-              </div>
-            ) : (
-              messages.map((msg, idx) => (
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {CONTACTS.map((user) => (
                 <div
-                  key={`${msg.senderId}-${idx}`}
-                  className={`flex ${
-                    msg.senderId === user.uid
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
+                  key={user.id}
+                  onClick={() => {
+                    setActiveTab(user.id);
+                    setMobileView("chat");
+                  }}
+                  className={`flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer ${activeTab === user.id ? "bg-slate-50 shadow-inner" : "hover:bg-slate-50"}`}
                 >
-                  <div
-                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm shadow-md ${
-                      msg.senderId === user.uid
-                        ? "bg-[#0b6b57] text-white rounded-br-none shadow-emerald-500/10"
-                        : "bg-[#16232b] text-white rounded-bl-none ring-1 ring-white/5"
-                    }`}
-                  >
-                    <p>{msg.text}</p>
-                    <p className="text-[10px] text-white/50 text-right mt-1">
-                      {formatTime(msg.createdAt)}
+                  <img
+                    src={user.avatar}
+                    className="w-11 h-11 rounded-full border-2 border-white shadow-sm"
+                    alt=""
+                  />
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex justify-between items-center">
+                      <p
+                        className={`font-bold text-sm truncate ${activeTab === user.id ? "text-[#4B164C]" : "text-slate-700"}`}
+                      >
+                        {user.name}
+                      </p>
+                      <span className="text-[10px] text-slate-400 shrink-0">
+                        {user.time}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 truncate">
+                      {user.lastMsg}
                     </p>
                   </div>
                 </div>
-              ))
-            )
-          ) : (
-            <div className="text-white/60 text-sm">
-              Select a chat from the left panel.
+              ))}
             </div>
-          )}
-          <div ref={messageEndRef} />
-        </div>
 
-        {/* Input */}
-        <div className="p-5 bg-[#121f26] flex items-center gap-3 border-t border-white/5">
-          <input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder={
-              activeChatId ? "Type a message" : "Select a chat to start"
-            }
-            disabled={!activeChatId || sending}
-            className="flex-1 bg-[#0f1c23] rounded-2xl px-4 py-3 text-white outline-none disabled:opacity-60 ring-1 ring-white/10 focus:ring-emerald-400/40 placeholder:text-white/40"
-          />
-          <button
-            onClick={sendMessage}
-            disabled={!activeChatId || sending}
-            className="bg-[#00a884] hover:bg-[#02c39a] px-4 py-3 rounded-2xl text-white disabled:opacity-60 shadow-lg shadow-emerald-500/20"
-          >
-            <Send size={18} />
-          </button>
-        </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button className="bg-[#4B164C] text-white py-3 rounded-xl text-xs font-semibold shadow-lg shadow-purple-200">
+                Meeting
+              </button>
+              <button className="bg-[#E5E7EB] text-slate-600 py-3 rounded-xl text-xs font-semibold">
+                Schedule
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* --- 3. MAIN CHAT WINDOW --- 
+          Visible if mobileView is 'chat' OR on screens larger than mobile (md) */}
+        <main
+          className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex flex-1 bg-white rounded-[32px] shadow-sm flex-col overflow-hidden`}
+        >
+          <header className="px-4 lg:px-8 py-5 border-b border-slate-50 flex justify-between items-center bg-white">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileView("list")}
+                className="md:hidden p-1 text-slate-400"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <img
+                src={activeUser.avatar}
+                className="w-10 h-10 rounded-full"
+                alt=""
+              />
+              <div>
+                <p className="font-bold text-slate-800 text-sm lg:text-base">
+                  {activeUser.name}
+                </p>
+                <p className="text-[11px] text-green-500 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />{" "}
+                  Online
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4 lg:gap-6 text-slate-400 items-center">
+              <Phone className="w-5 h-5 cursor-pointer hover:text-[#4B164C]" />
+              <VideoIcon className="w-5 h-5 cursor-pointer hover:text-[#4B164C]" />
+              <MoreHorizontal className="w-5 h-5 cursor-pointer" />
+            </div>
+          </header>
+
+          {/* Chat Feed */}
+          <div className="flex-1 p-4 lg:p-8 overflow-y-auto space-y-6 bg-[#FBFCFE]">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-3 max-w-[85%] lg:max-w-[75%] ${msg.sender === "me" ? "ml-auto flex-row-reverse" : ""}`}
+              >
+                {msg.sender === "other" && (
+                  <img
+                    src={activeUser.avatar}
+                    className="w-8 h-8 rounded-full self-end mb-1"
+                    alt=""
+                  />
+                )}
+                <div
+                  className={`flex flex-col ${msg.sender === "me" ? "items-end" : ""}`}
+                >
+                  <p className="text-[10px] text-slate-400 mb-1 px-2">
+                    {msg.sender === "me"
+                      ? "You"
+                      : activeUser.name.split(" ")[0]}{" "}
+                    • {msg.time}
+                  </p>
+                  <div
+                    className={`p-4 rounded-[24px] text-sm shadow-sm ${
+                      msg.sender === "me"
+                        ? "bg-[#4B164C] text-white rounded-tr-none shadow-purple-100"
+                        : "bg-white border border-slate-100 text-slate-600 rounded-tl-none"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Form Input */}
+          <footer className="p-4 lg:p-6">
+            <form
+              onSubmit={handleSendMessage}
+              className="flex items-center gap-3 bg-slate-50 border border-slate-100 p-2 pl-4 rounded-[24px] focus-within:bg-white focus-within:border-purple-200 transition-all"
+            >
+              <Smile className="hidden sm:block w-5 h-5 text-slate-400 cursor-pointer" />
+              <input
+                className="flex-1 bg-transparent text-sm focus:outline-none"
+                placeholder="Type message..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+              />
+              <div className="flex items-center gap-2 pr-1">
+                <Paperclip className="w-5 h-5 text-slate-400 cursor-pointer rotate-45" />
+                <button
+                  type="submit"
+                  className="bg-[#4B164C] p-3 rounded-full text-white shadow-lg hover:scale-105 active:scale-95 transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </footer>
+        </main>
+
+        {/* --- 4. RIGHT PROFILE PANEL --- 
+          Hidden on mobile and tablets. Only shows on large screens (xl and up) */}
+        <aside className="hidden xl:flex w-72 lg:w-70 bg-white rounded-[32px] p-8 shadow-sm flex-col items-center shrink-0">
+          <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-full border-[6px] border-[#F3F4F6] overflow-hidden mb-4 shadow-inner">
+            <img
+              src={activeUser.avatar}
+              className="w-full h-full object-cover"
+              alt="Profile"
+            />
+          </div>
+
+          <div className="text-center w-full">
+            <h3 className="text-xl font-bold text-slate-800">
+              {activeUser.name}
+            </h3>
+            <p className="text-sm text-slate-400">{activeUser.role}</p>
+            <div className="flex items-center justify-center gap-1 text-[11px] text-red-400 mt-2 font-semibold">
+              <MapPin className="w-3 h-3" /> {activeUser.loc}
+            </div>
+            {/* <div className="flex justify-center gap-3 mt-6">
+              {["B", "W", "f"].map((icon, i) => (
+                <div
+                  key={i}
+                  className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 cursor-pointer hover:bg-[#4B164C] hover:text-white transition-all font-bold text-xs"
+                >
+                  {icon}
+                </div>
+              ))}
+            </div> */}
+          </div>
+
+          <div className="w-full mt-8 space-y-4 pt-8 border-t border-slate-100 text-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-400">E-mail:</span>
+              <span className="font-bold truncate ml-2">
+                {activeUser.email}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">DOB:</span>
+              <span className="font-bold">01/01/2000</span>
+            </div>
+          </div>
+
+          {/* <div className="w-full mt-auto pt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="font-bold text-slate-800 text-sm">Media (24)</h4>
+            <button className="text-[10px] text-slate-400 uppercase font-bold hover:text-[#4B164C]">
+              See all
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <img
+              src="https://picsum.photos/seed/a1/200"
+              className="aspect-square rounded-2xl object-cover"
+              alt=""
+            />
+            <img
+              src="https://picsum.photos/seed/a2/200"
+              className="aspect-square rounded-2xl object-cover"
+              alt=""
+            />
+          </div>
+        </div> */}
+        </aside>
       </div>
-      </div>
-    </div>
+    </>
   );
 }

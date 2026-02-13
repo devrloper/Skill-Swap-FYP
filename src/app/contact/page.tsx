@@ -1,9 +1,11 @@
 "use client"; // Required for Framer Motion in Next.js App Router
 
-import React from "react";
+import React,{useState,useEffect} from "react";
 import { motion } from "framer-motion";
 import NavBar from "@/app/components/innernavbar/page";
 import Footer from "@/app/components/footer/page";
+import ChipLoader from "@/app/components/loader/page";
+import {  AnimatePresence } from "framer-motion";
 import {
   Mail,
   Phone,
@@ -30,9 +32,35 @@ const staggerContainer = {
   },
 };
 
+
+
+
 const Contact = () => {
+
+ const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
   return (
-    <div className="flex flex-col min-h-screen font-sans overflow-x-hidden">
+    <>
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          >
+            <div className="w-full max-w-md">
+              <ChipLoader />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>{" "}    <div className="flex flex-col min-h-screen font-sans overflow-x-hidden">
       <NavBar />
 
       {/* Hero Section */}
@@ -53,7 +81,7 @@ const Contact = () => {
         >
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Contact us</h1>
           <p className="text-lg max-w-lg mx-auto opacity-90">
-            Kassapay is ready to provide the right solution according to your
+            Skill Swap is ready to provide the right solution according to your
             needs.
           </p>
         </motion.div>
@@ -157,35 +185,35 @@ const Contact = () => {
                   <input
                     type="text"
                     placeholder="Name"
-                    className="w-full p-4 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    className="w-full p-4 bg-gray-100 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition"
                   />
                   <input
                     type="text"
                     placeholder="Company"
-                    className="w-full p-4 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    className="w-full p-4 bg-gray-100 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <input
                     type="text"
                     placeholder="Phone"
-                    className="w-full p-4 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    className="w-full p-4 bg-gray-100 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition"
                   />
                   <input
                     type="email"
                     placeholder="Email"
-                    className="w-full p-4 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    className="w-full p-4 bg-gray-100 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition"
                   />
                 </div>
                 <input
                   type="text"
                   placeholder="Subject"
-                  className="w-full p-4 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  className="w-full p-4 bg-gray-100 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition"
                 />
                 <textarea
                   placeholder="Message"
                   rows="4"
-                  className="w-full p-4 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  className="w-full p-4 bg-gray-100 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition"
                 ></textarea>
 
                 <motion.button
@@ -224,6 +252,7 @@ const Contact = () => {
 
       <Footer />
     </div>
+    </>
   );
 };
 

@@ -1,172 +1,395 @@
 "use client";
 
-import React from "react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
-import { Home, Brain, Users, MessageCircle, Calendar, Settings, Bell, Search } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  LayoutDashboard,
+  CalendarCheck,
+  Users,
+  BarChart3,
+  ClipboardCheck,
+  Settings,
+  Search,
+  Bell,
+  LogOut,
+  ChevronDown,
+} from "lucide-react";
+import ChipLoader from "@/app/components/loader/page";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/app/components/innernavbar/page";
 
-const userChartData = [
-  { week: "Week 1", sessions: 2, matches: 1 },
-  { week: "Week 2", sessions: 3, matches: 2 },
-  { week: "Week 3", sessions: 1, matches: 1 },
-  { week: "Week 4", sessions: 4, matches: 3 },
+// Mock data (Function ke bahar reh sakta hai)
+const activityData = [
+  { day: "Sun", animation: 20, illustration: 40, uiux: 30 },
+  { day: "Mon", animation: 18, illustration: 35, uiux: 50 },
+  { day: "Tue", animation: 90, illustration: 25, uiux: 45 },
+  { day: "Wed", animation: 85, illustration: 70, uiux: 60 },
+  { day: "Thu", animation: 25, illustration: 75, uiux: 35 },
+  { day: "Fri", animation: 15, illustration: 80, uiux: 40 },
+  { day: "Sat", animation: 10, illustration: 78, uiux: 38 },
 ];
 
-export default function UserDashboard() {
+const genderData = [
+  { name: "Men", value: 22, color: "#00C2FF" },
+  { name: "Woman", value: 10, color: "#FF85B8" },
+];
+
+export default function EmployeeDashboard() {
+  // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="min-h-screen flex bg-gradient-to-r from-purple-950 to-pink-950 text-white">
-      <Navbar />
-
-      {/* SIDEBAR */}
-      <aside className="hidden lg:flex w-72 flex-col p-6 border-r border-white/10">
-        <h1 className="text-2xl font-bold mb-10 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-          SkillSwap
-        </h1>
-
-        <nav className="space-y-3">
-          {[
-            { name: "Dashboard", icon: Home },
-            { name: "My Skills", icon: Users },
-            { name: "My AI Interviews", icon: Brain },
-            { name: "Messages", icon: MessageCircle },
-            { name: "My Schedule", icon: Calendar },
-            { name: "Settings", icon: Settings },
-          ].map((item) => (
-            <div
-              key={item.name}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 cursor-pointer transition"
-            >
-              <item.icon size={20} />
-              <span>{item.name}</span>
+    <>
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          >
+            <div className="w-full max-w-md">
+              <ChipLoader />
             </div>
-          ))}
-        </nav>
-      </aside>
-
-      {/* MAIN CONTENT */}
-      <main className="flex-1 p-6 lg:p-8 mt-18">
-        {/* TOP BAR */}
-        <div className="flex flex-wrap gap-4 items-center justify-between mb-8">
-          <h2 className="text-2xl font-semibold">Welcome back, Arooba 👋</h2>
-
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center bg-white/10 rounded-full px-4 py-2">
-              <Search size={16} />
-              <input
-                placeholder="Search skills or users..."
-                className="bg-transparent outline-none px-2 text-sm"
-              />
-            </div>
-
-           
-          </div>
-        </div>
-
-        {/* PERSONAL STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {[
-            { title: "My Matches", value: "12", color: "from-purple-400 to-purple-600" },
-            { title: "Sessions Completed", value: "8", color: "from-green-400 to-green-600" },
-            { title: "AI Interviews Taken", value: "5", color: "from-pink-400 to-pink-600" },
-            { title: "Pending Requests", value: "2", color: "from-yellow-400 to-yellow-600" },
-          ].map((item) => (
-            <div
-              key={item.title}
-              className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-lg hover:scale-[1.02] transition"
-            >
-              <h4 className="text-gray-300">{item.title}</h4>
-              <p className={`text-3xl font-bold bg-gradient-to-r ${item.color} bg-clip-text text-transparent`}>
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* CHART */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white/10 backdrop-blur-xl rounded-2xl p-6">
-            <h3 className="mb-4 text-lg font-semibold">My Sessions & Matches</h3>
-
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={userChartData}>
-                <XAxis dataKey="week" stroke="#aaa" />
-                <YAxis stroke="#aaa" />
-                <Tooltip />
-                <Bar dataKey="sessions" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="matches" fill="#a855f7" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* MY TOP SKILLS */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6">
-            <h3 className="mb-4 text-lg font-semibold">My Top Skills</h3>
-            {[
-              ["React.js", "5 matches"],
-              ["UI / UX Design", "3 matches"],
-              ["Python", "2 matches"],
-            ].map((skill) => (
-              <div
-                key={skill[0]}
-                className="flex justify-between py-3 border-b border-white/10 last:border-none"
-              >
-                <span>{skill[0]}</span>
-                <span className="text-purple-400">{skill[1]}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>{" "}
+      <div className="min-h-screen bg-gradient-to-br from-[#fbc2eb] to-purple-600 p-6 font-sans text-slate-700">
+        <Navbar />
+        <div className="max-w-[1400px] mx-auto bg-white/30 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/40 overflow-hidden flex flex-col md:flex-row min-h-[850px]  mt-14">
+          {/* --- SIDEBAR --- */}
+          <aside className="w-full md:w-64 bg-white/20 backdrop-blur-lg border-r border-white/20 p-8 flex flex-col">
+            <div className="flex flex-col items-center mb-10">
+              <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center mb-2 shadow-inner">
+                <Users className="text-indigo-600" size={24} />
               </div>
-            ))}
-          </div>
-        </div>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-indigo-900/60">
+                Skill Swap
+              </h2>
+            </div>
 
-        {/* RECENT ACTIVITIES & MESSAGES */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* MY RECENT MATCHES */}
-          <div className="lg:col-span-2 bg-white/10 backdrop-blur-xl rounded-2xl p-6">
-            <h3 className="mb-4 text-lg font-semibold">My Recent Matches</h3>
-            <table className="w-full text-sm">
-              <thead className="text-gray-400">
-                <tr>
-                  <th className="text-left py-2">Teacher / Learner</th>
-                  <th>Skill</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ["Ali Khan", "React.js", "Completed"],
-                  ["John Doe", "UI Design", "Pending"],
-                  ["Emma Smith", "Python", "Completed"],
-                ].map((row, i) => (
-                  <tr key={i} className="border-t border-white/10">
-                    <td className="py-3">{row[0]}</td>
-                    <td className="text-purple-400">{row[1]}</td>
-                    <td>{row[2]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            <nav className="space-y-2 flex-1">
+              {[
+                { name: "Dashboard", icon: LayoutDashboard, active: true },
+                { name: "Attendance", icon: CalendarCheck },
+                { name: "Employees", icon: Users },
+                { name: "Analytics", icon: BarChart3 },
+                { name: "Report Attendance", icon: ClipboardCheck },
+                { name: "Settings", icon: Settings },
+              ].map((item) => (
+                <div
+                  key={item.name}
+                  className={`flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all ${
+                    item.active
+                      ? "bg-gradient-to-r from-blue-100/50 to-purple-100/50 shadow-sm border border-white/50 text-indigo-700"
+                      : "text-slate-500 hover:bg-white/20"
+                  }`}
+                >
+                  <item.icon
+                    size={20}
+                    className={item.active ? "text-indigo-600" : ""}
+                  />
+                  <span className="text-sm font-semibold">{item.name}</span>
+                </div>
+              ))}
+            </nav>
+          </aside>
 
-          {/* MESSAGES */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6">
-            <h3 className="mb-4 text-lg font-semibold">Recent Chats</h3>
-            {["Ali", "Emma", "David"].map((name) => (
-              <div
-                key={name}
-                className="flex gap-3 py-3 border-b border-white/10 last:border-none"
-              >
-                <img
-                  src={`https://i.pravatar.cc/100?u=${name}`}
-                  className="w-10 h-10 rounded-full"
+          {/* --- MAIN CONTENT --- */}
+          <main className="flex-1 p-8 overflow-y-auto">
+            {/* TOP BAR */}
+            <header className="flex items-center justify-between mb-8">
+              <div className="relative w-1/2">
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
                 />
-                <div>
-                  <p className="font-medium">{name}</p>
-                  <p className="text-sm text-gray-400">New skill request message</p>
+                <input
+                  placeholder="search employee"
+                  className="w-full bg-white/40 border border-white/60 rounded-full py-2.5 pl-12 pr-4 outline-none focus:ring-2 ring-purple-200 transition-all text-sm placeholder:text-slate-400"
+                />
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 cursor-pointer">
+                  <img
+                    src="https://i.pravatar.cc/150?u=admin"
+                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+                    alt="Admin"
+                  />
+                  <span className="text-sm font-bold text-slate-600">
+                    Notification
+                  </span>
+                  <Bell size={18} className="text-blue-500" />
+                </div>
+                <button className="flex items-center gap-2 text-slate-600 font-bold text-sm hover:text-red-500 transition-colors">
+                  Logout <LogOut size={18} />
+                </button>
+              </div>
+            </header>
+
+            <h1 className="text-3xl font-bold text-slate-800 mb-8">
+              Welcome Admin!
+            </h1>
+
+            {/* TOP GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              {/* Total Employees (Donut) */}
+              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-slate-700">Total Employees</h3>
+                  <span className="text-2xl font-black text-slate-800">32</span>
+                </div>
+                <div className="h-40 flex items-center justify-center relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={genderData}
+                        innerRadius={45}
+                        outerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {genderData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center">
+                    <div className="flex gap-4 text-[10px] font-bold">
+                      <span className="text-blue-400">● Men</span>
+                      <span className="text-pink-400">● Woman</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Top Skills */}
+              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                <h3 className="font-bold text-slate-700 mb-4">Top Skills</h3>
+                <div className="space-y-4">
+                  {[
+                    {
+                      label: "UI/UX Design",
+                      val: "90%",
+                      color: "bg-orange-400",
+                    },
+                    {
+                      label: "Illustration",
+                      val: "85%",
+                      color: "bg-purple-400",
+                    },
+                    { label: "Animation", val: "78%", color: "bg-blue-400" },
+                  ].map((skill) => (
+                    <div key={skill.label} className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-full border-4 border-white flex items-center justify-center text-[10px] font-bold text-slate-600 shadow-sm`}
+                      >
+                        {skill.val}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-700">
+                          {skill.label}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          100+ projects
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stats Summary (Attendance/Late/Absent) */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Attendance", val: 30 },
+                    { label: "Late", val: 3 },
+                    { label: "Absent", val: 2 },
+                  ].map((s) => (
+                    <div
+                      key={s.label}
+                      className="bg-white/50 rounded-2xl p-3 text-center border border-white/40"
+                    >
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">
+                        {s.label}
+                      </p>
+                      <p className="text-lg font-black text-slate-800">
+                        {s.val}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {/* Birthday Card */}
+                <div className="bg-gradient-to-br from-slate-100/80 to-slate-200/80 rounded-[30px] p-4 flex items-center gap-4 relative overflow-hidden border border-white">
+                  <img
+                    src="https://i.pravatar.cc/150?u=terry"
+                    className="w-12 h-12 rounded-full border-2 border-white"
+                    alt="Terry"
+                  />
+                  <div>
+                    <h4 className="font-bold text-sm">Terry Calzoni</h4>
+                    <p className="text-[10px] text-slate-500">
+                      Has birthday today
+                    </p>
+                    <button className="mt-2 bg-white px-4 py-1 rounded-full text-[10px] font-bold shadow-sm hover:shadow-md transition-all">
+                      Wish Him
+                    </button>
+                  </div>
+                  <div className="absolute right-2 top-2 opacity-20">🎈</div>
+                </div>
+              </div>
+            </div>
+
+            {/* BOTTOM GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Weekly Activity Line Chart */}
+              <div className="lg:col-span-2 bg-white/40 border border-white/60 rounded-[30px] p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold text-slate-700">Weekly Activity</h3>
+                  <button className="text-[10px] bg-white/60 px-3 py-1.5 rounded-lg border border-white/40 font-bold flex items-center gap-2">
+                    December, 14 - 18th <ChevronDown size={14} />
+                  </button>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={activityData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#ffffff"
+                      />
+                      <XAxis
+                        dataKey="day"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fontWeight: "bold" }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fontWeight: "bold" }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: "15px",
+                          border: "none",
+                          boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="animation"
+                        stroke="#00C2FF"
+                        strokeWidth={3}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="illustration"
+                        stroke="#FF85B8"
+                        strokeWidth={3}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="uiux"
+                        stroke="#FFB347"
+                        strokeWidth={3}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-center gap-6 mt-4">
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                    <span className="w-3 h-3 rounded-full bg-blue-400"></span>{" "}
+                    Animation
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                    <span className="w-3 h-3 rounded-full bg-pink-400"></span>{" "}
+                    Illustration
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                    <span className="w-3 h-3 rounded-full bg-orange-400"></span>{" "}
+                    UI/UX Design
+                  </div>
+                </div>
+              </div>
+
+              {/* Holiday / Calendar */}
+              <div className="space-y-6">
+                <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                  <h3 className="font-bold text-sm mb-4">
+                    Employees on holiday
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-orange-100" />
+                        <span className="text-xs font-bold">Unhealthy</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-red-400">
+                        Only today
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-100" />
+                        <span className="text-xs font-bold">On holiday</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-red-400">
+                        21st to 22nd
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mini Calendar mockup */}
+                <div className="bg-white/60 rounded-[30px] p-4 border border-white shadow-sm text-center">
+                  <p className="text-[10px] font-bold text-slate-400 mb-2">
+                    December
+                  </p>
+                  <div className="grid grid-cols-7 gap-1 text-[9px] font-bold">
+                    {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((d) => (
+                      <span key={d} className="text-slate-400">
+                        {d}
+                      </span>
+                    ))}
+                    {Array.from({ length: 31 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`p-1 ${i + 1 === 21 ? "bg-blue-400 text-white rounded-full" : ""}`}
+                      >
+                        {i + 1}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }

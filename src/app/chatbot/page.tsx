@@ -2,11 +2,22 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import NavBar from "@/app/components/innernavbar/page";
-import Footer from "@/app/components/footer/page";
-import  Button  from "@/app/ui/button";
-import { Send, X ,Mic, MicOff,Trash2, Pencil} from "lucide-react";
+import Button from "@/app/ui/button";
+import {
+  Send,
+  Mic,
+  MicOff,
+  Trash2,
+  Pencil,
+  Plus,
+  Search,
+  Menu,
+  Bot,
+  User,
+} from "lucide-react";
 import { ChatMessage } from "@/app/lib/types";
-
+import { motion, AnimatePresence } from "framer-motion";
+import ChipLoader from "@/app/components/loader/page";
 
 type Chat = {
   id: string;
@@ -20,42 +31,45 @@ export default function ChatbotPage() {
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [search, setSearch] = useState("");
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
   const messages = activeChat?.messages || [];
+
   const skillSwapQuestions = [
-    "What is SkillSwap and how does it work?",
-    "How can I exchange skills on SkillSwap?",
-    "How does AI matching work in SkillSwap?",
-    "Is SkillSwap free for beginners?",
+    "What is SkillSwap?",
+    "How to exchange skills?",
+    "AI Matching work?",
+    "Is it free?",
   ];
 
-  /* CHAT AREA AUTO SCROLL ONLY */
   useEffect(() => {
-    const el = chatContainerRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages, isTyping]);
 
-  /* ✅ START NEW CHAT */
   const startNewChat = () => {
     const id = Date.now().toString();
     setChats((prev) => [
       {
         id,
-        title: "New Chat",
+        title: "New Conversation",
         messages: [
           {
             id: "welcome",
             role: "assistant",
-            content: "Hi! I'm your SkillSwap AI assistant.",
+            content: "Hi! I'm your SkillSwap AI assistant. How can I help you today?",
             timestamp: Date.now(),
           },
         ],
@@ -63,38 +77,31 @@ export default function ChatbotPage() {
       ...prev,
     ]);
     setActiveChatId(id);
-    setShowSidebar(false);
+    if (window.innerWidth < 768) setShowSidebar(false);
   };
 
   useEffect(() => {
     if (chats.length === 0) startNewChat();
-    // eslint-disable-next-line
   }, []);
 
-  /* ✅ SEND MESSAGE */
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !activeChatId) return;
+  const handleSendMessage = async (text?: string) => {
+    const content = text || inputMessage;
+    if (!content.trim() || !activeChatId) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
-      content: inputMessage,
+      content: content,
       timestamp: Date.now(),
     };
 
     setChats((prev) =>
       prev.map((chat) => {
         if (chat.id !== activeChatId) return chat;
-
-        const isFirstUserMessage =
-          chat.messages.filter((m) => m.role === "user").length === 0;
-
+        const isFirst = chat.messages.filter((m) => m.role === "user").length === 0;
         return {
           ...chat,
-          title:
-            isFirstUserMessage && chat.title === "New Chat"
-              ? generateChatTitle(userMessage.content)
-              : chat.title,
+          title: isFirst && chat.title === "New Conversation" ? content.slice(0, 30) : chat.title,
           messages: [...chat.messages, userMessage],
         };
       })
@@ -107,11 +114,9 @@ export default function ChatbotPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMessage.content }),
+        body: JSON.stringify({ prompt: content }),
       });
-
       const data = await res.json();
-
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === activeChatId
@@ -120,7 +125,7 @@ export default function ChatbotPage() {
                 messages: [
                   ...chat.messages,
                   {
-                    id: Date.now().toString(),
+                    id: (Date.now() + 1).toString(),
                     role: "assistant",
                     content: data.text,
                     timestamp: Date.now(),
@@ -131,287 +136,297 @@ export default function ChatbotPage() {
         )
       );
     } catch (err) {
-      console.error("Error sending message:", err);
-    }
-
-    setIsTyping(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+      console.error(err);
+    } finally {
+      setIsTyping(false);
     }
   };
 
-  /* ✅ VOICE RECORDING */
   const handleVoiceInput = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert("Speech Recognition not supported in this browser.");
-      return;
-    }
-
+    const Speech = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Speech) return alert("Not supported");
     if (isRecording) {
-      // Stop recording
       recognitionRef.current.stop();
       setIsRecording(false);
       return;
     }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => setIsRecording(true);
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setInputMessage(transcript);
-      handleSendMessage(); // automatically send after recording
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => setIsRecording(false);
-
-    recognition.start();
-    recognitionRef.current = recognition;
-  };
-  const generateChatTitle = (text: string) => {
-    return text.split(" ").slice(0, 4).join(" ") + "...";
-  };
-  const deleteChat = (id: string) => {
-    setChats((prev) => prev.filter((chat) => chat.id !== id));
-    if (activeChatId === id) {
-      setActiveChatId(null);
-    }
-  };
-  const editChatTitle = (id: string) => {
-    const newTitle = prompt("Edit chat title");
-    if (!newTitle) return;
-
-    setChats((prev) =>
-      prev.map((chat) => (chat.id === id ? { ...chat, title: newTitle } : chat))
-    );
-  };
-  const openEditModal = (chat: Chat) => {
-    setEditingChatId(chat.id);
-    setEditTitle(chat.title);
-    setIsEditModalOpen(true);
+    const rec = new Speech();
+    rec.onstart = () => setIsRecording(true);
+    rec.onresult = (e: any) => setInputMessage(e.results[0][0].transcript);
+    rec.onend = () => setIsRecording(false);
+    rec.start();
+    recognitionRef.current = rec;
   };
 
-  const saveEditedTitle = () => {
-    if (!editTitle.trim() || !editingChatId) return;
+ const [isLoading, setIsLoading] = useState(true);
 
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === editingChatId ? { ...chat, title: editTitle.trim() } : chat
-      )
-    );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
-    setIsEditModalOpen(false);
-  };
   return (
-    <div className="min-h-screen  flex flex-col bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-300">
+    <>
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          >
+            <div className="w-full max-w-md">
+              <ChipLoader />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>{" "}    <div className="flex flex-col h-screen bg-[#f3f4f6] overflow-hidden text-slate-900">
       <NavBar />
 
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 mt-16">
-        <div className="h-[85vh] flex rounded-3xl overflow-hidden bg-white/40 backdrop-blur-2xl shadow-2xl relative">
-          {/*  OVERLAY (CLICK TO CLOSE) */}
-          {showSidebar && (
-            <div
-              onClick={() => setShowSidebar(false)}
-              className="fixed inset-0 bg-black/40 z-30 md:hidden"
-            />
-          )}
+      <div className="flex flex-1 pt-16 overflow-hidden relative">
+        {/* SIDEBAR - Light Cool Grey */}
+        <aside
+          className={`
+          fixed md:relative inset-y-0 left-0 z-50 w-72 bg-gradient-to-br from-[#fbc2eb] to-purple-600  flex flex-col transition-transform duration-300 ease-in-out border-r border-slate-200
+          ${showSidebar ? "translate-x-0" : "-translate-x-full md:-ml-72"}
+        `}
+        >
+          <div className="p-4 flex flex-col h-full pt-20 md:pt-4">
+            <button
+              onClick={startNewChat}
+              className="w-full py-3 mb-6 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl flex items-center justify-center gap-2 font-semibold shadow-md active:scale-95 transition-all"
+            >
+              <Plus size={18} /> New Chat
+            </button>
 
-          {/* SIDEBAR */}
-          <div className="w-72 p-5 bg-gradient-to-r from-purple-950 to-pink-950 text-white flex flex-col">
-            <Button onClick={startNewChat} className="mb-4 bg-white/30">
-              + New Chat
-            </Button>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search chats..."
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 ring-purple-100 text-sm transition-all"
+              />
+            </div>
 
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search chats..."
-              className="mb-4 px-3 py-2 rounded bg-white/20"
-            />
-
-            <div className="flex-1 space-y-2 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
               {chats
-                .filter((c) =>
-                  c.title.toLowerCase().includes(search.toLowerCase())
-                )
+                .filter((c) => c.title.toLowerCase().includes(search.toLowerCase()))
                 .map((chat) => (
                   <div
                     key={chat.id}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer ${
-                      chat.id === activeChatId
-                        ? "bg-white/40"
-                        : "hover:bg-white/20"
-                    }`}
                     onClick={() => setActiveChatId(chat.id)}
+                    className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
+                      chat.id === activeChatId
+                        ? "bg-purple-100 border border-purple-200 text-purple-800"
+                        : "hover:bg-slate-200/50 text-slate-600"
+                    }`}
                   >
-                    <span className="truncate">{chat.title}</span>
-
-                    <div className="flex gap-2">
+                    <span className="truncate text-sm font-medium pr-2">{chat.title}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Pencil
-                        size={16}
+                        size={14}
                         onClick={(e) => {
                           e.stopPropagation();
-                          openEditModal(chat);
+                          setEditingChatId(chat.id);
+                          setEditTitle(chat.title);
+                          setIsEditModalOpen(true);
                         }}
-                        className="hover:text-purple-300"
+                        className="hover:text-purple-600 p-0.5"
                       />
                       <Trash2
-                        size={16}
+                        size={14}
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteChat(chat.id);
+                          setChats((prev) => prev.filter((x) => x.id !== chat.id));
                         }}
-                        className="hover:text-red-400"
+                        className="hover:text-red-500 p-0.5"
                       />
                     </div>
                   </div>
                 ))}
             </div>
           </div>
+        </aside>
 
-          {/*  CHAT AREA */}
-          <div className="flex-1 flex flex-col w-full">
-            {/* MOBILE HEADER */}
-            <div className="md:hidden p-3 bg-white/60 border-b flex items-center">
-              <button onClick={() => setShowSidebar(true)}>☰</button>
-              <h2 className="ml-3 font-semibold">SkillSwap AI</h2>
+        {/* MAIN CHAT - Soft Background */}
+        <main className="flex-1 flex flex-col bg-[#f3f4f6] relative min-w-0">
+          <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 z-10">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+              >
+                <Menu size={20} />
+              </button>
+              <div className="min-w-0">
+                <h2 className="font-bold text-slate-800 text-sm truncate max-w-[150px] md:max-w-[300px]">
+                  {activeChat?.title || "New Chat"}
+                </h2>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">AI Active</span>
+                </div>
+              </div>
             </div>
+            <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-inner">
+              <Bot size={18} />
+            </div>
+          </header>
 
-            {/* MESSAGES */}
-            <div
-              ref={chatContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4"
-            >
+          {/* Messages Area */}
+          <div
+            ref={chatContainerRef}
+            className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed"
+          >
+            <div className="max-w-3xl mx-auto w-full">
               {messages.length === 1 && (
-                <div className="h-full flex items-center justify-center text-center">
-                  <div>
-                    <h1 className="text-3xl font-bold mb-2">
-                      Welcome to SkillSwap AI
-                    </h1>
-                    <p className="text-gray-700">
-                      Ask anything and get instant help
-                    </p>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="py-16 text-center"
+                >
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 mx-auto mb-4 text-purple-600">
+                    <Bot size={32} />
+                  </div>
+                  <h1 className="text-3xl font-bold text-slate-900 mb-2">SkillSwap AI</h1>
+                  <p className="text-slate-500 text-sm">Ask me anything about swapping skills or your account.</p>
+                </motion.div>
+              )}
+
+              <AnimatePresence mode="popLayout">
+                {messages.map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className={`flex gap-3 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+                      <div className={`mt-1 shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-sm ${
+                        msg.role === "user" ? "bg-purple-600 text-white" : "bg-white border border-slate-200 text-slate-600"
+                      }`}>
+                        {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
+                      </div>
+                      <div className={`px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed shadow-sm ${
+                        msg.role === "user" 
+                          ? "bg-purple-600 text-white rounded-tr-none" 
+                          : "bg-purple-50 border border-purple-100 text-slate-800 rounded-tl-none"
+                      }`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {isTyping && (
+                <div className="flex gap-3 animate-pulse">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400">
+                    <Bot size={16} />
+                  </div>
+                  <div className="bg-purple-50 border border-purple-100 px-4 py-3 rounded-2xl flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce" />
+                    <span className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce [animation-delay:0.4s]" />
                   </div>
                 </div>
               )}
-
-              {messages.length > 1 &&
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div className="max-w-[85%] px-4 py-3 rounded-2xl bg-white shadow">
-                      {msg.content}
-                    </div>
-                  </div>
-                ))}
             </div>
-            {/* SUGGESTED QUESTIONS (TEXT ONLY) */}
-            {messages.length === 1 && (
-              <div className="px-4 pb-3">
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
-                  Suggested questions
-                </p>
+          </div>
 
-                <div className="flex flex-wrap gap-2">
+          <footer className="p-4 md:p-6 bg-white/70 backdrop-blur-md border-t border-slate-200 shrink-0">
+            <div className="max-w-3xl mx-auto w-full">
+              {messages.length === 1 && (
+                <div className="flex flex-wrap gap-2 mb-4 justify-center">
                   {skillSwapQuestions.map((q, i) => (
                     <button
                       key={i}
-                      onClick={() => setInputMessage(q)}
-                      className=" px-3 py-1.5 text-sm rounded-full bg-white/70 border border-gray-200 text-gray-800 hover:bg-purple-50hover:border-purple-300 hover:text-purple-700 transition"
+                      onClick={() => handleSendMessage(q)}
+                      className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-slate-200 text-slate-500 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all bg-white shadow-sm"
                     >
                       {q}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/*  INPUT (WITH VOICE RECORDING) */}
-            <div className="p-3 bg-white/70">
-              <div className="flex items-center gap-2">
-                <input
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your message or use voice..."
-                  className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white focus:outline-none"
-                />
-
-                <Button
+              <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 focus-within:ring-2 ring-purple-200 transition-all shadow-md">
+                <button
                   onClick={handleVoiceInput}
-                  className={`px-4 shrink-0 ${
-                    isRecording
-                      ? "bg-red-500 text-white hover:bg-red-600"
-                      : "bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600"
-                  }`}
+                  className={`p-2.5 rounded-xl transition-all ${isRecording ? "bg-red-500 text-white animate-pulse shadow-md" : "text-slate-400 hover:bg-slate-100"}`}
                 >
-                  {isRecording ? (
-                    <MicOff className="w-5 h-5" />
-                  ) : (
-                    <Mic className="w-5 h-5" />
-                  )}
-                </Button>
-                <Button
-                  onClick={handleSendMessage}
-                  
+                  {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                </button>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search chats..."
+                className="w-full pl-9 pr-4 py-2 bg-white border border-pink-100 rounded-lg outline-none focus:outline-none focus:ring-2 focus:ring-purple-100 text-sm transition-all"
+              />
+                <button
+                  onClick={() => handleSendMessage()}
+                  disabled={!inputMessage.trim()}
+                  className="p-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all disabled:opacity-30 active:scale-90"
                 >
-                  <Send />
-                </Button>
+                  <Send size={20} />
+                </button>
               </div>
             </div>
-          </div>
-        </div>
+          </footer>
+        </main>
       </div>
-      {/* 🔹 EDIT TITLE MODAL */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setIsEditModalOpen(false)}
-          />
-          <div className="bg-white rounded-2xl p-6 w-[90%] max-w-md z-10">
-            <div className="flex justify-between mb-4">
-              <h2 className="font-semibold">Edit Chat Title</h2>
-              <X onClick={() => setIsEditModalOpen(false)} />
-            </div>
-            <input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full px-4 py-3 border rounded-xl"
+
+      {/* RENAME MODAL */}
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              onClick={() => setIsEditModalOpen(false)}
             />
-            <div className="flex justify-end gap-3 mt-4">
-              <button onClick={() => setIsEditModalOpen(false)}>Cancel</button>
-              <button
-                onClick={saveEditedTitle}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg"
-              >
-                Save
-              </button>
-            </div>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm z-10 shadow-2xl border border-slate-100"
+            >
+              <h2 className="text-xl font-bold text-slate-900 mb-2">Rename Chat</h2>
+              <input
+                autoFocus
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 ring-purple-100 outline-none mb-6 font-medium"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setChats((prev) =>
+                      prev.map((c) => (c.id === editingChatId ? { ...c, title: editTitle } : c))
+                    );
+                    setIsEditModalOpen(false);
+                  }}
+                  className="flex-1 py-2.5 font-bold bg-purple-600 text-white rounded-xl hover:bg-purple-700 text-sm shadow-md"
+                >
+                  Save
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
+    </>
   );
 }

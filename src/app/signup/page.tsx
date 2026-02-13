@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import {
   FaUser,
   FaRegEye,
@@ -12,7 +12,8 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { updateProfile } from "firebase/auth";
-
+import ChipLoader from "@/app/components/loader/page";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -26,6 +27,7 @@ export default function SignupPage() {
   const [message, setMessage] = useState(""); // success or error message
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +84,29 @@ export default function SignupPage() {
     }
   };
 
+    // 2. Simulate loading time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500); // 2.5 seconds - adjust as needed
+    return () => clearTimeout(timer);
+  }, []);
   return (
+    <>
+<AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          >
+            <div className="w-full max-w-md">
+               <ChipLoader />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     <div className="min-h-screen w-full relative flex items-center justify-center bg-[#F0F4F8] font-sans overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 z-0">
@@ -217,5 +241,6 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

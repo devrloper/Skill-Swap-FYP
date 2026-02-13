@@ -114,3 +114,14 @@ body {
         .animate-fade-in {
           animation: fade-in 0.5s ease-out;
         }
+
+                @keyframes flow {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        .trace-flow {
+          stroke-dasharray: 40 400;
+          stroke-dashoffset: 438;
+          animation: flow 3s cubic-bezier(0.5, 0, 0.9, 1) infinite;
+        }

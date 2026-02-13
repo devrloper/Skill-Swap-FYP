@@ -1,16 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import Navbar from "@/app/components/navbar/page";
 import Landing from "@/app/components/landing/page";
 import Image from "next/image";
 import Footer from "@/app/components/footer/page";
-import { motion } from "framer-motion";
-import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";import Link from "next/link";
 import About from "@/app/components/about/page";
 import { Sparkle } from "lucide-react";
-
+import ChipLoader from "@/app/components/loader/page";
 export default function Home() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
+
 
   const faqs = [
     {
@@ -29,7 +30,30 @@ export default function Home() {
         "Your data is protected with enterprise-level encryption and robust access controls ensuring complete privacy.",
     },
   ];
+
+    // 2. Simulate loading time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500); // 2.5 seconds - adjust as needed
+    return () => clearTimeout(timer);
+  }, []);
   return (
+    <>
+<AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          >
+            <div className="w-full max-w-md">
+               <ChipLoader />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     <div>
       <Navbar />
       <Landing />
@@ -232,5 +256,6 @@ export default function Home() {
       </section>
       <Footer />
     </div>
+    </>
   );
 }
