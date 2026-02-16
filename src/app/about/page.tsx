@@ -274,7 +274,7 @@ export default function AboutPage() {
                   }}
                   viewport={{ once: true }}
                   whileHover={{ y: -15 }}
-                  className="group relative bg-white/70 backdrop-blur-md p-8 rounded-[2.5rem] border border-white shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_30px_60px_rgba(236,72,153,0.15)] transition-all duration-500"
+                  className="group relative bg-white/70 backdrop-blur-md p-8 rounded-[2.5rem] border border-white shadow-[0_20px_50px_rgba(147,51,234,0.35)] hover:shadow-[0_30px_60px_rgba(168,85,247,0.45)] transition-all duration-500"
                 >
                   {/* Icon Box with Floating Animation */}
                   <motion.div

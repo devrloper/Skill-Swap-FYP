@@ -15,7 +15,7 @@ export default function MatchCard({
     <div
       className="
         bg-white/30 backdrop-blur-lg border border-white/30
-        rounded-xl shadow-lg p-4
+        rounded-3xl shadow-lg p-4
         h-auto lg:max-h-[220px]
         flex flex-col
         hover:shadow-2xl hover:scale-[1.02]
