@@ -5,7 +5,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const snap = await adminDb.collection("profiles").get();
+    const snap = await adminDb
+      .collection("profiles")
+      .where("interviewStatus", "==", "Pass")
+      .get();
 
     const profiles = snap.docs.map((doc) => ({
       id: doc.id,

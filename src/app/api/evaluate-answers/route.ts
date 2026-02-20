@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const result = total > 0 && correct / total >= 0.5 ? "Pass" : "Fail";
+    const result = total > 0 && correct / total > 0.5 ? "Pass" : "Fail";
 
     return NextResponse.json({ result, score, correct, total });
   } catch (error) {

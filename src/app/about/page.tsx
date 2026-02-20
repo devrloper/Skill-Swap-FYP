@@ -215,7 +215,7 @@ export default function AboutPage() {
                 <img
                   src="/homeimg.png"
                   alt="SkillSwap Hero"
-                  className="relative w-80 sm:w-96 md:w-[500px] lg:w-[1400px] object-contain z-10 right-14"
+                  className="relative w-80 sm:w-96 md:w-[500px] lg:w-[1400px] object-contain z-10 lg:right-40"
                 />
               </motion.div>
             </div>

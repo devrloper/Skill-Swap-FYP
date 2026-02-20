@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AIInterviewCard from "@/app/components/interviewcard/card";
+import { auth, db } from "@/app/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 interface AIInterviewProps {
   skills: string[];
@@ -21,6 +23,7 @@ interface QuestionItem {
 
 const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const router = useRouter();
+  const userId = auth.currentUser?.uid;
   const [started, setStarted] = useState(false);
   const [currentPartIndex, setCurrentPartIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -144,6 +147,18 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
       setScore(typeof data.score === "number" ? data.score : null);
       setCorrectCount(typeof data.correct === "number" ? data.correct : null);
       setTotalCount(typeof data.total === "number" ? data.total : null);
+
+      if (userId) {
+        await setDoc(
+          doc(db, "profiles", userId),
+          {
+            interviewStatus: data.result === "Pass" ? "Pass" : "Fail",
+            interviewScore: typeof data.score === "number" ? data.score : 0,
+          },
+          { merge: true },
+        );
+      }
+
       if (data.result === "Pass") {
         setTimeout(() => router.push("/matching"), 1200);
       }

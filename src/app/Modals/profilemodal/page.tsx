@@ -119,7 +119,7 @@ export default function ProfileStepModal({
                   <button
                     onClick={() => !isDisabled && setStep(index)}
                     disabled={isDisabled}
-                    className={`w-full px-4 md:px-6 py-2 rounded-md font-semibold shadow transition
+                    className={`w-full px-4 md:px-6 py-2 rounded-md font-semibold shadow transition md:min-h-[44px] flex items-center justify-center text-center
                       ${
                         current
                           ? "bg-gradient-to-r from-purple-700 to-pink-600 text-white"
@@ -147,13 +147,15 @@ export default function ProfileStepModal({
                 { img: "/ai.png", text: "AI Interview" },
               ].map((item) => (
                 <div key={item.text}>
-                  <Image
-                    src={item.img}
-                    alt={item.text}
-                    width={144}
-                    height={128}
-                    className="mx-auto object-cover"
-                  />
+                  <div className="h-[128px] flex items-center justify-center">
+                    <Image
+                      src={item.img}
+                      alt={item.text}
+                      width={190}
+                      height={128}
+                      className="mx-auto w-[190px] h-[128px] object-contain"
+                    />
+                  </div>
                   <p className="mt-4 font-medium text-gray-700">{item.text}</p>
                 </div>
               ))}
