@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/app/lib/firebaseAdmin";
 
@@ -39,19 +39,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, alreadyRequested: true });
     }
 
+    let fromUserName: string | undefined;
+    try {
+      const fromProfileSnap = await adminDb
+        .collection("profiles")
+        .doc(fromUserId)
+        .get();
+      if (fromProfileSnap.exists) {
+        const fromProfile = fromProfileSnap.data() || {};
+        fromUserName = (fromProfile.fullName ||
+          fromProfile.name ||
+          fromProfile.displayName) as string | undefined;
+      }
+    } catch {
+      // best effort only
+    }
+
+
     await connectRequestRef.set({
       fromUserId,
       toUserId,
       status: "pending",
       createdAt: FieldValue.serverTimestamp(),
+      fromUserName: fromUserName || null,
     });
 
     await adminDb.collection("notifications").add({
       userId: toUserId,
       type: "connect_request",
       title: "New connect request",
-      message: "Someone wants to connect with you.",
+      message: fromUserName
+        ? fromUserName + " sent you a connect request."
+        : "Someone sent you a connect request.",
       fromUserId,
+      fromUserName: fromUserName || null,
       connectRequestId,
       read: false,
       createdAt: FieldValue.serverTimestamp(),

@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/app/components/innernavbar/page";
 import { auth } from "@/app/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import Link from "next/link";
 
 type ConnectRequestItem = {
   id: string;
@@ -290,6 +291,14 @@ export default function EmployeeDashboard() {
                             </p>
                           </div>
                           <div className="flex gap-2">
+                            {r.fromUserId && (
+                              <Link
+                                href={`/profile/${r.fromUserId}`}
+                                className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-white/60"
+                              >
+                                View
+                              </Link>
+                            )}
                             <button
                               type="button"
                               onClick={() =>
@@ -358,6 +367,14 @@ export default function EmployeeDashboard() {
                             </span>
                           </p>
                         </div>
+                        {r.toUserId && (
+                          <Link
+                            href={`/profile/${r.toUserId}`}
+                            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-white/60"
+                          >
+                            View
+                          </Link>
+                        )}
                       </div>
                     ))}
 

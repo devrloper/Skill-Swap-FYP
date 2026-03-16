@@ -17,6 +17,7 @@ type NotificationItem = {
   title?: string;
   message?: string;
   fromUserId?: string;
+  fromUserName?: string | null;
   connectRequestId?: string;
   status?: string;
   read?: boolean;
@@ -81,7 +82,7 @@ export default function Navbar() {
     setNotifLoading(true);
     try {
       const res = await fetch(
-        `/api/notifications/combined-v2?userId=${userId}&limit=10`,
+        `/api/notifications/combined-v3?userId=${userId}&limit=10`,
         {
           cache: "no-store",
         },
@@ -275,10 +276,16 @@ export default function Navbar() {
                           </button>
 
                           {n.type === "connect_request" && n.fromUserId && (
-                            <div className="flex gap-2 mt-3">
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              <Link
+                                href={`/profile/${n.fromUserId}`}
+                                className="flex-1 min-w-[110px] text-center text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition"
+                              >
+                                View Profile
+                              </Link>
                               <button
                                 type="button"
-                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
+                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
                                 onClick={() =>
                                   respondToConnectRequest(
                                     n.fromUserId as string,
@@ -291,7 +298,7 @@ export default function Navbar() {
                               </button>
                               <button
                                 type="button"
-                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
+                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
                                 onClick={() =>
                                   respondToConnectRequest(
                                     n.fromUserId as string,
@@ -433,10 +440,16 @@ export default function Navbar() {
                           </button>
 
                           {n.type === "connect_request" && n.fromUserId && (
-                            <div className="flex gap-2 mt-3">
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              <Link
+                                href={`/profile/${n.fromUserId}`}
+                                className="flex-1 min-w-[110px] text-center text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition"
+                              >
+                                View Profile
+                              </Link>
                               <button
                                 type="button"
-                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
+                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
                                 onClick={() =>
                                   respondToConnectRequest(
                                     n.fromUserId as string,
@@ -449,7 +462,7 @@ export default function Navbar() {
                               </button>
                               <button
                                 type="button"
-                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
+                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
                                 onClick={() =>
                                   respondToConnectRequest(
                                     n.fromUserId as string,
