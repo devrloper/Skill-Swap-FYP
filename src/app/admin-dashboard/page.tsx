@@ -104,7 +104,7 @@ function Sidebar({
   ];
 
   return (
-    <aside className="h-full bg-slate-950 text-white border-r border-white/10 p-6">
+    <aside className="h-full bg-purple-950 text-white border-r border-white/10 p-6">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-500 text-white flex items-center justify-center font-black shadow-sm">
           S
@@ -230,7 +230,13 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-fuchsia-50 to-indigo-50 p-4 md:p-6">
+    <div className="relative min-h-screen p-4 md:p-6">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url('/matching.png')" }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-50/55 via-fuchsia-50/45 to-indigo-50/55" />
+      <div className="relative">
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 xl:hidden">
           <div
@@ -259,13 +265,13 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur rounded-[28px] shadow-xl overflow-hidden border border-purple-100">
+      <div className="max-w-7xl mx-auto bg-white/35 backdrop-blur-xl rounded-[28px] shadow-xl overflow-hidden border border-white/40">
         <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr]">
           <div className="hidden xl:block">
             <Sidebar active={active} onSelect={setActive} />
           </div>
 
-          <main className="p-6 md:p-8 bg-white/60">
+          <main className="p-6 md:p-8 bg-white/20">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
                 <button
@@ -285,7 +291,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white/80 border border-purple-100 rounded-2xl px-4 py-3 w-full md:w-[360px]">
+                <div className="flex items-center gap-2 bg-white/55 border border-white/50 rounded-2xl px-4 py-3 w-full md:w-[360px]">
                   <Search size={16} className="text-slate-500" />
                   <input
                     placeholder="Search users, profiles…"
@@ -294,7 +300,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <button
                   type="button"
-                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-white/80 border border-purple-100 text-slate-700"
+                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-white/55 border border-white/50 text-slate-700"
                 >
                   Today <ChevronDown size={14} />
                 </button>
@@ -318,7 +324,7 @@ export default function AdminDashboardPage() {
               {kpis.map((kpi) => (
                 <div
                   key={kpi.label}
-                  className="rounded-2xl border border-purple-100 bg-white/80 backdrop-blur p-5 shadow-sm"
+                  className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-5 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -332,7 +338,7 @@ export default function AdminDashboardPage() {
                         {kpi.hint}
                       </p>
                     </div>
-                    <div className="text-violet-500">
+                    <div className="text-violet-600">
                       <Sparkline values={kpi.trend} />
                     </div>
                   </div>
@@ -341,7 +347,7 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="flex flex-col gap-6 mt-6">
-              <div className="rounded-2xl border border-purple-100 bg-white/80 backdrop-blur p-7 shadow-sm">
+              <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-7 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-black text-slate-900">
@@ -398,13 +404,13 @@ export default function AdminDashboardPage() {
                               <div className="flex items-center gap-2">
                                 <Link
                                   href={`/profile/${r.fromUserId}`}
-                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-purple-100 hover:bg-purple-50 transition"
+                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
                                 >
                                   View From
                                 </Link>
                                 <Link
                                   href={`/profile/${r.toUserId}`}
-                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-purple-100 hover:bg-purple-50 transition"
+                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
                                 >
                                   View To
                                 </Link>
@@ -434,7 +440,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-purple-100 bg-white/80 backdrop-blur p-6 shadow-sm">
+              <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-6 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-black text-slate-900">Failed Interviews</p>
@@ -453,7 +459,7 @@ export default function AdminDashboardPage() {
                     summary?.recent.failedInterviews?.map((u) => (
                       <div
                         key={u.userId}
-                        className="flex items-center justify-between gap-3 rounded-2xl border border-purple-100 bg-purple-50/60 p-4"
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-white/50 bg-white/40 p-4"
                       >
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900 truncate">
@@ -464,12 +470,12 @@ export default function AdminDashboardPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-xs font-black px-3 py-1.5 rounded-full bg-white border border-purple-100 text-slate-900">
+                          <span className="text-xs font-black px-3 py-1.5 rounded-full bg-white/75 border border-white/60 text-slate-900">
                             {u.interviewScore ?? "—"}/100
                           </span>
                           <Link
                             href={`/profile/${u.userId}`}
-                            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-purple-100 hover:bg-purple-50 transition"
+                            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
                           >
                             View
                           </Link>
@@ -490,6 +496,7 @@ export default function AdminDashboardPage() {
             </div>
           </main>
         </div>
+      </div>
       </div>
     </div>
   );
