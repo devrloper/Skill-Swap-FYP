@@ -100,7 +100,7 @@ export default function EmployeeDashboard() {
   const loadConnectRequests = async (uid: string) => {
     setConnectLoading(true);
     try {
-      const res = await fetch(`/api/connect-requests/list?userId=${uid}`, {
+      const res = await fetch(`/api/connect-requests/list-v2?userId=${uid}`, {
         cache: "no-store",
       });
       const data = await res.json().catch(() => ({}));
@@ -125,7 +125,6 @@ export default function EmployeeDashboard() {
     if (!userId) return;
     loadProfilesMap();
     loadConnectRequests(userId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const respond = async (fromUserId: string, action: "accept" | "reject") => {

@@ -81,7 +81,7 @@ export default function Navbar() {
     setNotifLoading(true);
     try {
       const res = await fetch(
-        `/api/notifications/combined?userId=${userId}&limit=10`,
+        `/api/notifications/combined-v2?userId=${userId}&limit=10`,
         {
           cache: "no-store",
         },
