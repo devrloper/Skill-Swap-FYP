@@ -28,6 +28,12 @@ export default function FindMatchPage() {
   const [currentUserProfile, setCurrentUserProfile] =
     useState<ProfileData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sendingConnectTo, setSendingConnectTo] = useState<
+    Record<string, boolean>
+  >({});
+  const [sentConnectTo, setSentConnectTo] = useState<Record<string, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -76,6 +82,43 @@ export default function FindMatchPage() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  const sendConnectRequest = async (toUserId: string) => {
+    const fromUserId = auth.currentUser?.uid;
+    if (!fromUserId) {
+      alert("Please sign in to send a connect request.");
+      return;
+    }
+
+    if (fromUserId === toUserId) return;
+    if (sendingConnectTo[toUserId] || sentConnectTo[toUserId]) return;
+
+    setSendingConnectTo((prev) => ({ ...prev, [toUserId]: true }));
+    try {
+      const res = await fetch("/api/connect-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromUserId, toUserId }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to send connect request");
+      }
+
+      setSentConnectTo((prev) => ({ ...prev, [toUserId]: true }));
+      if (data?.alreadyRequested) {
+        alert("You already sent a connect request to this user.");
+      } else {
+        alert("Connect request sent!");
+      }
+    } catch (err) {
+      console.error("Connect request error:", err);
+      alert(err instanceof Error ? err.message : "Failed to send request.");
+    } finally {
+      setSendingConnectTo((prev) => ({ ...prev, [toUserId]: false }));
+    }
+  };
 
   return (
     <>
@@ -300,6 +343,7 @@ export default function FindMatchPage() {
                         transition={{ duration: 0.5 }}
                       >
                         <MatchCard
+                          id={currentUserProfile.id}
                           name={currentUserProfile.fullName || "Your Profile"}
                           offer={offer}
                           seek={seek}
@@ -309,6 +353,7 @@ export default function FindMatchPage() {
                           tags={tags.length ? tags : ["No skills set"]}
                           education={education}
                           imageUrl={photoUrl}
+                          showConnect={false}
                         />
                       </motion.div>
                     );
@@ -358,6 +403,7 @@ export default function FindMatchPage() {
                         // }}
                       >
                         <MatchCard
+                          id={profile.id}
                           name={profile.fullName || "Profile"}
                           offer={offer}
                           seek={seek}
@@ -365,6 +411,18 @@ export default function FindMatchPage() {
                           tags={tags.length ? tags : ["No skills set"]}
                           education={education}
                           imageUrl={photoUrl}
+                          onConnect={() => sendConnectRequest(profile.id)}
+                          connectDisabled={
+                            !!sendingConnectTo[profile.id] ||
+                            !!sentConnectTo[profile.id]
+                          }
+                          connectLabel={
+                            sendingConnectTo[profile.id]
+                              ? "Sending..."
+                              : sentConnectTo[profile.id]
+                                ? "Request sent"
+                                : "Connect"
+                          }
                         />
                       </motion.div>
                     );

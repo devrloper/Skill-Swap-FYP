@@ -1,6 +1,7 @@
 import Button from "@/app/ui/button";
 
 export default function MatchCard({
+  id,
   name,
   offer,
   seek,
@@ -8,6 +9,10 @@ export default function MatchCard({
   tags,
   education,
   imageUrl,
+  showConnect = true,
+  connectDisabled = false,
+  connectLabel = "Connect",
+  onConnect,
 }) {
   const displayImage = imageUrl || "/girl.png";
 
@@ -85,9 +90,18 @@ export default function MatchCard({
           {location}
         </span>
 
-        <Button className="bg-black text-white hover:scale-105 transition">
-          Connect
-        </Button>
+        {showConnect && (
+          <Button
+            type="button"
+            onClick={onConnect}
+            disabled={connectDisabled}
+            aria-disabled={connectDisabled}
+            className="bg-black text-white hover:scale-105 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            data-profile-id={id}
+          >
+            {connectLabel}
+          </Button>
+        )}
       </div>
     </div>
   );
