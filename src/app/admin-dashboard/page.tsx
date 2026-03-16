@@ -170,7 +170,7 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/api/admin/summary?recentLimit=10", {
+        const res = await fetch("/api/admin/summary?recentLimit=15", {
           cache: "no-store",
         });
         const data = (await res.json().catch(() => ({}))) as Partial<AdminSummary> & {
@@ -230,7 +230,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-fuchsia-50 to-indigo-50 p-4 md:p-6">
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 xl:hidden">
           <div
@@ -259,13 +259,13 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto bg-white rounded-[28px] shadow-xl overflow-hidden border border-slate-200">
+      <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur rounded-[28px] shadow-xl overflow-hidden border border-purple-100">
         <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr]">
           <div className="hidden xl:block">
             <Sidebar active={active} onSelect={setActive} />
           </div>
 
-          <main className="p-6 md:p-8">
+          <main className="p-6 md:p-8 bg-white/60">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
                 <button
@@ -285,7 +285,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 w-full md:w-[360px]">
+                <div className="flex items-center gap-2 bg-white/80 border border-purple-100 rounded-2xl px-4 py-3 w-full md:w-[360px]">
                   <Search size={16} className="text-slate-500" />
                   <input
                     placeholder="Search users, profiles…"
@@ -294,14 +294,14 @@ export default function AdminDashboardPage() {
                 </div>
                 <button
                   type="button"
-                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700"
+                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-white/80 border border-purple-100 text-slate-700"
                 >
                   Today <ChevronDown size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-slate-950 text-white"
+                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-sm hover:opacity-95 transition"
                 >
                   <LogOut size={14} /> Logout
                 </button>
@@ -318,7 +318,7 @@ export default function AdminDashboardPage() {
               {kpis.map((kpi) => (
                 <div
                   key={kpi.label}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className="rounded-2xl border border-purple-100 bg-white/80 backdrop-blur p-5 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -332,7 +332,7 @@ export default function AdminDashboardPage() {
                         {kpi.hint}
                       </p>
                     </div>
-                    <div className="text-slate-400">
+                    <div className="text-violet-500">
                       <Sparkline values={kpi.trend} />
                     </div>
                   </div>
@@ -340,8 +340,8 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-6 mt-6">
+              <div className="rounded-2xl border border-purple-100 bg-white/80 backdrop-blur p-7 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-black text-slate-900">
@@ -359,8 +359,8 @@ export default function AdminDashboardPage() {
                   </Link>
                 </div>
 
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full min-w-[560px] text-sm">
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full min-w-[680px] text-sm">
                     <thead>
                       <tr className="text-xs text-slate-500">
                         <th className="text-left font-semibold py-3">From</th>
@@ -372,7 +372,7 @@ export default function AdminDashboardPage() {
                     <tbody>
                       {!loading &&
                         summary?.recent.pendingConnect?.map((r) => (
-                          <tr key={r.id} className="border-t border-slate-100">
+                          <tr key={r.id} className="border-t border-purple-50">
                             <td className="py-4">
                               <p className="font-semibold text-slate-900">
                                 {r.fromUserName || "User"}
@@ -390,7 +390,7 @@ export default function AdminDashboardPage() {
                               </p>
                             </td>
                             <td>
-                              <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                              <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100">
                                 {r.status}
                               </span>
                             </td>
@@ -398,13 +398,13 @@ export default function AdminDashboardPage() {
                               <div className="flex items-center gap-2">
                                 <Link
                                   href={`/profile/${r.fromUserId}`}
-                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 transition"
+                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-purple-100 hover:bg-purple-50 transition"
                                 >
                                   View From
                                 </Link>
                                 <Link
                                   href={`/profile/${r.toUserId}`}
-                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 transition"
+                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-purple-100 hover:bg-purple-50 transition"
                                 >
                                   View To
                                 </Link>
@@ -434,7 +434,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-2xl border border-purple-100 bg-white/80 backdrop-blur p-6 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-black text-slate-900">Failed Interviews</p>
@@ -453,7 +453,7 @@ export default function AdminDashboardPage() {
                     summary?.recent.failedInterviews?.map((u) => (
                       <div
                         key={u.userId}
-                        className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-purple-100 bg-purple-50/60 p-4"
                       >
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900 truncate">
@@ -464,12 +464,12 @@ export default function AdminDashboardPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-xs font-black px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-900">
+                          <span className="text-xs font-black px-3 py-1.5 rounded-full bg-white border border-purple-100 text-slate-900">
                             {u.interviewScore ?? "—"}/100
                           </span>
                           <Link
                             href={`/profile/${u.userId}`}
-                            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 transition"
+                            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-purple-100 hover:bg-purple-50 transition"
                           >
                             View
                           </Link>
@@ -494,4 +494,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
