@@ -10,13 +10,32 @@ import { auth } from "@/app/lib/firebase";
 import type { User } from "firebase/auth";
 import Button from "@/app/ui/button";
 
+type NotificationItem = {
+  id: string;
+  userId?: string;
+  type?: string;
+  title?: string;
+  message?: string;
+  fromUserId?: string;
+  connectRequestId?: string;
+  status?: string;
+  read?: boolean;
+  createdAt?: unknown;
+};
+
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [notifLoading, setNotifLoading] = useState<boolean>(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationsDesktopRef = useRef<HTMLDivElement>(null);
+  const notificationsMobileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -29,18 +48,108 @@ export default function Navbar() {
   // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target)
       ) {
         setProfileOpen(false);
+      }
+      if (
+        notificationsDesktopRef.current &&
+        !notificationsDesktopRef.current.contains(target) &&
+        notificationsMobileRef.current &&
+        !notificationsMobileRef.current.contains(target)
+      ) {
+        setNotificationsOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownRef]);
+  }, [dropdownRef, notificationsDesktopRef, notificationsMobileRef]);
+
+  const fetchNotifications = async () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
+    setNotifLoading(true);
+    try {
+      const res = await fetch(
+        `/api/notifications/combined?userId=${userId}&limit=10`,
+        {
+          cache: "no-store",
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to load notifications");
+
+      setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+      setUnreadCount(Number(data?.unreadCount) || 0);
+    } catch (err) {
+      console.error("Notification fetch error:", err);
+      setNotifications([]);
+      setUnreadCount(0);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user?.uid]);
+
+  const markNotificationRead = async (notificationId: string) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    if (notificationId.startsWith("connect:")) return;
+
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId, userId }),
+      });
+      await fetchNotifications();
+    } catch (err) {
+      console.error("Mark read error:", err);
+    }
+  };
+
+  const respondToConnectRequest = async (
+    fromUserId: string,
+    action: "accept" | "reject",
+    notificationId?: string,
+  ) => {
+    const toUserId = auth.currentUser?.uid;
+    if (!toUserId) return;
+
+    try {
+      const res = await fetch("/api/connect-requests/respond", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromUserId, toUserId, action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to respond");
+
+      if (notificationId && !notificationId.startsWith("connect:")) {
+        await markNotificationRead(notificationId);
+      }
+      await fetchNotifications();
+    } catch (err) {
+      console.error("Respond error:", err);
+      alert(err instanceof Error ? err.message : "Failed to respond.");
+    }
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -100,10 +209,107 @@ export default function Navbar() {
           {/* Desktop Right Section */}
           <div className="hidden lg:flex items-center gap-4">
             {/* Notifications */}
-            <button className="relative ">
-              <Bell className="w-6 h-6 text-gray-700 hover:text-purple-600 transition cursor-pointer" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
-            </button>
+            <div className="relative" ref={notificationsDesktopRef}>
+              <button
+                type="button"
+                className="relative"
+                onClick={async () => {
+                  const next = !notificationsOpen;
+                  setNotificationsOpen(next);
+                  if (next) await fetchNotifications();
+                }}
+              >
+                <Bell className="w-6 h-6 text-gray-700 hover:text-purple-600 transition cursor-pointer" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] rounded-full ring-2 ring-white flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-2xl border border-gray-200 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <p className="font-semibold text-gray-800">Notifications</p>
+                    <button
+                      type="button"
+                      className="text-xs text-purple-600 hover:underline"
+                      onClick={fetchNotifications}
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  <div className="max-h-[360px] overflow-y-auto">
+                    {notifLoading && (
+                      <div className="p-4 text-sm text-gray-500">Loading…</div>
+                    )}
+
+                    {!notifLoading && notifications.length === 0 && (
+                      <div className="p-4 text-sm text-gray-500">
+                        No notifications yet.
+                      </div>
+                    )}
+
+                    {!notifLoading &&
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`px-4 py-3 border-b border-gray-100 ${
+                            n.read ? "bg-white" : "bg-purple-50"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() => {
+                              if (!n.read) markNotificationRead(n.id);
+                            }}
+                          >
+                            <p className="text-sm font-semibold text-gray-800">
+                              {n.title || "Notification"}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              {n.message || ""}
+                            </p>
+                          </button>
+
+                          {n.type === "connect_request" && n.fromUserId && (
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                type="button"
+                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
+                                onClick={() =>
+                                  respondToConnectRequest(
+                                    n.fromUserId as string,
+                                    "accept",
+                                    n.id,
+                                  )
+                                }
+                              >
+                                Accept
+                              </button>
+                              <button
+                                type="button"
+                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
+                                onClick={() =>
+                                  respondToConnectRequest(
+                                    n.fromUserId as string,
+                                    "reject",
+                                    n.id,
+                                  )
+                                }
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User Avatar & Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -161,10 +367,107 @@ export default function Navbar() {
 
           {/* Mobile Right Section */}
           <div className="flex items-center gap-3 lg:hidden">
-            <button className="relative ">
-              <Bell className="w-6 h-6 text-gray-700 cursor-pointer" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
-            </button>
+            <div className="relative" ref={notificationsMobileRef}>
+              <button
+                type="button"
+                className="relative"
+                onClick={async () => {
+                  const next = !notificationsOpen;
+                  setNotificationsOpen(next);
+                  if (next) await fetchNotifications();
+                }}
+              >
+                <Bell className="w-6 h-6 text-gray-700 cursor-pointer" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] rounded-full ring-2 ring-white flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-2xl border border-gray-200 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <p className="font-semibold text-gray-800">Notifications</p>
+                    <button
+                      type="button"
+                      className="text-xs text-purple-600 hover:underline"
+                      onClick={fetchNotifications}
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  <div className="max-h-[360px] overflow-y-auto">
+                    {notifLoading && (
+                      <div className="p-4 text-sm text-gray-500">Loading…</div>
+                    )}
+
+                    {!notifLoading && notifications.length === 0 && (
+                      <div className="p-4 text-sm text-gray-500">
+                        No notifications yet.
+                      </div>
+                    )}
+
+                    {!notifLoading &&
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`px-4 py-3 border-b border-gray-100 ${
+                            n.read ? "bg-white" : "bg-purple-50"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() => {
+                              if (!n.read) markNotificationRead(n.id);
+                            }}
+                          >
+                            <p className="text-sm font-semibold text-gray-800">
+                              {n.title || "Notification"}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              {n.message || ""}
+                            </p>
+                          </button>
+
+                          {n.type === "connect_request" && n.fromUserId && (
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                type="button"
+                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
+                                onClick={() =>
+                                  respondToConnectRequest(
+                                    n.fromUserId as string,
+                                    "accept",
+                                    n.id,
+                                  )
+                                }
+                              >
+                                Accept
+                              </button>
+                              <button
+                                type="button"
+                                className="flex-1 text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
+                                onClick={() =>
+                                  respondToConnectRequest(
+                                    n.fromUserId as string,
+                                    "reject",
+                                    n.id,
+                                  )
+                                }
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="relative w-9 h-9">
               {user?.photoURL ? (
                 //  Google Sign-in Image

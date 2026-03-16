@@ -6,6 +6,9 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -27,6 +30,14 @@ const LoginPage = () => {
     setError("");
 
     try {
+      // Per-tab vs shared login across tabs:
+      // - remember = true  => shared (localStorage)
+      // - remember = false => per-tab (sessionStorage)
+      await setPersistence(
+        auth,
+        remember ? browserLocalPersistence : browserSessionPersistence,
+      );
+
       // Sign in
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -67,6 +78,11 @@ const LoginPage = () => {
     const provider = new GoogleAuthProvider();
 
     try {
+      await setPersistence(
+        auth,
+        remember ? browserLocalPersistence : browserSessionPersistence,
+      );
+
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 

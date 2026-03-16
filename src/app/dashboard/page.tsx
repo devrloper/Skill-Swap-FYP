@@ -28,6 +28,15 @@ import {
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/app/components/innernavbar/page";
+import { auth } from "@/app/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+
+type ConnectRequestItem = {
+  id: string;
+  fromUserId?: string;
+  toUserId?: string;
+  status?: string;
+};
 
 // Mock data (Function ke bahar reh sakta hai)
 const activityData = [
@@ -48,6 +57,16 @@ const genderData = [
 export default function EmployeeDashboard() {
   // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [incomingRequests, setIncomingRequests] = useState<ConnectRequestItem[]>(
+    [],
+  );
+  const [outgoingRequests, setOutgoingRequests] = useState<ConnectRequestItem[]>(
+    [],
+  );
+  const [connectLoading, setConnectLoading] = useState<boolean>(false);
+  const [respondingTo, setRespondingTo] = useState<Record<string, boolean>>({});
+  const [profileNames, setProfileNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -55,6 +74,82 @@ export default function EmployeeDashboard() {
     }, 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUserId(u?.uid || null);
+    });
+    return () => unsub();
+  }, []);
+
+  const loadProfilesMap = async () => {
+    try {
+      const res = await fetch("/api/profiles", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      const profiles = Array.isArray(data?.profiles) ? data.profiles : [];
+      const map: Record<string, string> = {};
+      for (const p of profiles) {
+        if (p?.id) map[p.id] = p?.fullName || p?.displayName || "User";
+      }
+      setProfileNames(map);
+    } catch (err) {
+      console.error("Failed to load profiles map:", err);
+    }
+  };
+
+  const loadConnectRequests = async (uid: string) => {
+    setConnectLoading(true);
+    try {
+      const res = await fetch(`/api/connect-requests/list?userId=${uid}`, {
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to load requests");
+
+      setIncomingRequests(
+        Array.isArray(data?.incoming) ? (data.incoming as ConnectRequestItem[]) : [],
+      );
+      setOutgoingRequests(
+        Array.isArray(data?.outgoing) ? (data.outgoing as ConnectRequestItem[]) : [],
+      );
+    } catch (err) {
+      console.error("Failed to load connect requests:", err);
+      setIncomingRequests([]);
+      setOutgoingRequests([]);
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+    loadProfilesMap();
+    loadConnectRequests(userId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const respond = async (fromUserId: string, action: "accept" | "reject") => {
+    if (!userId) return;
+    if (respondingTo[fromUserId]) return;
+
+    setRespondingTo((prev) => ({ ...prev, [fromUserId]: true }));
+    try {
+      const res = await fetch("/api/connect-requests/respond", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromUserId, toUserId: userId, action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to respond");
+
+      await loadConnectRequests(userId);
+    } catch (err) {
+      console.error("Respond failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to respond.");
+    } finally {
+      setRespondingTo((prev) => ({ ...prev, [fromUserId]: false }));
+    }
+  };
 
   return (
     <>
@@ -148,6 +243,134 @@ export default function EmployeeDashboard() {
             <h1 className="text-3xl font-bold text-slate-800 mb-8">
               Welcome Admin!
             </h1>
+
+            {/* CONNECT REQUESTS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-slate-700">
+                    Connection Requests
+                  </h3>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-purple-700 hover:underline"
+                    onClick={() => userId && loadConnectRequests(userId)}
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {!userId && (
+                  <p className="text-sm text-slate-600">
+                    Please sign in to view requests.
+                  </p>
+                )}
+
+                {userId && connectLoading && (
+                  <p className="text-sm text-slate-600">Loading…</p>
+                )}
+
+                {userId && !connectLoading && (
+                  <div className="space-y-3">
+                    {incomingRequests
+                      .filter((r) => r.status === "pending")
+                      .slice(0, 5)
+                      .map((r) => (
+                        <div
+                          key={r.id}
+                          className="bg-white/50 border border-white/60 rounded-2xl p-4 flex items-center justify-between gap-3"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">
+                              {profileNames[r.fromUserId || ""] ||
+                                r.fromUserId ||
+                                "User"}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              sent you a connect request
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                r.fromUserId && respond(r.fromUserId, "accept")
+                              }
+                              disabled={!!respondingTo[r.fromUserId || ""]}
+                              className="text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white disabled:opacity-60"
+                            >
+                              {respondingTo[r.fromUserId || ""]
+                                ? "…"
+                                : "Accept"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                r.fromUserId && respond(r.fromUserId, "reject")
+                              }
+                              disabled={!!respondingTo[r.fromUserId || ""]}
+                              className="text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white disabled:opacity-60"
+                            >
+                              {respondingTo[r.fromUserId || ""]
+                                ? "…"
+                                : "Reject"}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                    {incomingRequests.filter((r) => r.status === "pending")
+                      .length === 0 && (
+                      <p className="text-sm text-slate-600">
+                        No pending requests.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                <h3 className="font-bold text-slate-700 mb-4">Sent Requests</h3>
+                {!userId && (
+                  <p className="text-sm text-slate-600">
+                    Please sign in to view requests.
+                  </p>
+                )}
+                {userId && connectLoading && (
+                  <p className="text-sm text-slate-600">Loading…</p>
+                )}
+                {userId && !connectLoading && (
+                  <div className="space-y-3">
+                    {outgoingRequests.slice(0, 5).map((r) => (
+                      <div
+                        key={r.id}
+                        className="bg-white/50 border border-white/60 rounded-2xl p-4 flex items-center justify-between gap-3"
+                      >
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">
+                            {profileNames[r.toUserId || ""] ||
+                              r.toUserId ||
+                              "User"}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            Status:{" "}
+                            <span className="font-semibold">
+                              {r.status || "pending"}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {outgoingRequests.length === 0 && (
+                      <p className="text-sm text-slate-600">
+                        No sent requests.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* TOP GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

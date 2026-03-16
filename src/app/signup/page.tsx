@@ -8,7 +8,11 @@ import {
   FaGraduationCap,
 } from "react-icons/fa";
 import { auth, db } from "@/app/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  setPersistence,
+  browserSessionPersistence,
+} from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { updateProfile } from "firebase/auth";
@@ -47,6 +51,9 @@ export default function SignupPage() {
     }
 
     try {
+      // Keep signup session per-tab by default
+      await setPersistence(auth, browserSessionPersistence);
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
