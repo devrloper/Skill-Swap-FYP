@@ -1,5 +1,6 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { adminDb } from "@/app/lib/firebaseAdmin";
+import { getSessionUser, isAdminEmail } from "@/app/lib/serverAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,13 @@ async function loadProfileNames(userIds: string[]) {
 
 export async function GET(req: Request) {
   try {
+    const sessionUser = await getSessionUser();
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!isAdminEmail(sessionUser.email)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { searchParams } = new URL(req.url);
     const recentLimitParam = Number(searchParams.get("recentLimit") || "10");
     const recentLimit = Number.isFinite(recentLimitParam)

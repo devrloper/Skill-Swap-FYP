@@ -64,8 +64,7 @@ function Sparkline({ values }: { values: number[] }) {
 
     const d = points
       .map(
-        ([x, y], i) =>
-          `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`,
+        ([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`,
       )
       .join(" ");
 
@@ -173,15 +172,20 @@ export default function AdminDashboardPage() {
         const res = await fetch("/api/admin/summary?recentLimit=15", {
           cache: "no-store",
         });
-        const data = (await res.json().catch(() => ({}))) as Partial<AdminSummary> & {
+        const data = (await res
+          .json()
+          .catch(() => ({}))) as Partial<AdminSummary> & {
           error?: string;
         };
-        if (!res.ok) throw new Error(data?.error || "Failed to load admin data");
+        if (!res.ok)
+          throw new Error(data?.error || "Failed to load admin data");
         if (mounted) setSummary(data as AdminSummary);
       } catch (e) {
         if (mounted) {
           setSummary(null);
-          setError(e instanceof Error ? e.message : "Failed to load admin data");
+          setError(
+            e instanceof Error ? e.message : "Failed to load admin data",
+          );
         }
       } finally {
         if (mounted) setLoading(false);
@@ -195,7 +199,8 @@ export default function AdminDashboardPage() {
 
   const pass = summary?.totals.interviewsPass || 0;
   const fail = summary?.totals.interviewsFail || 0;
-  const passRate = pass + fail > 0 ? Math.round((pass / (pass + fail)) * 100) : 0;
+  const passRate =
+    pass + fail > 0 ? Math.round((pass / (pass + fail)) * 100) : 0;
 
   const kpis = [
     {
@@ -225,6 +230,11 @@ export default function AdminDashboardPage() {
   ];
 
   const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch (err) {
+      console.error("Logout cookie clear failed:", err);
+    }
     await signOut(auth);
     router.push("/signin");
   };
@@ -237,266 +247,283 @@ export default function AdminDashboardPage() {
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-50/55 via-fuchsia-50/45 to-indigo-50/55" />
       <div className="relative">
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 xl:hidden">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="absolute left-3 top-3 bottom-3 w-[280px] rounded-[32px] overflow-hidden shadow-2xl">
-            <div className="h-full relative">
-              <Sidebar
-                active={active}
-                onSelect={(name) => {
-                  setActive(name);
-                  setSidebarOpen(false);
-                }}
-              />
-              <button
-                type="button"
-                className="absolute top-4 right-4 w-9 h-9 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center"
-                onClick={() => setSidebarOpen(false)}
-                aria-label="Close menu"
-              >
-                <X size={18} className="text-white" />
-              </button>
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-50 xl:hidden">
+            <div
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setSidebarOpen(false)}
+            />
+            <div className="absolute left-3 top-3 bottom-3 w-[280px] rounded-[32px] overflow-hidden shadow-2xl">
+              <div className="h-full relative">
+                <Sidebar
+                  active={active}
+                  onSelect={(name) => {
+                    setActive(name);
+                    setSidebarOpen(false);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="absolute top-4 right-4 w-9 h-9 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center"
+                  onClick={() => setSidebarOpen(false)}
+                  aria-label="Close menu"
+                >
+                  <X size={18} className="text-white" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="max-w-7xl mx-auto bg-white/35 backdrop-blur-xl rounded-[28px] shadow-xl overflow-hidden border border-white/40">
-        <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr]">
-          <div className="hidden xl:block">
-            <Sidebar active={active} onSelect={setActive} />
-          </div>
-
-          <main className="p-6 md:p-8 bg-white/20">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="xl:hidden w-11 h-11 rounded-2xl bg-slate-950 text-white flex items-center justify-center"
-                  onClick={() => setSidebarOpen(true)}
-                  aria-label="Open menu"
-                >
-                  <Menu size={18} className="text-white" />
-                </button>
-                <div>
-                  <p className="text-xs font-semibold text-slate-500">{active}</p>
-                  <h1 className="text-xl md:text-2xl font-black text-slate-900">
-                    Admin Dashboard
-                  </h1>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white/55 border border-white/50 rounded-2xl px-4 py-3 w-full md:w-[360px]">
-                  <Search size={16} className="text-slate-500" />
-                  <input
-                    placeholder="Search users, profiles…"
-                    className="bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400 w-full"
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-white/55 border border-white/50 text-slate-700"
-                >
-                  Today <ChevronDown size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-sm hover:opacity-95 transition"
-                >
-                  <LogOut size={14} /> Logout
-                </button>
-              </div>
+        <div className="max-w-7xl mx-auto bg-white/35 backdrop-blur-xl rounded-[28px] shadow-xl overflow-hidden border border-white/40">
+          <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr]">
+            <div className="hidden xl:block">
+              <Sidebar active={active} onSelect={setActive} />
             </div>
 
-            {error && (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
-              {kpis.map((kpi) => (
-                <div
-                  key={kpi.label}
-                  className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-5 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500">
-                        {kpi.label}
-                      </p>
-                      <p className="text-2xl font-black text-slate-900 mt-1">
-                        {loading ? "…" : kpi.value}
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-2">
-                        {kpi.hint}
-                      </p>
-                    </div>
-                    <div className="text-violet-600">
-                      <Sparkline values={kpi.trend} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-6 mt-6">
-              <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-7 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-black text-slate-900">
-                      Pending Connect Requests
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Users waiting for accept/reject
-                    </p>
-                  </div>
-                  <Link
-                    href="/dashboard"
-                    className="text-xs font-semibold text-slate-700 hover:underline"
+            <main className="p-6 md:p-8 bg-white/20">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="xl:hidden w-11 h-11 rounded-2xl bg-slate-950 text-white flex items-center justify-center"
+                    onClick={() => setSidebarOpen(true)}
+                    aria-label="Open menu"
                   >
-                    Open user dashboard
-                  </Link>
+                    <Menu size={18} className="text-white" />
+                  </button>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500">
+                      {active}
+                    </p>
+                    <h1 className="text-xl md:text-2xl font-black text-slate-900">
+                      Admin Dashboard
+                    </h1>
+                  </div>
                 </div>
 
-                <div className="mt-5 overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-sm">
-                    <thead>
-                      <tr className="text-xs text-slate-500">
-                        <th className="text-left font-semibold py-3">From</th>
-                        <th className="text-left font-semibold">To</th>
-                        <th className="text-left font-semibold">Status</th>
-                        <th className="text-left font-semibold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {!loading &&
-                        summary?.recent.pendingConnect?.map((r) => (
-                          <tr key={r.id} className="border-t border-purple-50">
-                            <td className="py-4">
-                              <p className="font-semibold text-slate-900">
-                                {r.fromUserName || "User"}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                {r.fromUserId}
-                              </p>
-                            </td>
-                            <td>
-                              <p className="font-semibold text-slate-900">
-                                {r.toUserName || "User"}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                {r.toUserId}
-                              </p>
-                            </td>
-                            <td>
-                              <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100">
-                                {r.status}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="flex items-center gap-2">
-                                <Link
-                                  href={`/profile/${r.fromUserId}`}
-                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
-                                >
-                                  View From
-                                </Link>
-                                <Link
-                                  href={`/profile/${r.toUserId}`}
-                                  className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
-                                >
-                                  View To
-                                </Link>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white/55 border border-white/50 rounded-2xl px-4 py-3 w-full md:w-[360px]">
+                    <Search size={16} className="text-slate-500" />
+                    <input
+                      placeholder="Search users, profiles…"
+                      className="bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400 w-full"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-white/55 border border-white/50 text-slate-700"
+                  >
+                    Today <ChevronDown size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-sm hover:opacity-95 transition cursor-pointer"
+                  >
+                    <LogOut size={14} /> Logout
+                  </button>
+                </div>
+              </div>
 
-                      {!loading &&
-                        summary?.recent.pendingConnect?.length === 0 && (
+              {error && (
+                <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
+                {kpis.map((kpi) => (
+                  <div
+                    key={kpi.label}
+                    className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500">
+                          {kpi.label}
+                        </p>
+                        <p className="text-2xl font-black text-slate-900 mt-1">
+                          {loading ? "…" : kpi.value}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-2">
+                          {kpi.hint}
+                        </p>
+                      </div>
+                      <div className="text-violet-600">
+                        <Sparkline values={kpi.trend} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-6 mt-6">
+                <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-7 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-black text-slate-900">
+                        Pending Connect Requests
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Users waiting for accept/reject
+                      </p>
+                    </div>
+                    <Link
+                      href="/dashboard"
+                      className="text-xs font-semibold text-slate-700 hover:underline"
+                    >
+                      Open user dashboard
+                    </Link>
+                  </div>
+
+                  <div className="mt-5 overflow-x-auto">
+                    <table className="w-full min-w-[680px] text-sm">
+                      <thead>
+                        <tr className="text-xs text-slate-500">
+                          <th className="text-left font-semibold py-3">From</th>
+                          <th className="text-left font-semibold">To</th>
+                          <th className="text-left font-semibold">Status</th>
+                          <th className="text-left font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {!loading &&
+                          summary?.recent.pendingConnect?.map((r) => (
+                            <tr
+                              key={r.id}
+                              className="border-t border-purple-50"
+                            >
+                              <td className="py-4">
+                                <p className="font-semibold text-slate-900">
+                                  {r.fromUserName || "User"}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {r.fromUserId}
+                                </p>
+                              </td>
+                              <td>
+                                <p className="font-semibold text-slate-900">
+                                  {r.toUserName || "User"}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {r.toUserId}
+                                </p>
+                              </td>
+                              <td>
+                                <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100">
+                                  {r.status}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="flex items-center gap-2">
+                                  <Link
+                                    href={`/profile/${r.fromUserId}`}
+                                    className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
+                                  >
+                                    View From
+                                  </Link>
+                                  <Link
+                                    href={`/profile/${r.toUserId}`}
+                                    className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
+                                  >
+                                    View To
+                                  </Link>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+
+                        {!loading &&
+                          summary?.recent.pendingConnect?.length === 0 && (
+                            <tr className="border-t border-slate-100">
+                              <td
+                                colSpan={4}
+                                className="py-6 text-sm text-slate-600"
+                              >
+                                No pending connect requests.
+                              </td>
+                            </tr>
+                          )}
+
+                        {loading && (
                           <tr className="border-t border-slate-100">
-                            <td colSpan={4} className="py-6 text-sm text-slate-600">
-                              No pending connect requests.
+                            <td
+                              colSpan={4}
+                              className="py-6 text-sm text-slate-600"
+                            >
+                              Loading…
                             </td>
                           </tr>
                         )}
-
-                      {loading && (
-                        <tr className="border-t border-slate-100">
-                          <td colSpan={4} className="py-6 text-sm text-slate-600">
-                            Loading…
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-black text-slate-900">Failed Interviews</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Lowest scores (needs review)
-                    </p>
+                      </tbody>
+                    </table>
                   </div>
-                  <span className="text-xs font-semibold text-slate-600">
-                    Pass rate:{" "}
-                    <span className="text-slate-900 font-black">{passRate}%</span>
-                  </span>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  {!loading &&
-                    summary?.recent.failedInterviews?.map((u) => (
-                      <div
-                        key={u.userId}
-                        className="flex items-center justify-between gap-3 rounded-2xl border border-white/50 bg-white/40 p-4"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 truncate">
-                            {u.name}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {u.userId}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-black px-3 py-1.5 rounded-full bg-white/75 border border-white/60 text-slate-900">
-                            {u.interviewScore ?? "—"}/100
-                          </span>
-                          <Link
-                            href={`/profile/${u.userId}`}
-                            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
-                          >
-                            View
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
+                <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-6 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-black text-slate-900">
+                        Failed Interviews
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Lowest scores (needs review)
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-600">
+                      Pass rate:{" "}
+                      <span className="text-slate-900 font-black">
+                        {passRate}%
+                      </span>
+                    </span>
+                  </div>
 
-                  {!loading &&
-                    summary?.recent.failedInterviews?.length === 0 && (
-                      <div className="text-sm text-slate-600">
-                        No failed interviews found.
-                      </div>
+                  <div className="mt-4 space-y-3">
+                    {!loading &&
+                      summary?.recent.failedInterviews?.map((u) => (
+                        <div
+                          key={u.userId}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-white/50 bg-white/40 p-4"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 truncate">
+                              {u.name}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate">
+                              {u.userId}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black px-3 py-1.5 rounded-full bg-white/75 border border-white/60 text-slate-900">
+                              {u.interviewScore ?? "—"}/100
+                            </span>
+                            <Link
+                              href={`/profile/${u.userId}`}
+                              className="text-xs font-semibold px-3 py-2 rounded-xl bg-white/70 border border-white/60 hover:bg-white/80 transition"
+                            >
+                              View
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+
+                    {!loading &&
+                      summary?.recent.failedInterviews?.length === 0 && (
+                        <div className="text-sm text-slate-600">
+                          No failed interviews found.
+                        </div>
+                      )}
+
+                    {loading && (
+                      <div className="text-sm text-slate-600">Loading…</div>
                     )}
-
-                  {loading && <div className="text-sm text-slate-600">Loading…</div>}
+                  </div>
                 </div>
               </div>
-            </div>
-          </main>
+            </main>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

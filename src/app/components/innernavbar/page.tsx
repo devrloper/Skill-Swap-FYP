@@ -153,6 +153,11 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch (err) {
+      console.error("Logout cookie clear failed:", err);
+    }
     await signOut(auth);
     router.push("/signin");
   };

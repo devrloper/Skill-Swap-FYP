@@ -12,17 +12,43 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
 const LoginPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next");
+
+  const safeNextPath =
+    nextPath &&
+    nextPath.startsWith("/") &&
+    !nextPath.startsWith("//") &&
+    !nextPath.startsWith("/signin") &&
+    !nextPath.startsWith("/signup") &&
+    !nextPath.startsWith("/api")
+      ? nextPath
+      : null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
+
+  const establishSessionCookie = async (firebaseUser: { getIdToken: () => Promise<string> }) => {
+    const idToken = await firebaseUser.getIdToken();
+    const res = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ idToken, remember }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.error || "Failed to create session");
+    }
+  };
 
   // Email/password login
   const handleLogin = async (e: React.FormEvent) => {
@@ -46,9 +72,16 @@ const LoginPage = () => {
       );
       const user = userCredential.user;
 
+      // Create httpOnly session cookie for route protection (middleware).
+      await establishSessionCookie(user);
+
       // Admin check
       if (email === "aroobaadmin123@gmail.com" && password === "admin123") {
-        router.push("/admin-dashboard");
+        router.push(
+          safeNextPath?.startsWith("/admin-dashboard")
+            ? safeNextPath
+            : "/admin-dashboard",
+        );
         return;
       }
 
@@ -64,7 +97,7 @@ const LoginPage = () => {
       if (role === "learner") {
         router.push("/pricing");
       } else {
-        router.push("/dashboard"); // or "/" if you want home page
+        router.push(safeNextPath || "/dashboard"); // or "/" if you want home page
       }
     } catch (err: any) {
       console.error("LOGIN ERROR:", err);
@@ -86,6 +119,9 @@ const LoginPage = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      // Create httpOnly session cookie for route protection (middleware).
+      await establishSessionCookie(user);
+
       // Check Firestore if user exists
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
@@ -105,11 +141,15 @@ const LoginPage = () => {
 
       // Role-based redirect
       if (user.email === "aroobaadmin123@gmail.com") {
-        router.push("/admin-dashboard");
+        router.push(
+          safeNextPath?.startsWith("/admin-dashboard")
+            ? safeNextPath
+            : "/admin-dashboard",
+        );
       } else if (role === "learner") {
         router.push("/pricing");
       } else {
-        router.push("/dashboard"); // or "/"
+        router.push(safeNextPath || "/dashboard");
       }
     } catch (err: any) {
       console.error("GOOGLE LOGIN ERROR:", err);
