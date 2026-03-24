@@ -6,9 +6,10 @@ import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Modal from "@/app/Modals/profilemodal/page";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/app/lib/firebase";
+import { auth, db } from "@/app/lib/firebase";
 import type { User } from "firebase/auth";
 import Button from "@/app/ui/button";
+import { doc, getDoc } from "firebase/firestore";
 
 type NotificationItem = {
   id: string;
@@ -28,6 +29,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -46,6 +48,35 @@ export default function Navbar() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setIsEnrolled(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, "profiles", user.uid));
+        const data = snap.exists() ? snap.data() : null;
+        const enrolled =
+          Boolean(data?.enrolled) ||
+          Boolean(data?.profileCompleted) ||
+          Boolean(data?.interviewStatus) ||
+          Boolean(data?.interviewScore) ||
+          (Array.isArray(data?.completedSteps) && data.completedSteps.includes(4));
+        if (!cancelled) setIsEnrolled(enrolled);
+      } catch (err) {
+        console.error("Failed to check enrollment:", err);
+        if (!cancelled) setIsEnrolled(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
   // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -204,12 +235,14 @@ export default function Navbar() {
             <Link href="/dashboard" className={navLinkClass}>
               Dashboard
             </Link>
-            <button
-              onClick={() => setOpen(true)}
-              className="ml-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-2 rounded-full font-semibold shadow-md hover:brightness-105 transition cursor-pointer"
-            >
-              Enroll Now
-            </button>
+            {!isEnrolled && (
+              <button
+                onClick={() => setOpen(true)}
+                className="ml-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-2 rounded-full font-semibold shadow-md hover:brightness-105 transition cursor-pointer"
+              >
+                Enroll Now
+              </button>
+            )}
           </div>
 
           {/* Desktop Right Section */}
@@ -620,16 +653,18 @@ export default function Navbar() {
             </Link>
 
             {/* Enroll Now Button for mobile/tablet */}
-            <button
-              onClick={() => setOpen(true)}
-              className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-6 py-2 rounded-full font-semibold shadow-md hover:brightness-105 transition cursor-pointer text-sm sm:text-base md:text-lg mt-4"
-            >
-              Enroll Now
-            </button>
+            {!isEnrolled && (
+              <button
+                onClick={() => setOpen(true)}
+                className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-6 py-2 rounded-full font-semibold shadow-md hover:brightness-105 transition cursor-pointer text-sm sm:text-base md:text-lg mt-4"
+              >
+                Enroll Now
+              </button>
+            )}
           </div>
         )}
       </header>
-      <Modal open={open} setOpen={setOpen} />
+      <Modal open={open} setOpen={setOpen} mode="enroll" />
     </>
   );
 }

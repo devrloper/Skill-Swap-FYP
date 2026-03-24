@@ -8,21 +8,32 @@ import Step3 from "@/app/components/profile steps/step3";
 import Step4 from "@/app/components/profile steps/step4";
 import Image from "next/image";
 import { db, auth } from "@/app/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { arrayUnion, doc, setDoc } from "firebase/firestore";
 
 interface ProfileStepModalProps {
   readonly open: boolean;
   readonly setOpen: (value: boolean) => void;
+  readonly mode?: "enroll" | "edit";
+  readonly initialStep?: number;
 }
 
 export default function ProfileStepModal({
   open,
   setOpen,
-}: ProfileStepModalProps) {  const [step, setStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState([]);
+  mode = "enroll",
+  initialStep = 0,
+}: ProfileStepModalProps) {
+  const [step, setStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 
   const userId = auth.currentUser?.uid;
+
+  useEffect(() => {
+    if (!open) return;
+    setStep(initialStep);
+    setCompletedSteps(mode === "edit" ? [0, 1, 2, 3, 4] : []);
+  }, [open, initialStep, mode]);
 
   // Lock scroll when modal is open
   useEffect(() => {
@@ -43,12 +54,12 @@ export default function ProfileStepModal({
   ];
 
   // Save step completion to Firestore
-  const saveStepToDB = async (stepNumber) => {
+  const saveStepToDB = async (stepNumber: number) => {
     if (!userId) return;
     try {
       await setDoc(
         doc(db, "profiles", userId),
-        { completedSteps: [stepNumber] },
+        { completedSteps: arrayUnion(stepNumber) },
         { merge: true }
       );
     } catch (err) {
@@ -58,7 +69,7 @@ export default function ProfileStepModal({
 
   // Called when moving to the next step
   const handleNextStep = (skills?: string[]) => {
-    setCompletedSteps((prev) => [...prev, step]);
+    setCompletedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
     saveStepToDB(step); // Save to DB
     if (skills) setSelectedSkills(skills);
     setStep(step + 1);
@@ -102,14 +113,17 @@ export default function ProfileStepModal({
           </div>
 
           {/* DESKTOP/TABLET STEPPER */}
-          <div className="hidden md:flex justify-between items-start mb-12 relative gap-2">
-            {steps.map((item, index) => {
-              const current = index === step;
-              const isDisabled = index > 0 && !completedSteps.includes(index - 1);
+           <div className="hidden md:flex justify-between items-start mb-12 relative gap-2">
+             {steps.map((item, index) => {
+               const current = index === step;
+               const isDisabled =
+                 mode !== "edit" &&
+                 index > 0 &&
+                 !completedSteps.includes(index - 1);
 
-              return (
-                <div
-                  key={item.step}
+               return (
+                 <div
+                   key={item.step}
                   className="flex-1 min-w-[90px] flex flex-col items-center relative"
                 >
                   <span className="text-sm font-semibold text-gray-500 mb-2">
@@ -162,7 +176,7 @@ export default function ProfileStepModal({
 
               <div className="col-span-full text-center mt-6">
                 <button
-                  onClick={handleNextStep}
+                  onClick={() => handleNextStep()}
                   className="bg-gradient-to-r from-purple-600 to-pink-500 text-white px-8 py-3 rounded-lg font-semibold"
                 >
                   Start →

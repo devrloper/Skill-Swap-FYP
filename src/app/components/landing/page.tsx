@@ -1,12 +1,51 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Modal from "@/app/Modals/profilemodal/page";
+import { auth, db } from "@/app/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function HeroSection() {
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setIsEnrolled(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, "profiles", user.uid));
+        const data = snap.exists() ? snap.data() : null;
+        const enrolled =
+          Boolean(data?.enrolled) ||
+          Boolean(data?.profileCompleted) ||
+          Boolean(data?.interviewStatus) ||
+          Boolean(data?.interviewScore) ||
+          (Array.isArray(data?.completedSteps) && data.completedSteps.includes(4));
+        if (!cancelled) setIsEnrolled(enrolled);
+      } catch (err) {
+        console.error("Failed to check enrollment:", err);
+        if (!cancelled) setIsEnrolled(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
 
   return (
     <>
@@ -49,14 +88,16 @@ export default function HeroSection() {
             transition={{ delay: 0.6, duration: 0.6 }}
             viewport={{ once: false }}
           >
-            <motion.button
-              onClick={() => setOpen(true)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:opacity-90 transition-all"
-            >
-              Enroll Now
-            </motion.button>
+            {!isEnrolled && (
+              <motion.button
+                onClick={() => setOpen(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-gradient-to-r from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:opacity-90 transition-all"
+              >
+                Enroll Now
+              </motion.button>
+            )}
 
             <motion.button
               whileHover={{ x: 6 }}
@@ -93,7 +134,7 @@ export default function HeroSection() {
         </motion.div>
       </section>
 
-      <Modal open={open} setOpen={setOpen} />
+      <Modal open={open} setOpen={setOpen} mode="enroll" />
     </>
   );
 }

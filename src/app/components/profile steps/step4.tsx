@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AIInterviewCard from "@/app/components/interviewcard/card";
 import { auth, db } from "@/app/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 
 interface AIInterviewProps {
   skills: string[];
@@ -20,6 +20,13 @@ interface QuestionItem {
   options: string[];
   answer?: string;
 }
+
+type WrongAnswerItem = {
+  index: number;
+  question: string;
+  expected: string | null;
+  given: string | null;
+};
 
 const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const router = useRouter();
@@ -149,11 +156,26 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
       setTotalCount(typeof data.total === "number" ? data.total : null);
 
       if (userId) {
+        const wrongAnswers: WrongAnswerItem[] = Array.isArray(data?.wrongAnswers)
+          ? (data.wrongAnswers as WrongAnswerItem[])
+          : [];
+
         await setDoc(
           doc(db, "profiles", userId),
           {
+            enrolled: true,
+            profileCompleted: true,
+            enrolledAt: serverTimestamp(),
             interviewStatus: data.result === "Pass" ? "Pass" : "Fail",
             interviewScore: typeof data.score === "number" ? data.score : 0,
+            interview: {
+              result: data.result === "Pass" ? "Pass" : "Fail",
+              score: typeof data.score === "number" ? data.score : 0,
+              correct: typeof data.correct === "number" ? data.correct : 0,
+              total: typeof data.total === "number" ? data.total : 0,
+              wrongAnswers,
+              completedAt: new Date().toISOString(),
+            },
           },
           { merge: true },
         );
