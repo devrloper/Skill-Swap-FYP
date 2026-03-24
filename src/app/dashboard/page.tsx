@@ -98,6 +98,7 @@ export default function EmployeeDashboard() {
   // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "profile">("dashboard");
   const [incomingRequests, setIncomingRequests] = useState<ConnectRequestItem[]>(
     [],
   );
@@ -251,24 +252,26 @@ export default function EmployeeDashboard() {
 
             <nav className="space-y-2 flex-1">
               {[
-                { name: "Dashboard", icon: LayoutDashboard, active: true },
-                { name: "Attendance", icon: CalendarCheck },
-                { name: "Employees", icon: Users },
-                { name: "Analytics", icon: BarChart3 },
-                { name: "Report Attendance", icon: ClipboardCheck },
-                { name: "Settings", icon: Settings },
+                { name: "Dashboard", icon: LayoutDashboard, tab: "dashboard" as const },
+                { name: "View Profile", icon: Users, tab: "profile" as const },
+                { name: "Attendance", icon: CalendarCheck, tab: undefined },
+                { name: "Employees", icon: Users, tab: undefined },
+                { name: "Analytics", icon: BarChart3, tab: undefined },
+                { name: "Report Attendance", icon: ClipboardCheck, tab: undefined },
+                { name: "Settings", icon: Settings, tab: undefined },
               ].map((item) => (
                 <div
                   key={item.name}
+                  onClick={() => item.tab && setActiveTab(item.tab)}
                   className={`flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all ${
-                    item.active
+                    item.tab ? item.tab === activeTab : false
                       ? "bg-gradient-to-r from-blue-100/50 to-purple-100/50 shadow-sm border border-white/50 text-indigo-700"
                       : "text-slate-500 hover:bg-white/20"
                   }`}
                 >
                   <item.icon
                     size={20}
-                    className={item.active ? "text-indigo-600" : ""}
+                    className={item.tab ? (item.tab === activeTab ? "text-indigo-600" : "") : ""}
                   />
                   <span className="text-sm font-semibold">{item.name}</span>
                 </div>
@@ -309,11 +312,14 @@ export default function EmployeeDashboard() {
             </header>
 
             <h1 className="text-3xl font-bold text-slate-800 mb-6">
-              Welcome {myProfile?.fullName || "User"}!
+              {activeTab === "profile"
+                ? "My Profile"
+                : `Welcome ${myProfile?.fullName || "User"}!`}
             </h1>
 
             {/* MY PROFILE */}
-            <div className="mb-8 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+            {activeTab === "profile" && (
+              <div className="mb-8 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <img
@@ -356,7 +362,7 @@ export default function EmployeeDashboard() {
 
               {!myProfileLoading && !myProfile && (
                 <p className="mt-4 text-sm text-slate-600">
-                  You are not enrolled yet. Use the "Enroll Now" button to create
+                  You are not enrolled yet. Use the Enroll Now button to create
                   your profile and take the AI interview.
                 </p>
               )}
@@ -472,7 +478,10 @@ export default function EmployeeDashboard() {
                 </div>
               )}
             </div>
+            )}
 
+            {activeTab === "dashboard" && (
+              <>
             {/* CONNECT REQUESTS */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
@@ -727,7 +736,6 @@ export default function EmployeeDashboard() {
                 </div>
               </div>
             </div>
-
             {/* BOTTOM GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Weekly Activity Line Chart */}
@@ -855,6 +863,8 @@ export default function EmployeeDashboard() {
                 </div>
               </div>
             </div>
+              </>
+            )}
           </main>
         </div>
       </div>
