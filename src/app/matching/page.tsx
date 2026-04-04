@@ -6,8 +6,9 @@ import Navbar from "@/app/components/innernavbar/page";
 import SearchBar from "@/app/components/searchbar/page";
 import MatchCard from "@/app/components/matchcard/page";
 import SidebarFilters from "@/app/components/sidebarfilters/page";
-import { auth } from "@/app/lib/firebase";
+import { auth, db } from "@/app/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import ChipLoader from "@/app/components/loader/page";
 interface ProfileData {
   id: string;
@@ -34,8 +35,8 @@ export default function FindMatchPage() {
   const [sentConnectTo, setSentConnectTo] = useState<Record<string, boolean>>(
     {},
   );
-
-  useEffect(() => {
+  const [canSendRequests, setCanSendRequests] = useState<boolean>(false);
+useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
 
@@ -56,10 +57,27 @@ export default function FindMatchPage() {
         const others = allProfiles.filter((p) => p.id !== user.uid);
         setCurrentUserProfile(me);
         setProfiles(others);
+
+        const myProfileSnap = await getDoc(doc(db, "profiles", user.uid));
+        const myProfileData = myProfileSnap.exists() ? myProfileSnap.data() : null;
+        const hasEnrollment = Boolean(
+          myProfileData?.enrolled ||
+            myProfileData?.profileCompleted ||
+            (Array.isArray(myProfileData?.completedSteps) &&
+              myProfileData.completedSteps.includes(4)),
+        );
+        const hasInterview = Boolean(
+          myProfileData?.interviewStatus ||
+            myProfileData?.interviewScore ||
+            myProfileData?.interview,
+        );
+        const eligible = hasEnrollment && hasInterview;
+        setCanSendRequests(eligible);
       } catch (err) {
         console.error("Error loading profiles:", err);
         setCurrentUserProfile(null);
         setProfiles([]);
+        setCanSendRequests(false);
       } finally {
         setLoading(false);
       }
@@ -91,6 +109,10 @@ export default function FindMatchPage() {
     }
 
     if (fromUserId === toUserId) return;
+    if (!canSendRequests) {
+      alert("Please complete enrollment and the AI interview before sending requests.");
+      return;
+    }
     if (sendingConnectTo[toUserId] || sentConnectTo[toUserId]) return;
 
     setSendingConnectTo((prev) => ({ ...prev, [toUserId]: true }));
@@ -413,15 +435,18 @@ export default function FindMatchPage() {
                           imageUrl={photoUrl}
                           onConnect={() => sendConnectRequest(profile.id)}
                           connectDisabled={
+                            !canSendRequests ||
                             !!sendingConnectTo[profile.id] ||
                             !!sentConnectTo[profile.id]
                           }
                           connectLabel={
-                            sendingConnectTo[profile.id]
-                              ? "Sending..."
-                              : sentConnectTo[profile.id]
-                                ? "Request sent"
-                                : "Connect"
+                            !canSendRequests
+                              ? "Enroll first"
+                              : sendingConnectTo[profile.id]
+                                ? "Sending..."
+                                : sentConnectTo[profile.id]
+                                  ? "Request sent"
+                                  : "Connect"
                           }
                         />
                       </motion.div>
@@ -448,3 +473,7 @@ export default function FindMatchPage() {
     </>
   );
 }
+
+
+
+

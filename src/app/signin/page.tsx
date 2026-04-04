@@ -15,6 +15,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
+import { showAuthToast } from "@/app/lib/authToast";
 const LoginPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -77,6 +78,7 @@ const LoginPage = () => {
 
       // Admin check
       if (email === "aroobaadmin123@gmail.com" && password === "admin123") {
+        showAuthToast("Signed in successfully");
         router.push(
           safeNextPath?.startsWith("/admin-dashboard")
             ? safeNextPath
@@ -91,15 +93,18 @@ const LoginPage = () => {
         throw new Error("User data not found");
       }
 
-      const { role } = userSnap.data();
+      const userData = userSnap.data() as { role?: string };
+      const { role } = userData;
 
       // Role-based redirect
       if (role === "learner") {
+        showAuthToast("Signed in successfully");
         router.push("/pricing");
       } else {
+        showAuthToast("Signed in successfully");
         router.push(safeNextPath || "/dashboard"); // or "/" if you want home page
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("LOGIN ERROR:", err);
       setError("Invalid email or password");
     }
@@ -141,19 +146,22 @@ const LoginPage = () => {
 
       // Role-based redirect
       if (user.email === "aroobaadmin123@gmail.com") {
+        showAuthToast("Signed in successfully");
         router.push(
           safeNextPath?.startsWith("/admin-dashboard")
             ? safeNextPath
             : "/admin-dashboard",
         );
       } else if (role === "learner") {
+        showAuthToast("Signed in successfully");
         router.push("/pricing");
       } else {
+        showAuthToast("Signed in successfully");
         router.push(safeNextPath || "/dashboard");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("GOOGLE LOGIN ERROR:", err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "Login failed");
     }
   };
 
@@ -182,14 +190,26 @@ const LoginPage = () => {
       </AnimatePresence>{" "}
       <div className="min-h-screen w-full flex items-center justify-center bg-[#f0f4ff] p-4 font-sans">
         {/* Main Card */}
-        <div className="relative w-full max-w-4xl min-h-[550px] flex bg-white rounded-[30px] shadow-2xl overflow-hidden">
+        <div className="relative w-full max-w-4xl min-h-[550px] flex flex-col md:flex-row bg-white rounded-[30px] shadow-2xl overflow-hidden">
+          <div className="md:hidden bg-gradient-to-br from-purple-600 to-purple-700 px-6 py-8 text-white text-center">
+            <img
+              src="/login.png"
+              alt="Welcome Cartoon"
+              className="mx-auto w-28 h-28 object-contain"
+            />
+            <h2 className="font-bold text-2xl mt-3">Welcome Back!</h2>
+            <p className="text-xs opacity-90 mt-2">
+              Log in to access your dashboard and continue where you left off.
+            </p>
+          </div>
+
           {/* RIGHT DECORATIVE PURPLE SECTION */}
           <div
-            className="absolute right-0 top-0 h-full w-[55%] hidden md:flex
+            className="relative md:absolute md:right-0 md:top-0 h-[280px] md:h-full w-full md:w-[55%] hidden md:flex
              bg-gradient-to-br from-purple-600 to-purple-700"
             style={{
               clipPath:
-                "polygon(25% 0%, 100% 0%, 100% 100%, 0% 100%, 15% 85%, 5% 70%, 20% 55%, 10% 40%, 25% 25%, 15% 10%)",
+                "polygon(25% 0%, 100% 0%, 100% 100%, 0% 100%, 19% 85%, 0% 70%, 20% 55%, 10% 40%, 25% 25%, 15% 10%)",
             }}
           >
             <div className="flex flex-col items-center justify-center w-full h-full text-white text-center px-4 sm:px-6 md:px-12 lg:px-18 ml-12">
@@ -208,7 +228,7 @@ const LoginPage = () => {
           </div>
 
           {/* LEFT FORM SECTION */}
-          <div className="w-full md:w-[50%] p-8 md:p-12 flex flex-col justify-center bg-white">
+          <div className="w-full md:w-[50%] p-8 md:p-12 flex flex-col justify-center bg-white relative z-10">
             <div className="w-full max-w-sm mx-auto">
               <div className="text-center mb-10">
                 <h1 className="text-4xl font-extrabold text-[#333]">Hello!</h1>
@@ -308,7 +328,7 @@ const LoginPage = () => {
 
                 {/* Create Account Link */}
                 <p className="text-center text-[11px] text-gray-400 mt-8">
-                  Don't have an account?{" "}
+                  Don&apos;t have an account?{" "}
                   <a
                     href="/signup"
                     className="text-blue-500 font-bold hover:underline"
@@ -326,3 +346,5 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+

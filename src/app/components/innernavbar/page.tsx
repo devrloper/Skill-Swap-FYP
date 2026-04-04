@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { Bell } from "lucide-react";
+import {
+  Bell,
+  ArrowRightLeft,
+  CheckCircle2,
+  Clock3,
+  UserRound,
+  XCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import Modal from "@/app/Modals/profilemodal/page";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -314,39 +321,62 @@ export default function Navbar() {
                           </button>
 
                           {n.type === "connect_request" && n.fromUserId && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              <Link
-                                href={`/profile/${n.fromUserId}`}
-                                className="flex-1 min-w-[110px] text-center text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition"
-                              >
-                                View Profile
-                              </Link>
-                              <button
-                                type="button"
-                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
-                                onClick={() =>
-                                  respondToConnectRequest(
-                                    n.fromUserId as string,
-                                    "accept",
-                                    n.id,
-                                  )
-                                }
-                              >
-                                Accept
-                              </button>
-                              <button
-                                type="button"
-                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
-                                onClick={() =>
-                                  respondToConnectRequest(
-                                    n.fromUserId as string,
-                                    "reject",
-                                    n.id,
-                                  )
-                                }
-                              >
-                                Reject
-                              </button>
+                            <div className="mt-3 rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-3 shadow-sm">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold text-purple-700">
+                                      <ArrowRightLeft size={11} />
+                                      Connect request
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                                      <Clock3 size={11} />
+                                      Pending
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-xs text-gray-600 leading-relaxed">
+                                    {n.fromUserName || n.fromUserId || "A user"} wants to connect with you.
+                                  </p>
+                                </div>
+                                <Link
+                                  href={`/profile/${n.fromUserId}`}
+                                  className="inline-flex shrink-0 items-center gap-1 rounded-2xl bg-white px-3 py-2 text-xs font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition"
+                                >
+                                  <UserRound size={13} />
+                                  Profile
+                                </Link>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-1 rounded-2xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                                  onClick={() =>
+                                    respondToConnectRequest(
+                                      n.fromUserId as string,
+                                      "accept",
+                                      n.id,
+                                    )
+                                  }
+                                >
+                                  <CheckCircle2 size={13} />
+                                  Accept
+                                </button>
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-1 rounded-2xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
+                                  onClick={() =>
+                                    respondToConnectRequest(
+                                      n.fromUserId as string,
+                                      "reject",
+                                      n.id,
+                                    )
+                                  }
+                                >
+                                  <XCircle size={13} />
+                                  Reject
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -445,7 +475,7 @@ export default function Navbar() {
 
                   <div className="max-h-[360px] overflow-y-auto">
                     {notifLoading && (
-                      <div className="p-4 text-sm text-gray-500">Loading…</div>
+                      <div className="p-4 text-sm text-gray-500">Loading...</div>
                     )}
 
                     {!notifLoading && notifications.length === 0 && (
@@ -478,39 +508,62 @@ export default function Navbar() {
                           </button>
 
                           {n.type === "connect_request" && n.fromUserId && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              <Link
-                                href={`/profile/${n.fromUserId}`}
-                                className="flex-1 min-w-[110px] text-center text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 transition"
-                              >
-                                View Profile
-                              </Link>
-                              <button
-                                type="button"
-                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition"
-                                onClick={() =>
-                                  respondToConnectRequest(
-                                    n.fromUserId as string,
-                                    "accept",
-                                    n.id,
-                                  )
-                                }
-                              >
-                                Accept
-                              </button>
-                              <button
-                                type="button"
-                                className="flex-1 min-w-[110px] text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white hover:opacity-90 transition"
-                                onClick={() =>
-                                  respondToConnectRequest(
-                                    n.fromUserId as string,
-                                    "reject",
-                                    n.id,
-                                  )
-                                }
-                              >
-                                Reject
-                              </button>
+                            <div className="mt-3 rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-3 shadow-sm">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-[10px] font-semibold text-purple-700">
+                                      <ArrowRightLeft size={11} />
+                                      Connect request
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                                      <Clock3 size={11} />
+                                      Pending
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-xs text-gray-600 leading-relaxed">
+                                    {n.fromUserName || n.fromUserId || "A user"} wants to connect with you.
+                                  </p>
+                                </div>
+                                <Link
+                                  href={`/profile/${n.fromUserId}`}
+                                  className="inline-flex shrink-0 items-center gap-1 rounded-2xl bg-white px-3 py-2 text-xs font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition"
+                                >
+                                  <UserRound size={13} />
+                                  Profile
+                                </Link>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-1 rounded-2xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                                  onClick={() =>
+                                    respondToConnectRequest(
+                                      n.fromUserId as string,
+                                      "accept",
+                                      n.id,
+                                    )
+                                  }
+                                >
+                                  <CheckCircle2 size={13} />
+                                  Accept
+                                </button>
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-1 rounded-2xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
+                                  onClick={() =>
+                                    respondToConnectRequest(
+                                      n.fromUserId as string,
+                                      "reject",
+                                      n.id,
+                                    )
+                                  }
+                                >
+                                  <XCircle size={13} />
+                                  Reject
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>

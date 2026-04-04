@@ -19,6 +19,7 @@ import { updateProfile } from "firebase/auth";
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { showAuthToast } from "@/app/lib/authToast";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState(""); // success or error message
+  const [message, setMessage] = useState(""); // inline validation error message
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
@@ -74,15 +75,18 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
       });
 
-      setMessage("Account created successfully! Redirecting to signin...");
-      setIsError(false);
+      showAuthToast("Account created successfully");
 
       setTimeout(() => router.push("/signin"), 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("FULL SIGNUP ERROR:", err);
 
-      if (err.code) {
-        setErrorMessage(err.code.replace("auth/", "").replaceAll("-", " "));
+      const code =
+        err instanceof Error
+          ? (err as Error & { code?: string }).code
+          : undefined;
+      if (code) {
+        setErrorMessage(code.replace("auth/", "").replaceAll("-", " "));
       } else {
         setErrorMessage("Something went wrong. Try again.");
       }
@@ -114,28 +118,25 @@ export default function SignupPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="min-h-screen w-full relative flex items-center justify-center bg-[#F0F4F8] font-sans overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="/signup.png"
-            alt="Background"
-            className="w-full h-full object-cover"
-          />
-        </div>
+      <div
+        className="min-h-screen w-full relative flex items-center justify-center bg-[#F0F4F8] font-sans overflow-hidden bg-cover bg-center"
+        style={{ backgroundImage: "url('/signup.png')" }}
+      >
+        {/* Background overlay */}
+        <div className="absolute inset-0 z-0 " />
 
         {/* Signup Card */}
         <div className="relative z-10 w-full max-w-7xl px-4 flex justify-center md:justify-end items-center">
-          <div className="bg-gradient-to-br from-purple-600 to-pink-500 w-full max-w-[350px] sm:max-w-[380px] aspect-[3.5/5] rounded-[35px] shadow-2xl flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 transform transition-transform hover:scale-[1.01] lg:-translate-x-30 opacity-85">
+          <div className="bg-gradient-to-br from-purple-600 to-pink-500/95 w-full max-w-[350px] sm:max-w-[380px] aspect-[3.5/5] rounded-[35px] shadow-2xl flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 transform transition-transform hover:scale-[1.01] lg:-translate-x-30 backdrop-blur-sm">
             <h2 className="text-[#0A1144] text-xl sm:text-2xl font-bold mb-4 sm:mb-6 tracking-tight text-center">
               Create Account
             </h2>
 
-            {message && (
+            {(message || errorMessage) && (
               <p
                 className={`${isError ? "text-red-500" : "text-green-500"} text-sm mb-2`}
               >
-                {message}
+                {message || errorMessage}
               </p>
             )}
 
@@ -251,3 +252,5 @@ export default function SignupPage() {
     </>
   );
 }
+
+

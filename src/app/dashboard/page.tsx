@@ -24,6 +24,11 @@ import {
   Bell,
   LogOut,
   ChevronDown,
+  CheckCircle2,
+  XCircle,
+  Clock3,
+  ArrowRightLeft,
+  UserRound,
 } from "lucide-react";
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
@@ -93,6 +98,17 @@ const genderData = [
   { name: "Men", value: 22, color: "#00C2FF" },
   { name: "Woman", value: 10, color: "#FF85B8" },
 ];
+
+function getRequestBadge(status?: string) {
+  switch (status) {
+    case "accepted":
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "rejected":
+      return "bg-rose-100 text-rose-700 border-rose-200";
+    default:
+      return "bg-amber-100 text-amber-700 border-amber-200";
+  }
+}
 
 export default function EmployeeDashboard() {
   // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
@@ -485,15 +501,22 @@ export default function EmployeeDashboard() {
             {/* CONNECT REQUESTS */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-700">
-                    Connection Requests
-                  </h3>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                      <ArrowRightLeft size={18} className="text-purple-600" />
+                      Connection Requests
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Review who wants to connect with you.
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    className="text-xs font-semibold text-purple-700 hover:underline"
+                    className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full bg-white/70 border border-white/70 text-slate-700 hover:bg-white transition"
                     onClick={() => userId && loadConnectRequests(userId)}
                   >
+                    <Clock3 size={14} />
                     Refresh
                   </button>
                 </div>
@@ -516,24 +539,42 @@ export default function EmployeeDashboard() {
                       .map((r) => (
                         <div
                           key={r.id}
-                          className="bg-white/50 border border-white/60 rounded-2xl p-4 flex items-center justify-between gap-3"
+                          className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                         >
-                          <div>
-                            <p className="text-sm font-bold text-slate-800">
-                              {profileNames[r.fromUserId || ""] ||
-                                r.fromUserId ||
-                                "User"}
-                            </p>
-                            <p className="text-[11px] text-slate-500">
-                              sent you a connect request
-                            </p>
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+                              {(profileNames[r.fromUserId || ""] || "U")
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-bold text-slate-800 truncate">
+                                  {profileNames[r.fromUserId || ""] ||
+                                    r.fromUserId ||
+                                    "User"}
+                                </p>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${getRequestBadge(
+                                    r.status,
+                                  )}`}
+                                >
+                                  <Clock3 size={11} />
+                                  {r.status || "pending"}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-1">
+                                wants to connect with you
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
                             {r.fromUserId && (
                               <Link
                                 href={`/profile/${r.fromUserId}`}
-                                className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-white/60"
+                                className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
                               >
+                                <UserRound size={14} />
                                 View
                               </Link>
                             )}
@@ -543,11 +584,10 @@ export default function EmployeeDashboard() {
                                 r.fromUserId && respond(r.fromUserId, "accept")
                               }
                               disabled={!!respondingTo[r.fromUserId || ""]}
-                              className="text-xs font-semibold px-3 py-2 rounded-xl bg-green-600 text-white disabled:opacity-60"
+                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
                             >
-                              {respondingTo[r.fromUserId || ""]
-                                ? "…"
-                                : "Accept"}
+                              <CheckCircle2 size={14} />
+                              {respondingTo[r.fromUserId || ""] ? "Saving..." : "Accept"}
                             </button>
                             <button
                               type="button"
@@ -555,11 +595,10 @@ export default function EmployeeDashboard() {
                                 r.fromUserId && respond(r.fromUserId, "reject")
                               }
                               disabled={!!respondingTo[r.fromUserId || ""]}
-                              className="text-xs font-semibold px-3 py-2 rounded-xl bg-red-600 text-white disabled:opacity-60"
+                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-rose-600 text-white shadow-sm hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
                             >
-                              {respondingTo[r.fromUserId || ""]
-                                ? "…"
-                                : "Reject"}
+                              <XCircle size={14} />
+                              {respondingTo[r.fromUserId || ""] ? "Saving..." : "Reject"}
                             </button>
                           </div>
                         </div>
@@ -567,49 +606,65 @@ export default function EmployeeDashboard() {
 
                     {incomingRequests.filter((r) => r.status === "pending")
                       .length === 0 && (
-                      <p className="text-sm text-slate-600">
-                        No pending requests.
-                      </p>
+                      <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                        No pending requests right now.
+                      </div>
                     )}
                   </div>
                 )}
               </div>
 
               <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <h3 className="font-bold text-slate-700 mb-4">Sent Requests</h3>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                      <Users size={18} className="text-purple-600" />
+                      Sent Requests
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Track the requests you have already sent.
+                    </p>
+                  </div>
+                </div>
                 {!userId && (
                   <p className="text-sm text-slate-600">
                     Please sign in to view requests.
                   </p>
                 )}
                 {userId && connectLoading && (
-                  <p className="text-sm text-slate-600">Loading…</p>
+                  <p className="text-sm text-slate-600">Loading...</p>
                 )}
                 {userId && !connectLoading && (
                   <div className="space-y-3">
                     {outgoingRequests.slice(0, 5).map((r) => (
                       <div
                         key={r.id}
-                        className="bg-white/50 border border-white/60 rounded-2xl p-4 flex items-center justify-between gap-3"
+                        className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">
-                            {profileNames[r.toUserId || ""] ||
-                              r.toUserId ||
-                              "User"}
-                          </p>
-                          <p className="text-[11px] text-slate-500">
-                            Status:{" "}
-                            <span className="font-semibold">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+                            {(profileNames[r.toUserId || ""] || "U")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800 truncate">
+                              {profileNames[r.toUserId || ""] ||
+                                r.toUserId ||
+                                "User"}
+                            </p>
+                            <div className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-100 text-slate-700 border-slate-200">
+                              <Clock3 size={11} />
                               {r.status || "pending"}
-                            </span>
-                          </p>
+                            </div>
+                          </div>
                         </div>
                         {r.toUserId && (
                           <Link
                             href={`/profile/${r.toUserId}`}
-                            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-white/60"
+                            className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
                           >
+                            <UserRound size={14} />
                             View
                           </Link>
                         )}
@@ -617,13 +672,14 @@ export default function EmployeeDashboard() {
                     ))}
 
                     {outgoingRequests.length === 0 && (
-                      <p className="text-sm text-slate-600">
-                        No sent requests.
-                      </p>
+                      <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                        No sent requests yet.
+                      </div>
                     )}
                   </div>
                 )}
               </div>
+
             </div>
 
             {/* TOP GRID */}

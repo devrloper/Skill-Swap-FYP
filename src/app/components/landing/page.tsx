@@ -34,7 +34,8 @@ export default function HeroSection() {
           Boolean(data?.profileCompleted) ||
           Boolean(data?.interviewStatus) ||
           Boolean(data?.interviewScore) ||
-          (Array.isArray(data?.completedSteps) && data.completedSteps.includes(4));
+          (Array.isArray(data?.completedSteps) &&
+            data.completedSteps.includes(4));
         if (!cancelled) setIsEnrolled(enrolled);
       } catch (err) {
         console.error("Failed to check enrollment:", err);
@@ -50,7 +51,6 @@ export default function HeroSection() {
   return (
     <>
       <section className="bg-[#fdf4ff] min-h-screen flex flex-col-reverse lg:flex-row items-center justify-center px-6 sm:px-10 lg:px-20 py-10">
-        
         {/* LEFT CONTENT */}
         <motion.div
           className="w-full lg:w-1/2 text-center lg:text-left space-y-6 mt-10 lg:mt-0"
@@ -101,10 +101,9 @@ export default function HeroSection() {
 
             <motion.button
               whileHover={{ x: 6 }}
-              className="text-pink-600 font-medium flex items-center justify-center space-x-1 hover:underline"
+              className="bg-gradient-to-r from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-2 rounded-full font-medium shadow-md hover:opacity-90 transition-all"
             >
               <span>More Details</span>
-              <span>→</span>
             </motion.button>
           </motion.div>
         </motion.div>

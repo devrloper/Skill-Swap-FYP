@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/app/lib/firebaseAdmin";
 
@@ -8,6 +8,19 @@ type CreateConnectRequestBody = {
   fromUserId?: string;
   toUserId?: string;
 };
+
+function canSendConnectRequests(profile: Record<string, unknown>) {
+  const hasEnrollment = Boolean(
+    profile.enrolled ||
+      profile.profileCompleted ||
+      (Array.isArray(profile.completedSteps) && profile.completedSteps.includes(4)),
+  );
+  const hasInterview = Boolean(
+    profile.interviewStatus || profile.interviewScore || profile.interview,
+  );
+
+  return hasEnrollment && hasInterview;
+}
 
 export async function POST(req: Request) {
   try {
@@ -29,6 +42,22 @@ export async function POST(req: Request) {
       );
     }
 
+    const fromProfileSnap = await adminDb
+      .collection("profiles")
+      .doc(fromUserId)
+      .get();
+    const fromProfile = fromProfileSnap.exists ? (fromProfileSnap.data() || {}) : null;
+
+    if (!fromProfile || !canSendConnectRequests(fromProfile)) {
+      return NextResponse.json(
+        {
+          error:
+            "Complete enrollment and the AI interview before sending connect requests.",
+        },
+        { status: 403 },
+      );
+    }
+
     const connectRequestId = `${fromUserId}_${toUserId}`;
     const connectRequestRef = adminDb
       .collection("connectRequests")
@@ -39,22 +68,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, alreadyRequested: true });
     }
 
-    let fromUserName: string | undefined;
-    try {
-      const fromProfileSnap = await adminDb
-        .collection("profiles")
-        .doc(fromUserId)
-        .get();
-      if (fromProfileSnap.exists) {
-        const fromProfile = fromProfileSnap.data() || {};
-        fromUserName = (fromProfile.fullName ||
-          fromProfile.name ||
-          fromProfile.displayName) as string | undefined;
-      }
-    } catch {
-      // best effort only
-    }
-
+    const fromUserName = (fromProfile.fullName ||
+      fromProfile.name ||
+      fromProfile.displayName) as string | undefined;
 
     await connectRequestRef.set({
       fromUserId,
