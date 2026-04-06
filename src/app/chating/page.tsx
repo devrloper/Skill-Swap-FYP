@@ -13,7 +13,6 @@ import {
   VideoIcon,
   MoreHorizontal,
   Send,
-  Mic,
   Paperclip,
   Smile,
   MapPin,

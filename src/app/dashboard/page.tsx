@@ -29,6 +29,7 @@ import {
   Clock3,
   ArrowRightLeft,
   UserRound,
+  MessageSquare,
 } from "lucide-react";
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,7 +44,38 @@ type ConnectRequestItem = {
   id: string;
   fromUserId?: string;
   toUserId?: string;
+  senderId?: string;
+  receiverId?: string;
+  senderName?: string | null;
+  receiverName?: string | null;
+  fromUserName?: string | null;
+  offeredSkill?: string;
+  requestedSkill?: string;
+  message?: string | null;
+  schedule?: string | null;
+  duration?: string | null;
   status?: string;
+  connectionId?: string | null;
+  chatEnabled?: boolean;
+};
+
+type DashboardNotification = {
+  id: string;
+  type?: string;
+  title?: string;
+  message?: string;
+  fromUserId?: string;
+  fromUserName?: string | null;
+  senderId?: string;
+  senderName?: string | null;
+  receiverId?: string;
+  offeredSkill?: string;
+  requestedSkill?: string;
+  requestId?: string;
+  connectRequestId?: string;
+  status?: string;
+  read?: boolean;
+  createdAt?: unknown;
 };
 
 type WrongAnswerItem = {
@@ -127,6 +159,11 @@ export default function EmployeeDashboard() {
   const [myProfile, setMyProfile] = useState<ProfileDoc | null>(null);
   const [myProfileLoading, setMyProfileLoading] = useState<boolean>(false);
   const [editProfileOpen, setEditProfileOpen] = useState<boolean>(false);
+  const [activeConnections, setActiveConnections] = useState<ConnectRequestItem[]>(
+    [],
+  );
+  const [dashboardNotifications, setDashboardNotifications] = useState<DashboardNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -172,12 +209,38 @@ export default function EmployeeDashboard() {
       setOutgoingRequests(
         Array.isArray(data?.outgoing) ? (data.outgoing as ConnectRequestItem[]) : [],
       );
+      setActiveConnections(
+        Array.isArray(data?.connections) ? (data.connections as ConnectRequestItem[]) : [],
+      );
     } catch (err) {
       console.error("Failed to load connect requests:", err);
       setIncomingRequests([]);
       setOutgoingRequests([]);
+      setActiveConnections([]);
     } finally {
       setConnectLoading(false);
+    }
+  };
+
+  const loadDashboardNotifications = async (uid: string) => {
+    setNotificationsLoading(true);
+    try {
+      const res = await fetch(`/api/notifications/combined-v3?userId=${uid}&limit=8`, {
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to load notifications");
+
+      setDashboardNotifications(
+        Array.isArray(data?.notifications)
+          ? (data.notifications as DashboardNotification[])
+          : [],
+      );
+    } catch (err) {
+      console.error("Failed to load dashboard notifications:", err);
+      setDashboardNotifications([]);
+    } finally {
+      setNotificationsLoading(false);
     }
   };
 
@@ -185,6 +248,7 @@ export default function EmployeeDashboard() {
     if (!userId) return;
     loadProfilesMap();
     loadConnectRequests(userId);
+    loadDashboardNotifications(userId);
   }, [userId]);
 
   useEffect(() => {
@@ -234,6 +298,21 @@ export default function EmployeeDashboard() {
     } finally {
       setRespondingTo((prev) => ({ ...prev, [fromUserId]: false }));
     }
+  };
+
+  const getPeerId = (request: ConnectRequestItem) =>
+    request.senderId || request.fromUserId || request.receiverId || request.toUserId || "";
+
+  const getPeerName = (request: ConnectRequestItem, fallback = "User") => {
+    const peerId = getPeerId(request);
+    return (
+      request.senderName ||
+      request.fromUserName ||
+      request.receiverName ||
+      profileNames[peerId] ||
+      peerId ||
+      fallback
+    );
   };
 
   return (
@@ -317,7 +396,7 @@ export default function EmployeeDashboard() {
                     alt="Admin"
                   />
                   <span className="text-sm font-bold text-slate-600">
-                    Notification
+                    Notifications
                   </span>
                   <Bell size={18} className="text-blue-500" />
                 </div>
@@ -528,7 +607,7 @@ export default function EmployeeDashboard() {
                 )}
 
                 {userId && connectLoading && (
-                  <p className="text-sm text-slate-600">Loading…</p>
+                  <p className="text-sm text-slate-600">Loading...</p>
                 )}
 
                 {userId && !connectLoading && (
@@ -543,16 +622,12 @@ export default function EmployeeDashboard() {
                         >
                           <div className="flex items-start gap-3 min-w-0">
                             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
-                              {(profileNames[r.fromUserId || ""] || "U")
-                                .charAt(0)
-                                .toUpperCase()}
+                              {getPeerName(r).charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-sm font-bold text-slate-800 truncate">
-                                  {profileNames[r.fromUserId || ""] ||
-                                    r.fromUserId ||
-                                    "User"}
+                                  {getPeerName(r)}
                                 </p>
                                 <span
                                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${getRequestBadge(
@@ -566,12 +641,27 @@ export default function EmployeeDashboard() {
                               <p className="text-[11px] text-slate-500 mt-1">
                                 wants to connect with you
                               </p>
+                              <p className="text-xs text-slate-600 mt-2">
+                                Offer:{" "}
+                                <span className="font-semibold">
+                                  {r.offeredSkill || "Not specified"}
+                                </span>{" "}
+                                · Learn:{" "}
+                                <span className="font-semibold">
+                                  {r.requestedSkill || "Not specified"}
+                                </span>
+                              </p>
+                              {r.message && (
+                                <p className="text-xs text-slate-600 mt-2 bg-white/60 rounded-xl px-3 py-2">
+                                  {r.message}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2 sm:justify-end">
-                            {r.fromUserId && (
+                            {getPeerId(r) && (
                               <Link
-                                href={`/profile/${r.fromUserId}`}
+                                href={`/profile/${getPeerId(r)}`}
                                 className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
                               >
                                 <UserRound size={14} />
@@ -581,24 +671,24 @@ export default function EmployeeDashboard() {
                             <button
                               type="button"
                               onClick={() =>
-                                r.fromUserId && respond(r.fromUserId, "accept")
+                                getPeerId(r) && respond(getPeerId(r), "accept")
                               }
-                              disabled={!!respondingTo[r.fromUserId || ""]}
+                              disabled={!!respondingTo[r.id]}
                               className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
                             >
                               <CheckCircle2 size={14} />
-                              {respondingTo[r.fromUserId || ""] ? "Saving..." : "Accept"}
+                              {respondingTo[r.id] ? "Saving..." : "Accept"}
                             </button>
                             <button
                               type="button"
                               onClick={() =>
-                                r.fromUserId && respond(r.fromUserId, "reject")
+                                getPeerId(r) && respond(getPeerId(r), "reject")
                               }
-                              disabled={!!respondingTo[r.fromUserId || ""]}
+                              disabled={!!respondingTo[r.id]}
                               className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-rose-600 text-white shadow-sm hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
                             >
                               <XCircle size={14} />
-                              {respondingTo[r.fromUserId || ""] ? "Saving..." : "Reject"}
+                              {respondingTo[r.id] ? "Saving..." : "Reject"}
                             </button>
                           </div>
                         </div>
@@ -649,19 +739,32 @@ export default function EmployeeDashboard() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">
-                              {profileNames[r.toUserId || ""] ||
-                                r.toUserId ||
-                                "User"}
+                              {getPeerName(r)}
                             </p>
                             <div className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-100 text-slate-700 border-slate-200">
                               <Clock3 size={11} />
                               {r.status || "pending"}
                             </div>
+                            <p className="text-xs text-slate-600 mt-2">
+                              Offer:{" "}
+                              <span className="font-semibold">
+                                {r.offeredSkill || "Not specified"}
+                              </span>{" "}
+                              · Learn:{" "}
+                              <span className="font-semibold">
+                                {r.requestedSkill || "Not specified"}
+                              </span>
+                            </p>
+                            {r.message && (
+                              <p className="text-xs text-slate-600 mt-2 bg-white/60 rounded-xl px-3 py-2">
+                                {r.message}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        {r.toUserId && (
+                        {getPeerId(r) && (
                           <Link
-                            href={`/profile/${r.toUserId}`}
+                            href={`/profile/${getPeerId(r)}`}
                             className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
                           >
                             <UserRound size={14} />
@@ -680,6 +783,174 @@ export default function EmployeeDashboard() {
                 )}
               </div>
 
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                      <MessageSquare size={18} className="text-purple-600" />
+                      Active Chats
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Accepted requests automatically unlock chat access.
+                    </p>
+                  </div>
+                </div>
+
+                {userId && connectLoading && (
+                  <p className="text-sm text-slate-600">Loading chats...</p>
+                )}
+
+                {userId && !connectLoading && activeConnections.length === 0 && (
+                  <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                    No active chats yet.
+                  </div>
+                )}
+
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {activeConnections.map((c) => {
+                    const peerId = getPeerId(c);
+                    const peerName = getPeerName(c);
+                    return (
+                      <div
+                        key={c.id}
+                        className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-800 truncate">
+                            {peerName}
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            {c.offeredSkill || "Skill"} ↔ {c.requestedSkill || "Skill"}
+                          </p>
+                        </div>
+                        {peerId && (
+                          <Link
+                            href={`/chating?connectionId=${encodeURIComponent(c.id)}&peer=${encodeURIComponent(peerId)}`}
+                            className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition"
+                          >
+                            <MessageSquare size={14} />
+                            Chat
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                      <Bell size={18} className="text-purple-600" />
+                      Notifications
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Recent request updates and skill swap alerts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full bg-white/70 border border-white/70 text-slate-700 hover:bg-white transition"
+                    onClick={() => userId && loadDashboardNotifications(userId)}
+                  >
+                    <Clock3 size={14} />
+                    Refresh
+                  </button>
+                </div>
+
+                {userId && notificationsLoading && (
+                  <p className="text-sm text-slate-600">Loading...</p>
+                )}
+
+                {userId && !notificationsLoading && dashboardNotifications.length === 0 && (
+                  <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                    No notifications yet.
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {dashboardNotifications.map((notification) => {
+                    const peerId =
+                      notification.fromUserId ||
+                      notification.senderId ||
+                      notification.receiverId ||
+                      "";
+                    const peerName =
+                      notification.fromUserName ||
+                      notification.senderName ||
+                      profileNames[peerId] ||
+                      "User";
+
+                    return (
+                      <div
+                        key={notification.id}
+                        className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-bold text-slate-800 truncate">
+                              {notification.title || "Notification"}
+                            </p>
+                            {!notification.read && (
+                              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                                New
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {notification.message || "You have a new update."}
+                          </p>
+                          {notification.offeredSkill || notification.requestedSkill ? (
+                            <p className="text-[11px] text-slate-500 mt-2">
+                              {peerName} · {notification.offeredSkill || "Skill"} ↔{" "}
+                              {notification.requestedSkill || "Skill"}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
+                          {peerId && (
+                            <Link
+                              href={`/profile/${peerId}`}
+                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
+                            >
+                              <UserRound size={14} />
+                              View
+                            </Link>
+                          )}
+                          {!notification.read && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await fetch("/api/notifications", {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    notificationId: notification.id,
+                                    userId,
+                                  }),
+                                });
+                                if (userId) {
+                                  await loadDashboardNotifications(userId);
+                                }
+                              }}
+                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition"
+                            >
+                              Mark read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* TOP GRID */}

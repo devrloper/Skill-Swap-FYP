@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { X, MapPin, GraduationCap, Sparkles } from "lucide-react";
 import Navbar from "@/app/components/innernavbar/page";
 import SearchBar from "@/app/components/searchbar/page";
 import MatchCard from "@/app/components/matchcard/page";
+import SkillRequestPanel from "@/app/components/skill-request-panel/page";
 import SidebarFilters from "@/app/components/sidebarfilters/page";
-import { auth, db } from "@/app/lib/firebase";
+import { auth } from "@/app/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import ChipLoader from "@/app/components/loader/page";
 interface ProfileData {
   id: string;
   fullName?: string;
   location?: string;
   photoURL?: string | null;
+  bio?: string;
   skills?: {
     learnSkills?: string[];
     teachSkills?: string[];
@@ -29,14 +31,10 @@ export default function FindMatchPage() {
   const [currentUserProfile, setCurrentUserProfile] =
     useState<ProfileData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [sendingConnectTo, setSendingConnectTo] = useState<
-    Record<string, boolean>
-  >({});
-  const [sentConnectTo, setSentConnectTo] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [canSendRequests, setCanSendRequests] = useState<boolean>(false);
-useEffect(() => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedProfile, setSelectedProfile] = useState<ProfileData | null>(null);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
 
@@ -57,27 +55,10 @@ useEffect(() => {
         const others = allProfiles.filter((p) => p.id !== user.uid);
         setCurrentUserProfile(me);
         setProfiles(others);
-
-        const myProfileSnap = await getDoc(doc(db, "profiles", user.uid));
-        const myProfileData = myProfileSnap.exists() ? myProfileSnap.data() : null;
-        const hasEnrollment = Boolean(
-          myProfileData?.enrolled ||
-            myProfileData?.profileCompleted ||
-            (Array.isArray(myProfileData?.completedSteps) &&
-              myProfileData.completedSteps.includes(4)),
-        );
-        const hasInterview = Boolean(
-          myProfileData?.interviewStatus ||
-            myProfileData?.interviewScore ||
-            myProfileData?.interview,
-        );
-        const eligible = hasEnrollment && hasInterview;
-        setCanSendRequests(eligible);
       } catch (err) {
         console.error("Error loading profiles:", err);
         setCurrentUserProfile(null);
         setProfiles([]);
-        setCanSendRequests(false);
       } finally {
         setLoading(false);
       }
@@ -92,8 +73,6 @@ useEffect(() => {
     visible: { opacity: 1, y: 0 },
   };
 
-  const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -101,46 +80,11 @@ useEffect(() => {
     return () => clearTimeout(timer);
   }, []);
 
-  const sendConnectRequest = async (toUserId: string) => {
-    const fromUserId = auth.currentUser?.uid;
-    if (!fromUserId) {
-      alert("Please sign in to send a connect request.");
-      return;
-    }
-
-    if (fromUserId === toUserId) return;
-    if (!canSendRequests) {
-      alert("Please complete enrollment and the AI interview before sending requests.");
-      return;
-    }
-    if (sendingConnectTo[toUserId] || sentConnectTo[toUserId]) return;
-
-    setSendingConnectTo((prev) => ({ ...prev, [toUserId]: true }));
-    try {
-      const res = await fetch("/api/connect-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromUserId, toUserId }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to send connect request");
-      }
-
-      setSentConnectTo((prev) => ({ ...prev, [toUserId]: true }));
-      if (data?.alreadyRequested) {
-        alert("You already sent a connect request to this user.");
-      } else {
-        alert("Connect request sent!");
-      }
-    } catch (err) {
-      console.error("Connect request error:", err);
-      alert(err instanceof Error ? err.message : "Failed to send request.");
-    } finally {
-      setSendingConnectTo((prev) => ({ ...prev, [toUserId]: false }));
-    }
+  const openProfileModal = (profile: ProfileData) => {
+    setSelectedProfile(profile);
   };
+
+  const closeProfileModal = () => setSelectedProfile(null);
 
   return (
     <>
@@ -433,21 +377,9 @@ useEffect(() => {
                           tags={tags.length ? tags : ["No skills set"]}
                           education={education}
                           imageUrl={photoUrl}
-                          onConnect={() => sendConnectRequest(profile.id)}
-                          connectDisabled={
-                            !canSendRequests ||
-                            !!sendingConnectTo[profile.id] ||
-                            !!sentConnectTo[profile.id]
-                          }
-                          connectLabel={
-                            !canSendRequests
-                              ? "Enroll first"
-                              : sendingConnectTo[profile.id]
-                                ? "Sending..."
-                                : sentConnectTo[profile.id]
-                                  ? "Request sent"
-                                  : "Connect"
-                          }
+                          onConnect={() => openProfileModal(profile)}
+                          connectDisabled={false}
+                          connectLabel="View Profile"
                         />
                       </motion.div>
                     );
@@ -470,6 +402,146 @@ useEffect(() => {
           {/* <Jobboard /> */}
         </div>
       </div>
+      <AnimatePresence>
+        {selectedProfile && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-4 backdrop-blur-md sm:items-center sm:py-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onMouseDown={closeProfileModal}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.96, y: 20, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-hidden rounded-[28px] border border-white/50 bg-white shadow-[0_25px_90px_rgba(15,23,42,0.25)] sm:max-h-[90vh]"
+            >
+              <div className="relative border-b border-slate-100 bg-gradient-to-r from-purple-700 to-pink-600 px-6 py-5 text-white">
+                <button
+                  type="button"
+                  onClick={closeProfileModal}
+                  className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/25"
+                  aria-label="Close profile preview"
+                >
+                  <X size={18} />
+                </button>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="h-20 w-20 overflow-hidden rounded-3xl border border-white/25 bg-white/15 shadow-lg">
+                    <img
+                      src={selectedProfile.photoURL || "/girl.png"}
+                      alt={selectedProfile.fullName || "Profile"}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-white/75">
+                      Profile Preview
+                    </p>
+                    <h2 className="mt-1 text-2xl font-black leading-tight">
+                      {selectedProfile.fullName || "Profile"}
+                    </h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-white/90">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1">
+                        <MapPin size={14} />
+                        {selectedProfile.location || "Location not set"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-6 overflow-y-auto p-6 lg:grid-cols-[0.95fr_1.05fr]">
+                <div className="space-y-5">
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                    <div className="flex items-center gap-2 text-slate-800">
+                      <Sparkles size={18} className="text-purple-600" />
+                      <h3 className="font-bold">About</h3>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                      {selectedProfile.bio || "No bio has been added yet."}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-center gap-2 text-slate-800">
+                        <Sparkles size={17} className="text-emerald-600" />
+                        <h4 className="font-bold">Skills Offered</h4>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {[
+                          ...(selectedProfile.skills?.teachSkills || []),
+                          ...(selectedProfile.skills?.customTeachSkills || []),
+                        ].length ? (
+                          [
+                            ...(selectedProfile.skills?.teachSkills || []),
+                            ...(selectedProfile.skills?.customTeachSkills || []),
+                          ].map((skill) => (
+                            <span
+                              key={skill}
+                              className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                            >
+                              {skill}
+                            </span>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-500">Not set</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-center gap-2 text-slate-800">
+                        <GraduationCap size={17} className="text-purple-600" />
+                        <h4 className="font-bold">Skills Wanted</h4>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {[
+                          ...(selectedProfile.skills?.learnSkills || []),
+                          ...(selectedProfile.skills?.customLearnSkills || []),
+                        ].length ? (
+                          [
+                            ...(selectedProfile.skills?.learnSkills || []),
+                            ...(selectedProfile.skills?.customLearnSkills || []),
+                          ].map((skill) => (
+                            <span
+                              key={skill}
+                              className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700"
+                            >
+                              {skill}
+                            </span>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-500">Not set</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="self-start">
+                  <SkillRequestPanel
+                    receiverId={selectedProfile.id}
+                    receiverName={selectedProfile.fullName || "Profile"}
+                    receiverTeachSkills={[
+                      ...(selectedProfile.skills?.teachSkills || []),
+                      ...(selectedProfile.skills?.customTeachSkills || []),
+                    ]}
+                    receiverLearnSkills={[
+                      ...(selectedProfile.skills?.learnSkills || []),
+                      ...(selectedProfile.skills?.customLearnSkills || []),
+                    ]}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

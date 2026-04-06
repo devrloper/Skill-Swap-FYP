@@ -25,8 +25,15 @@ type NotificationItem = {
   title?: string;
   message?: string;
   fromUserId?: string;
+  senderId?: string;
+  receiverId?: string;
   fromUserName?: string | null;
+  senderName?: string | null;
+  offeredSkill?: string;
+  requestedSkill?: string;
   connectRequestId?: string;
+  requestId?: string;
+  connectionId?: string;
   status?: string;
   read?: boolean;
   createdAt?: unknown;
@@ -320,7 +327,7 @@ export default function Navbar() {
                             </p>
                           </button>
 
-                          {n.type === "connect_request" && n.fromUserId && (
+                          {(n.type === "connect_request" || n.type === "skill_request") && n.fromUserId && (
                             <div className="mt-3 rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-3 shadow-sm">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -335,7 +342,7 @@ export default function Navbar() {
                                     </span>
                                   </div>
                                   <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-                                    {n.fromUserName || n.fromUserId || "A user"} wants to connect with you.
+                                    {n.fromUserName || n.fromUserId || "A user"} wants to swap {n.offeredSkill || "a skill"} for {n.requestedSkill || "another skill"}.
                                   </p>
                                 </div>
                                 <Link
@@ -507,7 +514,7 @@ export default function Navbar() {
                             </p>
                           </button>
 
-                          {n.type === "connect_request" && n.fromUserId && (
+                          {(n.type === "connect_request" || n.type === "skill_request") && n.fromUserId && (
                             <div className="mt-3 rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-3 shadow-sm">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -522,7 +529,7 @@ export default function Navbar() {
                                     </span>
                                   </div>
                                   <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-                                    {n.fromUserName || n.fromUserId || "A user"} wants to connect with you.
+                                    {n.fromUserName || n.fromUserId || "A user"} wants to swap {n.offeredSkill || "a skill"} for {n.requestedSkill || "another skill"}.
                                   </p>
                                 </div>
                                 <Link

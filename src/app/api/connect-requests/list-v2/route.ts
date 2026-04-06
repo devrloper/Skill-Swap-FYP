@@ -1,54 +1,41 @@
 import { NextResponse } from "next/server";
+import { QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { adminDb } from "@/app/lib/firebaseAdmin";
+import { isRequestExpired, toMillis } from "@/app/lib/skill-request-utils";
 
 export const dynamic = "force-dynamic";
 
-function toMillis(value: unknown): number {
-  // Firestore Timestamp has toMillis(), Date has getTime()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const anyValue = value as any;
-  if (anyValue?.toMillis) return Number(anyValue.toMillis());
-  if (value instanceof Date) return value.getTime();
-  return 0;
+function decorateRequest(doc: QueryDocumentSnapshot) {
+  const data = doc.data() as Record<string, unknown>;
+  return { id: doc.id, ...data, expired: Boolean(data.status === "pending" && isRequestExpired(data)) };
+}
+
+function decorateConnection(doc: QueryDocumentSnapshot) {
+  return { id: doc.id, ...doc.data() };
 }
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId")?.trim();
+    if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const [incomingSnap, outgoingSnap] = await Promise.all([
-      adminDb
-        .collection("connectRequests")
-        .where("toUserId", "==", userId)
-        .limit(200)
-        .get(),
-      adminDb
-        .collection("connectRequests")
-        .where("fromUserId", "==", userId)
-        .limit(200)
-        .get(),
+    const [incomingSnap, outgoingSnap, connectionsSnap] = await Promise.all([
+      adminDb.collection("skillRequests").where("receiverId", "==", userId).get(),
+      adminDb.collection("skillRequests").where("senderId", "==", userId).get(),
+      adminDb.collection("connections").where("users", "array-contains", userId).get(),
     ]);
 
-    const incoming = incomingSnap.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+    const incoming = incomingSnap.docs.map(decorateRequest).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+    const outgoing = outgoingSnap.docs.map(decorateRequest).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+    const connections = connectionsSnap.docs
+      .map(decorateConnection)
+      .filter((connection) => connection.status === "accepted")
+      .sort((a, b) => toMillis(b.acceptedAt || b.createdAt) - toMillis(a.acceptedAt || a.createdAt));
 
-    const outgoing = outgoingSnap.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
-
-    return NextResponse.json({ incoming, outgoing });
+    return NextResponse.json({ incoming, outgoing, connections });
   } catch (err) {
-    console.error("Error loading connect requests (v2):", err);
-    return NextResponse.json(
-      { error: "Failed to load connect requests" },
-      { status: 500 },
-    );
+    console.error("Error loading skill requests (v2):", err);
+    return NextResponse.json({ error: "Failed to load skill requests" }, { status: 500 });
   }
 }
-
