@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent } from "react";
-import { db, auth } from "@/app/lib/firebase";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { db, auth, storage } from "@/app/lib/firebase";
+import { updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc, DocumentData } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes, type StorageReference } from "firebase/storage";
 
 interface ProfileInfoStepProps {
   onNext: () => void;
+  onSaved?: () => void;
 }
 
-export default function ProfileInfoStep({ onNext }: ProfileInfoStepProps) {
+export default function ProfileInfoStep({ onNext, onSaved }: ProfileInfoStepProps) {
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
   const [fullName, setFullName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [location, setLocation] = useState<string>("");
@@ -17,7 +21,26 @@ export default function ProfileInfoStep({ onNext }: ProfileInfoStepProps) {
   const [bio, setBio] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
 
+  const lastUploadedPhotoURLRef = useRef<string | null>(null);
   const userId = auth.currentUser?.uid;
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Failed to read image"));
+      reader.readAsDataURL(file);
+    });
+
+  const uploadWithTimeout = async (imageRef: StorageReference, file: File) => {
+    const timeoutMs = 12000;
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      window.setTimeout(() => reject(new Error("Upload timed out")), timeoutMs),
+    );
+
+    await Promise.race([uploadBytes(imageRef, file), timeoutPromise]);
+    return getDownloadURL(imageRef);
+  };
 
   // Load existing profile data
   useEffect(() => {
@@ -45,11 +68,42 @@ export default function ProfileInfoStep({ onNext }: ProfileInfoStepProps) {
   }, [userId]);
 
   // Handle image selection
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setPreview(URL.createObjectURL(file));
-      // Optional: upload to Firebase Storage and store URL
+    if (!file) return;
+
+    setUploadingImage(true);
+    lastUploadedPhotoURLRef.current = null;
+
+    try {
+      const localDataUrl = await fileToDataUrl(file);
+      setPreview(localDataUrl);
+      setUploadingImage(false);
+
+      if (!userId) {
+        return;
+      }
+
+      const fileExt = file.name.split(".").pop() || "jpg";
+      const imageRef = ref(
+        storage,
+        `profile-images/${userId}/avatar-${Date.now()}.${fileExt}`,
+      );
+
+      void (async () => {
+        try {
+          const downloadURL = await uploadWithTimeout(imageRef, file);
+          lastUploadedPhotoURLRef.current = downloadURL;
+          setPreview(downloadURL);
+        } catch (uploadErr) {
+          console.warn("Storage upload failed, keeping data URL preview:", uploadErr);
+        }
+      })();
+    } catch (err) {
+      console.error("Error preparing image:", err);
+      setUploadingImage(false);
+      setPreview(null);
+      alert("Image upload failed. Please try again.");
     }
   };
 
@@ -60,6 +114,7 @@ export default function ProfileInfoStep({ onNext }: ProfileInfoStepProps) {
     setSaving(true);
 
     try {
+      const savedPhotoURL = lastUploadedPhotoURLRef.current || preview;
       await setDoc(
         doc(db, "profiles", userId),
         {
@@ -68,11 +123,25 @@ export default function ProfileInfoStep({ onNext }: ProfileInfoStepProps) {
           location,
           phone,
           bio,
-          photoURL: preview,
+          photoURL: savedPhotoURL,
+          photoUpdatedAt: Date.now(),
         },
-        { merge: true }
+        { merge: true },
       );
 
+      if (
+        auth.currentUser &&
+        savedPhotoURL &&
+        !savedPhotoURL.startsWith("data:") &&
+        !savedPhotoURL.startsWith("blob:")
+      ) {
+        await updateProfile(auth.currentUser, {
+          displayName: fullName || auth.currentUser.displayName,
+          photoURL: savedPhotoURL,
+        });
+      }
+
+      onSaved?.();
       onNext();
     } catch (err) {
       console.error("Error saving profile:", err);
@@ -168,14 +237,14 @@ export default function ProfileInfoStep({ onNext }: ProfileInfoStepProps) {
       <div className="flex justify-end">
         <button
           onClick={handleNext}
-          disabled={saving || !isFormValid} // disabled if saving or form invalid
+          disabled={saving || uploadingImage || !isFormValid}
           className={`px-8 py-3 rounded-xl text-white font-semibold shadow-md transition ${
-            saving || !isFormValid
+            saving || uploadingImage || !isFormValid
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-gradient-to-r from-purple-600 to-pink-500 hover:scale-[1.03]"
           }`}
         >
-          {saving ? "Saving..." : "Continue →"}
+          {uploadingImage ? "Uploading..." : saving ? "Saving..." : "Continue ->"}
         </button>
       </div>
     </div>

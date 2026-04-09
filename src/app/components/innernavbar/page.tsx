@@ -49,6 +49,8 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notifLoading, setNotifLoading] = useState<boolean>(false);
+  const [profilePhotoURL, setProfilePhotoURL] = useState<string>("");
+  const [profileName, setProfileName] = useState<string>("");
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationsDesktopRef = useRef<HTMLDivElement>(null);
@@ -91,6 +93,42 @@ export default function Navbar() {
       cancelled = true;
     };
   }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setProfilePhotoURL("");
+      setProfileName("");
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, "profiles", user.uid));
+        const data = snap.exists() ? snap.data() : null;
+        if (cancelled) return;
+
+        setProfilePhotoURL(
+          typeof data?.photoURL === "string" && !data.photoURL.startsWith("blob:")
+            ? data.photoURL
+            : "",
+        );
+        setProfileName(
+          (data?.fullName || data?.name || user.displayName || "") as string,
+        );
+      } catch (err) {
+        console.error("Failed to load profile avatar:", err);
+        if (!cancelled) {
+          setProfilePhotoURL("");
+          setProfileName(user.displayName || "");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid, user?.displayName]);
   // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -399,15 +437,15 @@ export default function Navbar() {
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-300 focus:outline-none"
               >
-                {user?.photoURL ? (
+                {profilePhotoURL || user?.photoURL ? (
                   <img
-                    src={user.photoURL}
+                    src={profilePhotoURL || user?.photoURL || ""}
                     alt="User"
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-purple-600 flex items-center justify-center text-white font-semibold uppercase">
-                    {user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                    {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
                   </div>
                 )}
               </button>
@@ -415,21 +453,21 @@ export default function Navbar() {
               {profileOpen && (
                 <div className="absolute right-0 mt-2 w-52 bg-white shadow-xl rounded-lg border border-gray-200 z-50 animate-fade-in">
                   <div className="flex flex-col items-center gap-2 p-4 border-b border-gray-100">
-                    {user?.photoURL ? (
+                    {profilePhotoURL || user?.photoURL ? (
                       // Show user image if available
                       <img
-                        src={user.photoURL}
+                        src={profilePhotoURL || user?.photoURL || ""}
                         alt="User"
                         className="w-14 h-14 rounded-full object-cover"
                       />
                     ) : (
                       // Fallback: show initials if no image
                       <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold text-lg uppercase">
-                        {user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                        {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
                       </div>
                     )}
                     <p className="font-semibold text-gray-800 text-center truncate">
-                      {user?.displayName || "User"}
+                      {profileName || user?.displayName || "User"}
                     </p>
                     <p className="text-xs text-gray-500 truncate text-center">
                       {user?.email}
@@ -580,17 +618,17 @@ export default function Navbar() {
               )}
             </div>
             <div className="relative w-9 h-9">
-              {user?.photoURL ? (
+              {profilePhotoURL || user?.photoURL ? (
                 //  Google Sign-in Image
                 <img
-                  src={user.photoURL}
+                  src={profilePhotoURL || user?.photoURL || ""}
                   alt="User"
                   className="w-9 h-9 rounded-full object-cover border border-gray-300"
                 />
               ) : (
                 // ✅ Email Signup → First Letter
                 <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold uppercase">
-                  {user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                  {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
                 </div>
               )}
 
@@ -604,13 +642,19 @@ export default function Navbar() {
                   onMouseLeave={() => setProfileOpen(false)}
                 >
                   <div className="flex flex-col items-center gap-2 p-4 border-b border-gray-100">
-                    <img
-                      src={user?.photoURL || ""}
-                      alt="User"
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
+                    {profilePhotoURL || user?.photoURL ? (
+                      <img
+                        src={profilePhotoURL || user?.photoURL || ""}
+                        alt="User"
+                        className="w-14 h-14 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold text-lg uppercase">
+                        {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                      </div>
+                    )}
                     <p className="font-semibold text-gray-800 text-center truncate">
-                      {user?.displayName || "User"}
+                      {profileName || user?.displayName || "User"}
                     </p>
                     <p className="text-xs text-gray-500 truncate text-center">
                       {user?.email}

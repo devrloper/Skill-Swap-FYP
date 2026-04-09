@@ -92,6 +92,7 @@ type ProfileDoc = {
   phone?: string;
   bio?: string;
   photoURL?: string | null;
+  photoUpdatedAt?: number;
   enrolled?: boolean;
   profileCompleted?: boolean;
   completedSteps?: number[];
@@ -244,6 +245,20 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const loadMyProfile = async (uid: string) => {
+    setMyProfileLoading(true);
+    try {
+      const snap = await getDoc(doc(db, "profiles", uid));
+      const data = snap.exists() ? (snap.data() as ProfileDoc) : null;
+      setMyProfile(data);
+    } catch (err) {
+      console.error("Failed to load my profile:", err);
+      setMyProfile(null);
+    } finally {
+      setMyProfileLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!userId) return;
     loadProfilesMap();
@@ -257,24 +272,7 @@ export default function EmployeeDashboard() {
       return;
     }
 
-    let cancelled = false;
-    setMyProfileLoading(true);
-    (async () => {
-      try {
-        const snap = await getDoc(doc(db, "profiles", userId));
-        const data = snap.exists() ? (snap.data() as ProfileDoc) : null;
-        if (!cancelled) setMyProfile(data);
-      } catch (err) {
-        console.error("Failed to load my profile:", err);
-        if (!cancelled) setMyProfile(null);
-      } finally {
-        if (!cancelled) setMyProfileLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    loadMyProfile(userId);
   }, [userId]);
 
   const respond = async (fromUserId: string, action: "accept" | "reject") => {
@@ -314,6 +312,13 @@ export default function EmployeeDashboard() {
       fallback
     );
   };
+
+  const myProfilePhotoURL =
+    myProfile?.photoURL && !myProfile.photoURL.startsWith("blob:")
+      ? myProfile.photoURL.startsWith("data:")
+        ? myProfile.photoURL
+        : `${myProfile.photoURL}${myProfile.photoUpdatedAt ? `?v=${myProfile.photoUpdatedAt}` : ""}`
+      : "";
 
   return (
     <>
@@ -418,7 +423,7 @@ export default function EmployeeDashboard() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <img
-                    src={myProfile?.photoURL || "https://i.pravatar.cc/150?u=me"}
+                    src={myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"}
                     className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover"
                     alt="Profile"
                   />
@@ -1200,6 +1205,7 @@ export default function EmployeeDashboard() {
         setOpen={setEditProfileOpen}
         mode="edit"
         initialStep={1}
+        onSaved={() => userId && loadMyProfile(userId)}
       />
     </>
   );

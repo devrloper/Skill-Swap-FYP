@@ -21,7 +21,15 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const profile = snap.data() || {};
   const name = (profile.fullName || profile.name || "Profile") as string;
   const location = (profile.location || "") as string;
-  const photoURL = (profile.photoURL || "") as string;
+  const photoURL =
+    typeof profile.photoURL === "string" && !profile.photoURL.startsWith("blob:")
+      ? profile.photoURL
+      : "";
+  const photoSrc = photoURL
+    ? photoURL.startsWith("data:")
+      ? photoURL
+      : `${photoURL}${profile.photoUpdatedAt ? `?v=${profile.photoUpdatedAt}` : ""}`
+    : "";
 
   const skills = profile.skills || {};
   const learnSkills: string[] = [
@@ -42,9 +50,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           <div className="p-8">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-full overflow-hidden bg-white border border-white/60 shadow-sm flex items-center justify-center">
-                {photoURL ? (
+                {photoSrc ? (
                   <Image
-                    src={photoURL}
+                    src={photoSrc}
                     alt={name}
                     width={80}
                     height={80}

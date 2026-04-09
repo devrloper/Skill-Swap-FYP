@@ -16,6 +16,7 @@ interface ProfileData {
   fullName?: string;
   location?: string;
   photoURL?: string | null;
+  photoUpdatedAt?: number;
   bio?: string;
   skills?: {
     learnSkills?: string[];
@@ -71,6 +72,14 @@ export default function FindMatchPage() {
   const cardVariants = {
     hidden: { opacity: 0, y: 30 },
     visible: { opacity: 1, y: 0 },
+  };
+
+  const getProfileImageUrl = (profile?: ProfileData | null) => {
+    const raw = profile?.photoURL;
+    if (!raw || raw.startsWith("blob:")) return undefined;
+    if (raw.startsWith("data:")) return raw;
+    const stamp = profile?.photoUpdatedAt ? `?v=${profile.photoUpdatedAt}` : "";
+    return `${raw}${stamp}`;
   };
 
   useEffect(() => {
@@ -294,12 +303,6 @@ export default function FindMatchPage() {
                           .filter(Boolean)
                           .join(", ")
                       : "";
-                    const photoUrl =
-                      currentUserProfile.photoURL &&
-                      !currentUserProfile.photoURL.startsWith("blob:")
-                        ? currentUserProfile.photoURL
-                        : undefined;
-
                     return (
                       <motion.div
                         key={currentUserProfile.id}
@@ -318,7 +321,7 @@ export default function FindMatchPage() {
                           }
                           tags={tags.length ? tags : ["No skills set"]}
                           education={education}
-                          imageUrl={photoUrl}
+                          imageUrl={getProfileImageUrl(currentUserProfile)}
                           showConnect={false}
                         />
                       </motion.div>
@@ -351,11 +354,6 @@ export default function FindMatchPage() {
                           .filter(Boolean)
                           .join(", ")
                       : "";
-                    const photoUrl =
-                      profile.photoURL && !profile.photoURL.startsWith("blob:")
-                        ? profile.photoURL
-                        : undefined;
-
                     return (
                       <motion.div
                         key={profile.id}
@@ -376,7 +374,7 @@ export default function FindMatchPage() {
                           location={profile.location || "Location not set"}
                           tags={tags.length ? tags : ["No skills set"]}
                           education={education}
-                          imageUrl={photoUrl}
+                          imageUrl={getProfileImageUrl(profile)}
                           onConnect={() => openProfileModal(profile)}
                           connectDisabled={false}
                           connectLabel="View Profile"
@@ -432,7 +430,7 @@ export default function FindMatchPage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="h-20 w-20 overflow-hidden rounded-3xl border border-white/25 bg-white/15 shadow-lg">
                     <img
-                      src={selectedProfile.photoURL || "/girl.png"}
+                      src={getProfileImageUrl(selectedProfile) || "/girl.png"}
                       alt={selectedProfile.fullName || "Profile"}
                       className="h-full w-full object-cover"
                     />

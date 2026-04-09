@@ -15,6 +15,7 @@ interface ProfileStepModalProps {
   readonly setOpen: (value: boolean) => void;
   readonly mode?: "enroll" | "edit";
   readonly initialStep?: number;
+  readonly onSaved?: () => void;
 }
 
 export default function ProfileStepModal({
@@ -22,6 +23,7 @@ export default function ProfileStepModal({
   setOpen,
   mode = "enroll",
   initialStep = 0,
+  onSaved,
 }: ProfileStepModalProps) {
   const [step, setStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -52,6 +54,7 @@ export default function ProfileStepModal({
     { step: "STEP 3", title: "Skills" },
     { step: "STEP 4", title: "AI Interview" },
   ];
+  const visibleSteps = mode === "edit" ? steps.slice(0, 3) : steps;
 
   // Save step completion to Firestore
   const saveStepToDB = async (stepNumber: number) => {
@@ -69,6 +72,11 @@ export default function ProfileStepModal({
 
   // Called when moving to the next step
   const handleNextStep = (skills?: string[]) => {
+    if (mode === "edit" && step >= 2) {
+      setOpen(false);
+      return;
+    }
+
     setCompletedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));
     saveStepToDB(step); // Save to DB
     if (skills) setSelectedSkills(skills);
@@ -100,22 +108,22 @@ export default function ProfileStepModal({
           {/* MOBILE STEPPER */}
           <div className="md:hidden mb-6 text-center">
             <p className="text-sm text-gray-500 font-medium">
-              Step {step} of {steps.length - 1}
+              Step {step} of {visibleSteps.length - 1}
             </p>
             <h3 className="text-lg font-semibold text-gray-800">
-              {steps[step]?.title}
+              {visibleSteps[step]?.title}
             </h3>
             <div className="w-full bg-gray-200 h-2 rounded-full mt-3">
               <div
                 className="h-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 transition-all"
-                style={{ width: `${(step / (steps.length - 1)) * 100}%` }}
+                style={{ width: `${(step / (visibleSteps.length - 1)) * 100}%` }}
               />
             </div>
           </div>
 
           {/* DESKTOP/TABLET STEPPER */}
            <div className="hidden md:flex justify-between items-start mb-12 relative gap-2">
-             {steps.map((item, index) => {
+             {visibleSteps.map((item, index) => {
                const current = index === step;
                const isDisabled =
                  mode !== "edit" &&
@@ -188,10 +196,10 @@ export default function ProfileStepModal({
             </div>
           )}
 
-          {step === 1 && <Step1 onNext={handleNextStep} />}
+          {step === 1 && <Step1 onNext={handleNextStep} onSaved={onSaved} />}
           {step === 2 && <Step2 onNext={handleNextStep} />}
-          {step === 3 && <Step3 onNext={handleNextStep} />}
-          {step === 4 && <Step4 skills={selectedSkills} /> 
+          {mode !== "edit" && step === 3 && <Step3 onNext={handleNextStep} />}
+          {mode !== "edit" && step === 4 && <Step4 skills={selectedSkills} /> 
             
           }
         </div>
