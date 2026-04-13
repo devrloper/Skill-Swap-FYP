@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import {
   FaUser,
   FaRegEye,
+  FaEye,
+  FaEyeSlash,
   FaExchangeAlt,
   FaGraduationCap,
 } from "react-icons/fa";
@@ -29,6 +31,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState(""); // inline validation error message
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -41,6 +45,12 @@ export default function SignupPage() {
 
     if (!name || !email || !password || !confirmPassword) {
       setMessage("Please fill all fields.");
+      setIsError(true);
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(name.trim())) {
+      setMessage("Name must include at least one letter. Numbers only are not allowed.");
       setIsError(true);
       return;
     }
@@ -151,7 +161,12 @@ export default function SignupPage() {
                   type="text"
                   placeholder="Full Name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "" || /[A-Za-z]/.test(value)) {
+                      setName(value);
+                    }
+                  }}
                   className="w-full py-2.5 sm:py-3 pl-10 pr-3 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
                 />
               </div>
@@ -172,24 +187,42 @@ export default function SignupPage() {
               <div className="relative">
                 <FaRegEye className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full py-2.5 sm:py-3 pl-10 pr-3 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
+                  className="w-full py-2.5 sm:py-3 pl-10 pr-10 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+                </button>
               </div>
 
               {/* Confirm Password */}
               <div className="relative">
                 <FaRegEye className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full py-2.5 sm:py-3 pl-10 pr-3 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
+                  className="w-full py-2.5 sm:py-3 pl-10 pr-10 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={
+                    showConfirmPassword ? "Hide confirm password" : "Show confirm password"
+                  }
+                >
+                  {showConfirmPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+                </button>
               </div>
 
               {/* Role Selection */}

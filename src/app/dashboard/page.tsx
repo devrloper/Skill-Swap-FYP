@@ -26,10 +26,13 @@ import {
   ChevronDown,
   CheckCircle2,
   XCircle,
+  X,
   Clock3,
   ArrowRightLeft,
   UserRound,
   MessageSquare,
+  Sparkles,
+  GraduationCap,
 } from "lucide-react";
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
@@ -98,6 +101,7 @@ type ProfileDoc = {
   completedSteps?: number[];
   interviewStatus?: string;
   interviewScore?: number;
+  educations?: Array<{ degree?: string; institute?: string; start?: string; end?: string }>;
   interview?: {
     result?: string;
     score?: number;
@@ -160,6 +164,7 @@ export default function EmployeeDashboard() {
   const [myProfile, setMyProfile] = useState<ProfileDoc | null>(null);
   const [myProfileLoading, setMyProfileLoading] = useState<boolean>(false);
   const [editProfileOpen, setEditProfileOpen] = useState<boolean>(false);
+  const [viewProfileOpen, setViewProfileOpen] = useState<boolean>(false);
   const [activeConnections, setActiveConnections] = useState<ConnectRequestItem[]>(
     [],
   );
@@ -441,17 +446,18 @@ export default function EmployeeDashboard() {
                   <button
                     type="button"
                     onClick={() => setEditProfileOpen(true)}
-                    className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white text-sm font-semibold shadow-md hover:brightness-105 transition"
+                    className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white text-sm font-semibold shadow-md hover:brightness-105 transition cursor-pointer"
                   >
                     Edit Profile
                   </button>
                   {userId && (
-                    <Link
-                      href={`/profile/${userId}`}
-                      className="px-4 py-2 rounded-full bg-white/60 border border-white/70 text-slate-700 text-sm font-semibold hover:bg-white/70 transition"
+                    <button
+                      type="button"
+                      onClick={() => setViewProfileOpen(true)}
+                      className="px-4 py-2 rounded-full bg-white/60 border border-white/70 text-slate-700 text-sm font-semibold hover:bg-white/70 transition cursor-pointer"
                     >
                       View Public
-                    </Link>
+                    </button>
                   )}
                 </div>
               </div>
@@ -1200,6 +1206,162 @@ export default function EmployeeDashboard() {
           </main>
         </div>
       </div>
+      <AnimatePresence>
+        {viewProfileOpen && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-4 backdrop-blur-md sm:items-center sm:py-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onMouseDown={() => setViewProfileOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.96, y: 20, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="w-full max-w-4xl max-h-[calc(100vh-2rem)] overflow-hidden rounded-[28px] border border-white/50 bg-white shadow-[0_25px_90px_rgba(15,23,42,0.25)] sm:max-h-[90vh]"
+            >
+              <div className="relative border-b border-slate-100 bg-gradient-to-r from-purple-700 to-pink-600 px-6 py-5 text-white">
+                <button
+                  type="button"
+                  onClick={() => setViewProfileOpen(false)}
+                  className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/25 cursor-pointer"
+                  aria-label="Close public profile preview"
+                >
+                  <X size={18} />
+                </button>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="h-20 w-20 overflow-hidden rounded-3xl border border-white/25 bg-white/15 shadow-lg">
+                    <img
+                      src={myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"}
+                      alt={myProfile?.fullName || "Profile"}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-white/75">
+                      Public Preview
+                    </p>
+                    <h2 className="mt-1 text-2xl font-black leading-tight">
+                      {myProfile?.fullName || "Profile"}
+                    </h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-white/90">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1">
+                        <UserRound size={14} />
+                        {myProfile?.email || "No email"}
+                      </span>
+                      {myProfile?.location ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1">
+                          {myProfile.location}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-6 overflow-y-auto p-6 lg:grid-cols-[0.95fr_1.05fr]">
+                <div className="space-y-5">
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                    <h3 className="font-bold text-slate-800">About</h3>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                      {myProfile?.bio || "No bio has been added yet."}
+                    </p>
+                    <div className="mt-4 space-y-1 text-sm text-slate-600">
+                      <p>{myProfile?.phone ? `Phone: ${myProfile.phone}` : ""}</p>
+                      <p>{myProfile?.location ? `Location: ${myProfile.location}` : ""}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center gap-2 text-slate-800">
+                      <Sparkles size={18} className="text-purple-600" />
+                      <h4 className="font-bold">Education</h4>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {myProfile?.educations?.length ? (
+                        myProfile.educations.map((edu, idx) => (
+                          <div
+                            key={`${edu.degree || "edu"}-${idx}`}
+                            className="rounded-2xl bg-purple-50 px-3 py-2 text-sm text-purple-800"
+                          >
+                            <p className="font-semibold">{edu.degree || "Education"}</p>
+                            <p className="text-xs text-purple-700/80">
+                              {edu.institute || "Institute"}
+                              {edu.start || edu.end ? ` · ${edu.start || "?"} - ${edu.end || "?"}` : ""}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500">Not set</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center gap-2 text-slate-800">
+                      <CheckCircle2 size={17} className="text-emerald-600" />
+                      <h4 className="font-bold">Skills Offered</h4>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {[
+                        ...(myProfile?.skills?.teachSkills || []),
+                        ...(myProfile?.skills?.customTeachSkills || []),
+                      ].length ? (
+                        [
+                          ...(myProfile?.skills?.teachSkills || []),
+                          ...(myProfile?.skills?.customTeachSkills || []),
+                        ].map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                          >
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500">Not set</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center gap-2 text-slate-800">
+                      <GraduationCap size={17} className="text-purple-600" />
+                      <h4 className="font-bold">Skills Wanted</h4>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {[
+                        ...(myProfile?.skills?.learnSkills || []),
+                        ...(myProfile?.skills?.customLearnSkills || []),
+                      ].length ? (
+                        [
+                          ...(myProfile?.skills?.learnSkills || []),
+                          ...(myProfile?.skills?.customLearnSkills || []),
+                        ].map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700"
+                          >
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500">Not set</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <Modal
         open={editProfileOpen}
         setOpen={setEditProfileOpen}

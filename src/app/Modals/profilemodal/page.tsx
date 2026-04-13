@@ -91,7 +91,7 @@ export default function ProfileStepModal({
           {/* Close button */}
           <button
             onClick={() => setOpen(false)}
-            className="absolute top-3 right-3 md:top-4 md:right-4 text-gray-400 hover:text-black bg-white/70 rounded-full p-1.5 shadow-sm"
+            className="absolute top-3 right-3 md:top-4 md:right-4 text-gray-400 hover:text-black bg-white/70 rounded-full p-1.5 shadow-sm cursor-pointer"
             aria-label="Close modal"
           >
             <X />
