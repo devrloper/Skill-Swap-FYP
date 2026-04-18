@@ -50,7 +50,9 @@ export default function SignupPage() {
     }
 
     if (!/[A-Za-z]/.test(name.trim())) {
-      setMessage("Name must include at least one letter. Numbers only are not allowed.");
+      setMessage(
+        "Name must include at least one letter. Numbers only are not allowed.",
+      );
       setIsError(true);
       return;
     }
@@ -136,27 +138,27 @@ export default function SignupPage() {
         <div className="absolute inset-0 z-0 " />
 
         {/* Signup Card */}
-        <div className="relative z-10 w-full max-w-7xl px-4 flex justify-center md:justify-end items-center">
-          <div className="bg-gradient-to-br from-purple-600 to-pink-500/95 w-full max-w-[350px] sm:max-w-[380px] aspect-[3.5/5] rounded-[35px] shadow-2xl flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 transform transition-transform hover:scale-[1.01] lg:-translate-x-30 backdrop-blur-sm">
-            <h2 className="text-[#0A1144] text-xl sm:text-2xl font-bold mb-4 sm:mb-6 tracking-tight text-center">
+        <div className="relative z-10 w-full max-w-7xl px-4 flex justify-center md:justify-end items-center min-h-screen overflow-hidden">
+          <div className=" bg-gradient-to-br from-purple-600 to-pink-500/95 w-full max-w-[320px] sm:max-w-[340px] md:max-w-[300px] lg:max-w-[350px] lg:h-[480px] max-h-[520px] md:max-h-[500px] rounded-[30px] shadow-2xl flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 transition-transform hover:scale-[1.01] backdrop-blur-sm lg:-translate-x-40">
+            <h2 className="text-[#0A1144] text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-center">
               Create Account
             </h2>
 
             {(message || errorMessage) && (
               <p
-                className={`${isError ? "text-red-500" : "text-green-500"} text-sm mb-2`}
+                className={`${isError ? "text-red-500" : "text-green-500"} text-xs mb-2`}
               >
                 {message || errorMessage}
               </p>
             )}
 
             <form
-              className="w-full space-y-3 sm:space-y-4"
+              className="w-full space-y-2.5 sm:space-y-3"
               onSubmit={handleSignup}
             >
               {/* Name */}
               <div className="relative">
-                <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm" />
+                <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                 <input
                   type="text"
                   placeholder="Full Name"
@@ -167,93 +169,98 @@ export default function SignupPage() {
                       setName(value);
                     }
                   }}
-                  className="w-full py-2.5 sm:py-3 pl-10 pr-3 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
+                  className="w-full py-2 pl-10 pr-3 rounded-full text-xs bg-white shadow-inner outline-none focus:ring-2 focus:ring-purple-800"
                 />
               </div>
 
               {/* Email */}
               <div className="relative">
-                <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm" />
+                <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                 <input
                   type="email"
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full py-2.5 sm:py-3 pl-10 pr-3 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
+                  className="w-full py-2 pl-10 pr-3 rounded-full text-xs bg-white shadow-inner outline-none focus:ring-2 focus:ring-purple-800"
                 />
               </div>
 
               {/* Password */}
               <div className="relative">
-                <FaRegEye className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm" />
+                <FaRegEye className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full py-2.5 sm:py-3 pl-10 pr-10 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
+                  className="w-full py-2 pl-10 pr-10 rounded-full text-xs bg-white shadow-inner outline-none focus:ring-2 focus:ring-purple-800"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                 >
-                  {showPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+                  {showPassword ? (
+                    <FaEyeSlash size={14} />
+                  ) : (
+                    <FaEye size={14} />
+                  )}
                 </button>
               </div>
 
               {/* Confirm Password */}
               <div className="relative">
-                <FaRegEye className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm" />
+                <FaRegEye className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full py-2.5 sm:py-3 pl-10 pr-10 rounded-full border-none focus:ring-2 focus:ring-purple-800 outline-none shadow-inner text-xs sm:text-sm bg-white"
+                  className="w-full py-2 pl-10 pr-10 rounded-full text-xs bg-white shadow-inner outline-none focus:ring-2 focus:ring-purple-800"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  aria-label={
-                    showConfirmPassword ? "Hide confirm password" : "Show confirm password"
-                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                 >
-                  {showConfirmPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+                  {showConfirmPassword ? (
+                    <FaEyeSlash size={14} />
+                  ) : (
+                    <FaEye size={14} />
+                  )}
                 </button>
               </div>
 
               {/* Role Selection */}
-              <div className="pt-2">
-                <p className="text-xs text-[#0A1144] font-semibold mb-2 text-center">
-                  Choose your role
+              <div className="pt-1">
+                <p className="text-[11px] text-[#0A1144] font-semibold mb-2 text-center">
+                  Choose role
                 </p>
-                <div className="flex gap-3">
+
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setRole("exchanger")}
-                    className={`flex-1 flex flex-col items-center py-2 rounded-2xl text-xs sm:text-sm font-semibold border transition-all ${
+                    className={`flex-1 py-2 rounded-xl text-[11px] font-semibold border flex flex-col items-center ${
                       role === "exchanger"
-                        ? "bg-[#0A1144] text-white border-[#0A1144]"
-                        : "bg-white text-[#0A1144] border-gray-300"
+                        ? "bg-[#0A1144] text-white"
+                        : "bg-white text-[#0A1144]"
                     }`}
                   >
-                    <FaExchangeAlt size={20} className="mb-1" />
-                    Skill Exchanger
+                    <FaExchangeAlt size={16} className="mb-1" />
+                    Exchanger
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setRole("learner")}
-                    className={`flex-1 flex flex-col items-center py-2 rounded-2xl text-xs sm:text-sm font-semibold border transition-all ${
+                    className={`flex-1 py-2 rounded-xl text-[11px] font-semibold border flex flex-col items-center ${
                       role === "learner"
-                        ? "bg-[#0A1144] text-white border-[#0A1144]"
-                        : "bg-white text-[#0A1144] border-gray-300"
+                        ? "bg-[#0A1144] text-white"
+                        : "bg-white text-[#0A1144]"
                     }`}
                   >
-                    <FaGraduationCap size={20} className="mb-1" />
+                    <FaGraduationCap size={16} className="mb-1" />
                     Learner
                   </button>
                 </div>
@@ -262,22 +269,17 @@ export default function SignupPage() {
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full bg-[#0A1144] text-white py-3 rounded-full font-bold text-sm shadow-lg hover:bg-black transition-all active:scale-95 mt-1"
+                className="w-full bg-[#0A1144] text-white py-2.5 rounded-full font-bold text-xs mt-1 hover:bg-black active:scale-95 transition"
               >
                 Create Account
               </button>
 
-              <div className="mt-2 text-center text-sm text-black">
-                <p>
-                  Already have an account?{" "}
-                  <Link
-                    href="/signin"
-                    className="text-purple-950 font-semibold hover:underline"
-                  >
-                    Login here
-                  </Link>
-                </p>
-              </div>
+              <p className="text-center text-[11px] text-black mt-1">
+                Already have an account?{" "}
+                <Link href="/signin" className="text-purple-950 font-semibold">
+                  Login
+                </Link>
+              </p>
             </form>
           </div>
         </div>
@@ -285,5 +287,3 @@ export default function SignupPage() {
     </>
   );
 }
-
-
