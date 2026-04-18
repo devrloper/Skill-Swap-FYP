@@ -45,11 +45,11 @@ type AdminSummary = {
     }>;
   };
 };
-
 function Sparkline({ values }: { values: number[] }) {
   const { width, height, path } = useMemo(() => {
-    const w = 120;
+    const w = 90;
     const h = 36;
+
     if (!values.length) return { width: w, height: h, path: "" };
 
     const min = Math.min(...values);
@@ -63,24 +63,27 @@ function Sparkline({ values }: { values: number[] }) {
     });
 
     const d = points
-      .map(
-        ([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`,
-      )
+      .map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x} ${y}`)
       .join(" ");
 
     return { width: w, height: h, path: d };
   }, [values]);
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className="block"
+    >
       <path
         d={path}
         fill="none"
         stroke="currentColor"
-        strokeWidth="2.5"
+        strokeWidth="2"
         strokeLinejoin="round"
         strokeLinecap="round"
-        opacity="0.9"
       />
     </svg>
   );
@@ -231,7 +234,10 @@ export default function AdminDashboardPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
     } catch (err) {
       console.error("Logout cookie clear failed:", err);
     }
@@ -302,26 +308,32 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-white/55 border border-white/50 rounded-2xl px-4 py-3 w-full md:w-[360px]">
+                <div className="flex flex-wrap md:flex-nowrap items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
+                  {/* Search */}
+                  <div className="flex items-center gap-2 bg-white/55 border border-white/50 rounded-2xl px-3 py-2 w-full sm:w-[260px] md:w-[320px] lg:w-[360px]">
                     <Search size={16} className="text-slate-500" />
                     <input
                       placeholder="Search users, profiles…"
                       className="bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400 w-full"
                     />
                   </div>
+
+                  {/* Today button */}
                   <button
                     type="button"
-                    className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-white/55 border border-white/50 text-slate-700"
+                    className="hidden lg:flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-2xl bg-white/55 border border-white/50 text-slate-700"
                   >
                     Today <ChevronDown size={14} />
                   </button>
+
+                  {/* Logout button */}
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="hidden md:flex items-center gap-2 text-xs font-semibold px-3 py-3 rounded-2xl bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-sm hover:opacity-95 transition cursor-pointer"
+                    className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-2xl bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-sm hover:opacity-95 transition whitespace-nowrap cursor-pointer"
                   >
-                    <LogOut size={14} /> Logout
+                    <LogOut size={14} />
+                    <span className="hidden sm:inline">Logout</span>
                   </button>
                 </div>
               </div>
@@ -336,7 +348,7 @@ export default function AdminDashboardPage() {
                 {kpis.map((kpi) => (
                   <div
                     key={kpi.label}
-                    className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-5 shadow-sm"
+                    className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-5 shadow-sm overflow-hidden"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -350,7 +362,7 @@ export default function AdminDashboardPage() {
                           {kpi.hint}
                         </p>
                       </div>
-                      <div className="text-violet-600">
+                      <div className="text-violet-600 flex-shrink-0 w-[90px] h-[40px] overflow-hidden">
                         <Sparkline values={kpi.trend} />
                       </div>
                     </div>
