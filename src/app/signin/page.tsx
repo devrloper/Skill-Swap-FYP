@@ -37,7 +37,9 @@ const LoginPage = () => {
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
 
-  const establishSessionCookie = async (firebaseUser: { getIdToken: () => Promise<string> }) => {
+  const establishSessionCookie = async (firebaseUser: {
+    getIdToken: () => Promise<string>;
+  }) => {
     const idToken = await firebaseUser.getIdToken();
     const res = await fetch("/api/auth/session", {
       method: "POST",
@@ -228,24 +230,27 @@ const LoginPage = () => {
           </div>
 
           {/* LEFT FORM SECTION */}
-          <div className="w-full md:w-[50%] p-8 md:p-12 flex flex-col justify-center bg-white relative z-10">
+          <div className="w-full md:w-[50%] p-5 sm:p-6 md:p-10 lg:p-12 flex flex-col justify-center bg-white relative z-10">
             <div className="w-full max-w-sm mx-auto">
-              <div className="text-center mb-10">
-                <h1 className="text-4xl font-extrabold text-[#333]">Hello!</h1>
-                <p className="text-gray-500 font-medium mt-2">
+              {/* Heading */}
+              <div className="text-center mb-8 md:mb-10">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#333]">
+                  Hello!
+                </h1>
+                <p className="text-gray-500 font-medium mt-2 text-xs sm:text-sm">
                   Sign in to your account
                 </p>
               </div>
 
-              {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+              {error && <p className="text-red-500 text-xs mb-2">{error}</p>}
 
-              <form className="space-y-5" onSubmit={handleLogin}>
-                {/* Email Field */}
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                    <div className="bg-purple-600 p-2 rounded-xl shadow-lg shadow-purple-200">
+              <form className="space-y-4 sm:space-y-5" onSubmit={handleLogin}>
+                {/* EMAIL */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 sm:pl-5 flex items-center pointer-events-none">
+                    <div className="bg-purple-600 p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-lg">
                       <svg
-                        className="w-4 h-4 text-white"
+                        className="w-3 h-3 sm:w-4 sm:h-4 text-white"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -254,21 +259,22 @@ const LoginPage = () => {
                       </svg>
                     </div>
                   </div>
+
                   <input
                     type="email"
                     placeholder="E-mail"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-16 pr-6 py-4 bg-white border-0 rounded-full shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] focus:ring-2 focus:ring-purple-300 outline-none transition-all placeholder:text-gray-400"
+                    className="w-full pl-12 sm:pl-14 md:pl-16 pr-4 sm:pr-6 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base bg-white border-0 rounded-full shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] focus:ring-2 focus:ring-purple-300 outline-none placeholder:text-gray-400"
                   />
                 </div>
 
-                {/* Password Field */}
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                    <div className="bg-purple-600 p-2 rounded-xl shadow-lg shadow-purple-200">
+                {/* PASSWORD */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 sm:pl-5 flex items-center pointer-events-none">
+                    <div className="bg-purple-600 p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-lg">
                       <svg
-                        className="w-4 h-4 text-white"
+                        className="w-3 h-3 sm:w-4 sm:h-4 text-white"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -280,54 +286,56 @@ const LoginPage = () => {
                       </svg>
                     </div>
                   </div>
+
                   <input
                     type="password"
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-16 pr-14 py-4 bg-white border-0 rounded-full shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] focus:ring-2 focus:ring-purple-300 outline-none transition-all placeholder:text-gray-400"
+                    className="w-full pl-12 sm:pl-14 md:pl-16 pr-10 sm:pr-14 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base bg-white border-0 rounded-full shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] focus:ring-2 focus:ring-purple-300 outline-none placeholder:text-gray-400"
                   />
                 </div>
 
-                {/* Remember + Forgot */}
-                <div className="flex items-center justify-between text-[11px] px-2 font-medium">
+                {/* REMEMBER + FORGOT */}
+                <div className="flex items-center justify-between text-[10px] sm:text-xs px-1 sm:px-2 font-medium">
                   <label className="flex items-center text-gray-400 cursor-pointer">
                     <input
                       type="checkbox"
-                      className="mr-2 w-3 h-3 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                      className="mr-2 w-3 h-3 rounded border-gray-300 text-purple-600"
                       checked={remember}
                       onChange={() => setRemember(!remember)}
                     />
                     Remember me
                   </label>
+
                   <a
                     href="#"
-                    className="text-blue-400 hover:text-blue-600 transition-colors"
+                    className="text-blue-400 hover:text-blue-600 transition"
                   >
                     Forgot password?
                   </a>
                 </div>
 
-                {/* Login Button */}
+                {/* LOGIN BUTTON */}
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-4 px-4 rounded-full shadow-xl shadow-purple-200 hover:brightness-110 active:scale-[0.98] transition-all uppercase tracking-widest text-sm cursor-pointer"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-2.5 sm:py-3 md:py-4 px-4 rounded-full shadow-xl hover:brightness-110 active:scale-[0.98] transition-all uppercase tracking-widest text-xs sm:text-sm cursor-pointer"
                 >
                   Sign In
                 </button>
 
-                {/* Google Login */}
+                {/* GOOGLE BUTTON */}
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full mt-1 flex items-center justify-center gap-3 bg-white text-black font-semibold py-3 rounded-full shadow-lg hover:scale-105 transition"
+                  className="w-full flex items-center justify-center gap-2 sm:gap-3 bg-white text-black font-semibold py-2.5 sm:py-3 rounded-full shadow-lg hover:scale-[1.02] transition text-xs sm:text-sm cursor-pointer"
                 >
-                  <FcGoogle size={24} />
+                  <FcGoogle size={20} className="sm:w-6 sm:h-6" />
                   Sign in with Google
                 </button>
 
-                {/* Create Account Link */}
-                <p className="text-center text-[11px] text-gray-400 mt-8">
+                {/* SIGNUP */}
+                <p className="text-center text-[10px] sm:text-xs text-gray-400 mt-6 sm:mt-8">
                   Don&apos;t have an account?{" "}
                   <a
                     href="/signup"
@@ -346,5 +354,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-
-
