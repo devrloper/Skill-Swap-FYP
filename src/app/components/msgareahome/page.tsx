@@ -171,7 +171,7 @@ export default function Chatbot() {
         className="
       w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16
       rounded-full bg-purple-600 flex items-center justify-center 
-      shadow-2xl text-white border-4 border-white/20
+      shadow-2xl text-white border-4 border-white/20 cursor-pointer
     "
       >
         {isChatOpen ? <X size={24} /> : <MessageSquare size={24} />}

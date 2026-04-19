@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -99,12 +99,14 @@ export default function HeroSection() {
               </motion.button>
             )}
 
-            <motion.button
-              whileHover={{ x: 6 }}
-              className="bg-gradient-to-r from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-2 rounded-full font-medium shadow-md hover:opacity-90 transition-all"
-            >
-              <span>More Details</span>
-            </motion.button>
+            <Link href="/about">
+              <motion.button
+                whileHover={{ x: 6 }}
+                className="bg-gradient-to-r from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-2 rounded-full font-medium shadow-md hover:opacity-90 transition-all"
+              >
+                <span>More Details</span>
+              </motion.button>
+            </Link>
           </motion.div>
         </motion.div>
 
