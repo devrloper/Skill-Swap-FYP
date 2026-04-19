@@ -219,7 +219,7 @@ const Contact = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-purple-950 to-pink-600 text-white font-bold py-4 rounded-xl transition shadow-xl shadow-blue-200 cursor-pointer"
+                  className="w-full bg-gradient-to-r from-purple-950 to-pink-600 text-white font-bold py-4 rounded-xl transition shadow-xl cursor-pointer"
                 >
                   Send Message
                 </motion.button>
