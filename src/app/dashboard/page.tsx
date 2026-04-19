@@ -101,7 +101,12 @@ type ProfileDoc = {
   completedSteps?: number[];
   interviewStatus?: string;
   interviewScore?: number;
-  educations?: Array<{ degree?: string; institute?: string; start?: string; end?: string }>;
+  educations?: Array<{
+    degree?: string;
+    institute?: string;
+    start?: string;
+    end?: string;
+  }>;
   interview?: {
     result?: string;
     score?: number;
@@ -147,17 +152,19 @@ function getRequestBadge(status?: string) {
   }
 }
 
-export default function EmployeeDashboard() {
+export default function UserDashboard() {
   // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "profile">("dashboard");
-  const [incomingRequests, setIncomingRequests] = useState<ConnectRequestItem[]>(
-    [],
+  const [activeTab, setActiveTab] = useState<"dashboard" | "profile">(
+    "dashboard",
   );
-  const [outgoingRequests, setOutgoingRequests] = useState<ConnectRequestItem[]>(
-    [],
-  );
+  const [incomingRequests, setIncomingRequests] = useState<
+    ConnectRequestItem[]
+  >([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<
+    ConnectRequestItem[]
+  >([]);
   const [connectLoading, setConnectLoading] = useState<boolean>(false);
   const [respondingTo, setRespondingTo] = useState<Record<string, boolean>>({});
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
@@ -165,11 +172,14 @@ export default function EmployeeDashboard() {
   const [myProfileLoading, setMyProfileLoading] = useState<boolean>(false);
   const [editProfileOpen, setEditProfileOpen] = useState<boolean>(false);
   const [viewProfileOpen, setViewProfileOpen] = useState<boolean>(false);
-  const [activeConnections, setActiveConnections] = useState<ConnectRequestItem[]>(
-    [],
-  );
-  const [dashboardNotifications, setDashboardNotifications] = useState<DashboardNotification[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState<boolean>(false);
+  const [activeConnections, setActiveConnections] = useState<
+    ConnectRequestItem[]
+  >([]);
+  const [dashboardNotifications, setDashboardNotifications] = useState<
+    DashboardNotification[]
+  >([]);
+  const [notificationsLoading, setNotificationsLoading] =
+    useState<boolean>(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -210,13 +220,19 @@ export default function EmployeeDashboard() {
       if (!res.ok) throw new Error(data?.error || "Failed to load requests");
 
       setIncomingRequests(
-        Array.isArray(data?.incoming) ? (data.incoming as ConnectRequestItem[]) : [],
+        Array.isArray(data?.incoming)
+          ? (data.incoming as ConnectRequestItem[])
+          : [],
       );
       setOutgoingRequests(
-        Array.isArray(data?.outgoing) ? (data.outgoing as ConnectRequestItem[]) : [],
+        Array.isArray(data?.outgoing)
+          ? (data.outgoing as ConnectRequestItem[])
+          : [],
       );
       setActiveConnections(
-        Array.isArray(data?.connections) ? (data.connections as ConnectRequestItem[]) : [],
+        Array.isArray(data?.connections)
+          ? (data.connections as ConnectRequestItem[])
+          : [],
       );
     } catch (err) {
       console.error("Failed to load connect requests:", err);
@@ -231,11 +247,15 @@ export default function EmployeeDashboard() {
   const loadDashboardNotifications = async (uid: string) => {
     setNotificationsLoading(true);
     try {
-      const res = await fetch(`/api/notifications/combined-v3?userId=${uid}&limit=8`, {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/notifications/combined-v3?userId=${uid}&limit=8`,
+        {
+          cache: "no-store",
+        },
+      );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Failed to load notifications");
+      if (!res.ok)
+        throw new Error(data?.error || "Failed to load notifications");
 
       setDashboardNotifications(
         Array.isArray(data?.notifications)
@@ -304,7 +324,11 @@ export default function EmployeeDashboard() {
   };
 
   const getPeerId = (request: ConnectRequestItem) =>
-    request.senderId || request.fromUserId || request.receiverId || request.toUserId || "";
+    request.senderId ||
+    request.fromUserId ||
+    request.receiverId ||
+    request.toUserId ||
+    "";
 
   const getPeerName = (request: ConnectRequestItem, fallback = "User") => {
     const peerId = getPeerId(request);
@@ -357,26 +381,42 @@ export default function EmployeeDashboard() {
 
             <nav className="space-y-2 flex-1">
               {[
-                { name: "Dashboard", icon: LayoutDashboard, tab: "dashboard" as const },
+                {
+                  name: "Dashboard",
+                  icon: LayoutDashboard,
+                  tab: "dashboard" as const,
+                },
                 { name: "View Profile", icon: Users, tab: "profile" as const },
                 { name: "Attendance", icon: CalendarCheck, tab: undefined },
                 { name: "Employees", icon: Users, tab: undefined },
                 { name: "Analytics", icon: BarChart3, tab: undefined },
-                { name: "Report Attendance", icon: ClipboardCheck, tab: undefined },
+                {
+                  name: "Report Attendance",
+                  icon: ClipboardCheck,
+                  tab: undefined,
+                },
                 { name: "Settings", icon: Settings, tab: undefined },
               ].map((item) => (
                 <div
                   key={item.name}
                   onClick={() => item.tab && setActiveTab(item.tab)}
                   className={`flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all ${
-                    item.tab ? item.tab === activeTab : false
-                      ? "bg-gradient-to-r from-blue-100/50 to-purple-100/50 shadow-sm border border-white/50 text-indigo-700"
-                      : "text-slate-500 hover:bg-white/20"
+                    item.tab
+                      ? item.tab === activeTab
+                      : false
+                        ? "bg-gradient-to-r from-blue-100/50 to-purple-100/50 shadow-sm border border-white/50 text-indigo-700"
+                        : "text-slate-500 hover:bg-white/20"
                   }`}
                 >
                   <item.icon
                     size={20}
-                    className={item.tab ? (item.tab === activeTab ? "text-indigo-600" : "") : ""}
+                    className={
+                      item.tab
+                        ? item.tab === activeTab
+                          ? "text-indigo-600"
+                          : ""
+                        : ""
+                    }
                   />
                   <span className="text-sm font-semibold">{item.name}</span>
                 </div>
@@ -388,31 +428,39 @@ export default function EmployeeDashboard() {
           <main className="flex-1 p-8 overflow-y-auto">
             {/* TOP BAR */}
             <header className="flex items-center justify-between mb-8">
-              <div className="relative w-1/2">
-                <Search
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  size={18}
-                />
-                <input
-                  placeholder="search employee"
-                  className="w-full bg-white/40 border border-white/60 rounded-full py-2.5 pl-12 pr-4 outline-none focus:ring-2 ring-purple-200 transition-all text-sm placeholder:text-slate-400"
-                />
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2 cursor-pointer">
-                  <img
-                    src="https://i.pravatar.cc/150?u=admin"
-                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                    alt="Admin"
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full">
+                {/* Search Bar - Full width on mobile, half on desktop */}
+                <div className="relative w-full md:w-1/2">
+                  <Search
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={18}
                   />
-                  <span className="text-sm font-bold text-slate-600">
-                    Notifications
-                  </span>
-                  <Bell size={18} className="text-blue-500" />
+                  <input
+                    placeholder="search employee"
+                    className="w-full bg-white/40 border border-white/60 rounded-full py-2.5 pl-12 pr-4 outline-none focus:ring-2 ring-purple-200 transition-all text-sm placeholder:text-slate-400"
+                  />
                 </div>
-                <button className="flex items-center gap-2 text-slate-600 font-bold text-sm hover:text-red-500 transition-colors">
-                  Logout <LogOut size={18} />
-                </button>
+
+                {/* Icons & Actions - Wraps or shrinks on small screens */}
+                <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto justify-between md:justify-end">
+                  <div className="flex items-center gap-2 cursor-pointer">
+                    <img
+                      src="https://i.pravatar.cc/150?u=admin"
+                      className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+                      alt="Admin"
+                    />
+                    {/* Label hidden on very small screens to save space */}
+                    <span className="hidden sm:inline text-sm font-bold text-slate-600">
+                      Notifications
+                    </span>
+                    <Bell size={18} className="text-blue-500" />
+                  </div>
+
+                  <button className="flex items-center gap-2 text-slate-600 font-bold text-sm hover:text-red-500 transition-colors">
+                    <span className="hidden sm:inline">Logout</span>{" "}
+                    <LogOut size={18} />
+                  </button>
+                </div>
               </div>
             </header>
 
@@ -425,251 +473,369 @@ export default function EmployeeDashboard() {
             {/* MY PROFILE */}
             {activeTab === "profile" && (
               <div className="mb-8 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"}
-                    className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover"
-                    alt="Profile"
-                  />
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">
-                      {myProfile?.fullName || "Profile not created yet"}
-                    </p>
-                    <p className="text-xs text-slate-600 break-all">
-                      {myProfile?.email || ""}
-                    </p>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={
+                        myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"
+                      }
+                      className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover"
+                      alt="Profile"
+                    />
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">
+                        {myProfile?.fullName || "Profile not created yet"}
+                      </p>
+                      <p className="text-xs text-slate-600 break-all">
+                        {myProfile?.email || ""}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setEditProfileOpen(true)}
-                    className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white text-sm font-semibold shadow-md hover:brightness-105 transition cursor-pointer"
-                  >
-                    Edit Profile
-                  </button>
-                  {userId && (
+                  <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setViewProfileOpen(true)}
-                      className="px-4 py-2 rounded-full bg-white/60 border border-white/70 text-slate-700 text-sm font-semibold hover:bg-white/70 transition cursor-pointer"
+                      onClick={() => setEditProfileOpen(true)}
+                      className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white text-sm font-semibold shadow-md hover:brightness-105 transition cursor-pointer"
                     >
-                      View Public
+                      Edit Profile
                     </button>
-                  )}
-                </div>
-              </div>
-
-              {myProfileLoading && (
-                <p className="mt-4 text-sm text-slate-600">Loading profile...</p>
-              )}
-
-              {!myProfileLoading && !myProfile && (
-                <p className="mt-4 text-sm text-slate-600">
-                  You are not enrolled yet. Use the Enroll Now button to create
-                  your profile and take the AI interview.
-                </p>
-              )}
-
-              {!myProfileLoading && myProfile && (
-                <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      About
-                    </p>
-                    <p className="mt-2 text-sm text-slate-700">
-                      {myProfile.bio || "—"}
-                    </p>
-                    <p className="mt-3 text-xs text-slate-600">
-                      {myProfile.location ? `Location: ${myProfile.location}` : ""}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      {myProfile.phone ? `Phone: ${myProfile.phone}` : ""}
-                    </p>
-                  </div>
-
-                  <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Skills
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {[
-                        ...(myProfile.skills?.learnSkills || []),
-                        ...(myProfile.skills?.teachSkills || []),
-                        ...(myProfile.skills?.customLearnSkills || []),
-                        ...(myProfile.skills?.customTeachSkills || []),
-                      ]
-                        .filter(Boolean)
-                        .slice(0, 12)
-                        .map((s) => (
-                          <span
-                            key={s}
-                            className="text-[11px] bg-purple-100 text-purple-800 px-2 py-1 rounded-lg"
-                          >
-                            {s}
-                          </span>
-                        ))}
-                      {!(
-                        (myProfile.skills?.learnSkills?.length ||
-                          myProfile.skills?.teachSkills?.length ||
-                          myProfile.skills?.customLearnSkills?.length ||
-                          myProfile.skills?.customTeachSkills?.length) ??
-                        0
-                      ) && <span className="text-sm text-slate-600">—</span>}
-                    </div>
-                  </div>
-
-                  <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      AI Interview
-                    </p>
-                    <div className="mt-2 text-sm text-slate-700 space-y-1">
-                      <p>
-                        Status:{" "}
-                        <span className="font-semibold">
-                          {myProfile.interview?.result ||
-                            myProfile.interviewStatus ||
-                            "Not attempted"}
-                        </span>
-                      </p>
-                      <p>
-                        Marks:{" "}
-                        <span className="font-semibold">
-                          {typeof myProfile.interview?.score === "number"
-                            ? `${myProfile.interview.score}/100`
-                            : typeof myProfile.interviewScore === "number"
-                              ? `${myProfile.interviewScore}/100`
-                              : "—"}
-                        </span>
-                      </p>
-                      {typeof myProfile.interview?.correct === "number" &&
-                        typeof myProfile.interview?.total === "number" && (
-                          <p className="text-xs text-slate-600">
-                            Correct: {myProfile.interview.correct} /{" "}
-                            {myProfile.interview.total}
-                          </p>
-                        )}
-                    </div>
-
-                    {(myProfile.interview?.wrongAnswers?.length || 0) > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs font-semibold text-slate-600">
-                          Wrong answers (showing up to 3)
-                        </p>
-                        <ul className="mt-2 space-y-2">
-                          {myProfile.interview?.wrongAnswers
-                            ?.slice(0, 3)
-                            .map((w) => (
-                              <li
-                                key={`${w.index}-${w.question}`}
-                                className="text-[12px] text-slate-700 bg-white/60 border border-white/60 rounded-xl p-3"
-                              >
-                                <p className="font-semibold">{w.question}</p>
-                                <p className="mt-1">
-                                  <span className="text-slate-500">Your:</span>{" "}
-                                  {w.given || "—"}
-                                </p>
-                                <p>
-                                  <span className="text-slate-500">Correct:</span>{" "}
-                                  {w.expected || "—"}
-                                </p>
-                              </li>
-                            ))}
-                        </ul>
-                      </div>
+                    {userId && (
+                      <button
+                        type="button"
+                        onClick={() => setViewProfileOpen(true)}
+                        className="px-4 py-2 rounded-full bg-white/60 border border-white/70 text-slate-700 text-sm font-semibold hover:bg-white/70 transition cursor-pointer"
+                      >
+                        View Public
+                      </button>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
+
+                {myProfileLoading && (
+                  <p className="mt-4 text-sm text-slate-600">
+                    Loading profile...
+                  </p>
+                )}
+
+                {!myProfileLoading && !myProfile && (
+                  <p className="mt-4 text-sm text-slate-600">
+                    You are not enrolled yet. Use the Enroll Now button to
+                    create your profile and take the AI interview.
+                  </p>
+                )}
+
+                {!myProfileLoading && myProfile && (
+                  <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
+                      <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        About
+                      </p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        {myProfile.bio || "—"}
+                      </p>
+                      <p className="mt-3 text-xs text-slate-600">
+                        {myProfile.location
+                          ? `Location: ${myProfile.location}`
+                          : ""}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        {myProfile.phone ? `Phone: ${myProfile.phone}` : ""}
+                      </p>
+                    </div>
+
+                    <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
+                      <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Skills
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {[
+                          ...(myProfile.skills?.learnSkills || []),
+                          ...(myProfile.skills?.teachSkills || []),
+                          ...(myProfile.skills?.customLearnSkills || []),
+                          ...(myProfile.skills?.customTeachSkills || []),
+                        ]
+                          .filter(Boolean)
+                          .slice(0, 12)
+                          .map((s) => (
+                            <span
+                              key={s}
+                              className="text-[11px] bg-purple-100 text-purple-800 px-2 py-1 rounded-lg"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        {!(
+                          (myProfile.skills?.learnSkills?.length ||
+                            myProfile.skills?.teachSkills?.length ||
+                            myProfile.skills?.customLearnSkills?.length ||
+                            myProfile.skills?.customTeachSkills?.length) ??
+                          0
+                        ) && <span className="text-sm text-slate-600">—</span>}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
+                      <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        AI Interview
+                      </p>
+                      <div className="mt-2 text-sm text-slate-700 space-y-1">
+                        <p>
+                          Status:{" "}
+                          <span className="font-semibold">
+                            {myProfile.interview?.result ||
+                              myProfile.interviewStatus ||
+                              "Not attempted"}
+                          </span>
+                        </p>
+                        <p>
+                          Marks:{" "}
+                          <span className="font-semibold">
+                            {typeof myProfile.interview?.score === "number"
+                              ? `${myProfile.interview.score}/100`
+                              : typeof myProfile.interviewScore === "number"
+                                ? `${myProfile.interviewScore}/100`
+                                : "—"}
+                          </span>
+                        </p>
+                        {typeof myProfile.interview?.correct === "number" &&
+                          typeof myProfile.interview?.total === "number" && (
+                            <p className="text-xs text-slate-600">
+                              Correct: {myProfile.interview.correct} /{" "}
+                              {myProfile.interview.total}
+                            </p>
+                          )}
+                      </div>
+
+                      {(myProfile.interview?.wrongAnswers?.length || 0) > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs font-semibold text-slate-600">
+                            Wrong answers (showing up to 3)
+                          </p>
+                          <ul className="mt-2 space-y-2">
+                            {myProfile.interview?.wrongAnswers
+                              ?.slice(0, 3)
+                              .map((w) => (
+                                <li
+                                  key={`${w.index}-${w.question}`}
+                                  className="text-[12px] text-slate-700 bg-white/60 border border-white/60 rounded-xl p-3"
+                                >
+                                  <p className="font-semibold">{w.question}</p>
+                                  <p className="mt-1">
+                                    <span className="text-slate-500">
+                                      Your:
+                                    </span>{" "}
+                                    {w.given || "—"}
+                                  </p>
+                                  <p>
+                                    <span className="text-slate-500">
+                                      Correct:
+                                    </span>{" "}
+                                    {w.expected || "—"}
+                                  </p>
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {activeTab === "dashboard" && (
               <>
-            {/* CONNECT REQUESTS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <div>
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                      <ArrowRightLeft size={18} className="text-purple-600" />
-                      Connection Requests
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Review who wants to connect with you.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full bg-white/70 border border-white/70 text-slate-700 hover:bg-white transition"
-                    onClick={() => userId && loadConnectRequests(userId)}
-                  >
-                    <Clock3 size={14} />
-                    Refresh
-                  </button>
-                </div>
+                {/* CONNECT REQUESTS */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                          <ArrowRightLeft
+                            size={18}
+                            className="text-purple-600"
+                          />
+                          Connection Requests
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Review who wants to connect with you.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full bg-white/70 border border-white/70 text-slate-700 hover:bg-white transition"
+                        onClick={() => userId && loadConnectRequests(userId)}
+                      >
+                        <Clock3 size={14} />
+                        Refresh
+                      </button>
+                    </div>
 
-                {!userId && (
-                  <p className="text-sm text-slate-600">
-                    Please sign in to view requests.
-                  </p>
-                )}
+                    {!userId && (
+                      <p className="text-sm text-slate-600">
+                        Please sign in to view requests.
+                      </p>
+                    )}
 
-                {userId && connectLoading && (
-                  <p className="text-sm text-slate-600">Loading...</p>
-                )}
+                    {userId && connectLoading && (
+                      <p className="text-sm text-slate-600">Loading...</p>
+                    )}
 
-                {userId && !connectLoading && (
-                  <div className="space-y-3">
-                    {incomingRequests
-                      .filter((r) => r.status === "pending")
-                      .slice(0, 5)
-                      .map((r) => (
-                        <div
-                          key={r.id}
-                          className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="flex items-start gap-3 min-w-0">
-                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
-                              {getPeerName(r).charAt(0).toUpperCase()}
+                    {userId && !connectLoading && (
+                      <div className="space-y-3">
+                        {incomingRequests
+                          .filter((r) => r.status === "pending")
+                          .slice(0, 5)
+                          .map((r) => (
+                            <div
+                              key={r.id}
+                              className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              <div className="flex items-start gap-3 min-w-0">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+                                  {getPeerName(r).charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-bold text-slate-800 truncate">
+                                      {getPeerName(r)}
+                                    </p>
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${getRequestBadge(
+                                        r.status,
+                                      )}`}
+                                    >
+                                      <Clock3 size={11} />
+                                      {r.status || "pending"}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 mt-1">
+                                    wants to connect with you
+                                  </p>
+                                  <p className="text-xs text-slate-600 mt-2">
+                                    Offer:{" "}
+                                    <span className="font-semibold">
+                                      {r.offeredSkill || "Not specified"}
+                                    </span>{" "}
+                                    · Learn:{" "}
+                                    <span className="font-semibold">
+                                      {r.requestedSkill || "Not specified"}
+                                    </span>
+                                  </p>
+                                  {r.message && (
+                                    <p className="text-xs text-slate-600 mt-2 bg-white/60 rounded-xl px-3 py-2">
+                                      {r.message}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-2 sm:justify-end">
+                                {getPeerId(r) && (
+                                  <Link
+                                    href={`/profile/${getPeerId(r)}`}
+                                    className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
+                                  >
+                                    <UserRound size={14} />
+                                    View
+                                  </Link>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    getPeerId(r) &&
+                                    respond(getPeerId(r), "accept")
+                                  }
+                                  disabled={!!respondingTo[r.id]}
+                                  className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                                >
+                                  <CheckCircle2 size={14} />
+                                  {respondingTo[r.id] ? "Saving..." : "Accept"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    getPeerId(r) &&
+                                    respond(getPeerId(r), "reject")
+                                  }
+                                  disabled={!!respondingTo[r.id]}
+                                  className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-rose-600 text-white shadow-sm hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                                >
+                                  <XCircle size={14} />
+                                  {respondingTo[r.id] ? "Saving..." : "Reject"}
+                                </button>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
+                          ))}
+
+                        {incomingRequests.filter((r) => r.status === "pending")
+                          .length === 0 && (
+                          <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                            No pending requests right now.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                          <Users size={18} className="text-purple-600" />
+                          Sent Requests
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Track the requests you have already sent.
+                        </p>
+                      </div>
+                    </div>
+                    {!userId && (
+                      <p className="text-sm text-slate-600">
+                        Please sign in to view requests.
+                      </p>
+                    )}
+                    {userId && connectLoading && (
+                      <p className="text-sm text-slate-600">Loading...</p>
+                    )}
+                    {userId && !connectLoading && (
+                      <div className="space-y-3">
+                        {outgoingRequests.slice(0, 5).map((r) => (
+                          <div
+                            key={r.id}
+                            className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div className="flex items-start gap-3 min-w-0">
+                              <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+                                {(profileNames[r.toUserId || ""] || "U")
+                                  .charAt(0)
+                                  .toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
                                 <p className="text-sm font-bold text-slate-800 truncate">
                                   {getPeerName(r)}
                                 </p>
-                                <span
-                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${getRequestBadge(
-                                    r.status,
-                                  )}`}
-                                >
+                                <div className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-100 text-slate-700 border-slate-200">
                                   <Clock3 size={11} />
                                   {r.status || "pending"}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-500 mt-1">
-                                wants to connect with you
-                              </p>
-                              <p className="text-xs text-slate-600 mt-2">
-                                Offer:{" "}
-                                <span className="font-semibold">
-                                  {r.offeredSkill || "Not specified"}
-                                </span>{" "}
-                                · Learn:{" "}
-                                <span className="font-semibold">
-                                  {r.requestedSkill || "Not specified"}
-                                </span>
-                              </p>
-                              {r.message && (
-                                <p className="text-xs text-slate-600 mt-2 bg-white/60 rounded-xl px-3 py-2">
-                                  {r.message}
+                                </div>
+                                <p className="text-xs text-slate-600 mt-2">
+                                  Offer:{" "}
+                                  <span className="font-semibold">
+                                    {r.offeredSkill || "Not specified"}
+                                  </span>{" "}
+                                  · Learn:{" "}
+                                  <span className="font-semibold">
+                                    {r.requestedSkill || "Not specified"}
+                                  </span>
                                 </p>
-                              )}
+                                {r.message && (
+                                  <p className="text-xs text-slate-600 mt-2 bg-white/60 rounded-xl px-3 py-2">
+                                    {r.message}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2 sm:justify-end">
                             {getPeerId(r) && (
                               <Link
                                 href={`/profile/${getPeerId(r)}`}
@@ -679,528 +845,477 @@ export default function EmployeeDashboard() {
                                 View
                               </Link>
                             )}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                getPeerId(r) && respond(getPeerId(r), "accept")
-                              }
-                              disabled={!!respondingTo[r.id]}
-                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                            >
-                              <CheckCircle2 size={14} />
-                              {respondingTo[r.id] ? "Saving..." : "Accept"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                getPeerId(r) && respond(getPeerId(r), "reject")
-                              }
-                              disabled={!!respondingTo[r.id]}
-                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-rose-600 text-white shadow-sm hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                            >
-                              <XCircle size={14} />
-                              {respondingTo[r.id] ? "Saving..." : "Reject"}
-                            </button>
+                          </div>
+                        ))}
+
+                        {outgoingRequests.length === 0 && (
+                          <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                            No sent requests yet.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                          <MessageSquare
+                            size={18}
+                            className="text-purple-600"
+                          />
+                          Active Chats
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Accepted requests automatically unlock chat access.
+                        </p>
+                      </div>
+                    </div>
+
+                    {userId && connectLoading && (
+                      <p className="text-sm text-slate-600">Loading chats...</p>
+                    )}
+
+                    {userId &&
+                      !connectLoading &&
+                      activeConnections.length === 0 && (
+                        <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                          No active chats yet.
+                        </div>
+                      )}
+
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {activeConnections.map((c) => {
+                        const peerId = getPeerId(c);
+                        const peerName = getPeerName(c);
+                        return (
+                          <div
+                            key={c.id}
+                            className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-slate-800 truncate">
+                                {peerName}
+                              </p>
+                              <p className="text-[11px] text-slate-500 mt-1">
+                                {c.offeredSkill || "Skill"} ↔{" "}
+                                {c.requestedSkill || "Skill"}
+                              </p>
+                            </div>
+                            {peerId && (
+                              <Link
+                                href={`/chating?connectionId=${encodeURIComponent(c.id)}&peer=${encodeURIComponent(peerId)}`}
+                                className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition"
+                              >
+                                <MessageSquare size={14} />
+                                Chat
+                              </Link>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                          <Bell
+                            size={18}
+                            className="text-purple-600 shrink-0"
+                          />
+                          Notifications
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Recent request updates and skill swap alerts.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="flex items-center justify-center gap-1.5 px-4 py-2 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-semibold rounded-full bg-white/70 border border-white/70 text-slate-700 hover:bg-white transition-all shrink-0 w-fit"
+                        onClick={() =>
+                          userId && loadDashboardNotifications(userId)
+                        }
+                      >
+                        <Clock3 size={14} />
+                        <span className="leading-none">Refresh</span>
+                      </button>
+                    </div>
+
+                    {userId && notificationsLoading && (
+                      <p className="text-sm text-slate-600">Loading...</p>
+                    )}
+
+                    {userId &&
+                      !notificationsLoading &&
+                      dashboardNotifications.length === 0 && (
+                        <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                          No notifications yet.
+                        </div>
+                      )}
+
+                    <div className="space-y-3">
+                      {dashboardNotifications.map((notification) => {
+                        const peerId =
+                          notification.fromUserId ||
+                          notification.senderId ||
+                          notification.receiverId ||
+                          "";
+                        const peerName =
+                          notification.fromUserName ||
+                          notification.senderName ||
+                          profileNames[peerId] ||
+                          "User";
+
+                        return (
+                          <div
+                            key={notification.id}
+                            className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-bold text-slate-800 truncate">
+                                  {notification.title || "Notification"}
+                                </p>
+                                {!notification.read && (
+                                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700">
+                                    New
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {notification.message ||
+                                  "You have a new update."}
+                              </p>
+                              {notification.offeredSkill ||
+                              notification.requestedSkill ? (
+                                <p className="text-[11px] text-slate-500 mt-2">
+                                  {peerName} ·{" "}
+                                  {notification.offeredSkill || "Skill"} ↔{" "}
+                                  {notification.requestedSkill || "Skill"}
+                                </p>
+                              ) : null}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 sm:justify-end">
+                              {peerId && (
+                                <Link
+                                  href={`/profile/${peerId}`}
+                                  className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
+                                >
+                                  <UserRound size={14} />
+                                  View
+                                </Link>
+                              )}
+                              {!notification.read && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await fetch("/api/notifications", {
+                                      method: "PATCH",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        notificationId: notification.id,
+                                        userId,
+                                      }),
+                                    });
+                                    if (userId) {
+                                      await loadDashboardNotifications(userId);
+                                    }
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition"
+                                >
+                                  Mark read
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* TOP GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  {/* Total Employees (Donut) */}
+                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-bold text-slate-700">
+                        Total Employees
+                      </h3>
+                      <span className="text-2xl font-black text-slate-800">
+                        32
+                      </span>
+                    </div>
+                    <div className="h-40 flex items-center justify-center relative">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={genderData}
+                            innerRadius={45}
+                            outerRadius={60}
+                            paddingAngle={5}
+                            dataKey="value"
+                          >
+                            {genderData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute flex flex-col items-center">
+                        <div className="flex gap-4 text-[10px] font-bold">
+                          <span className="text-blue-400">● Men</span>
+                          <span className="text-pink-400">● Woman</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Skills */}
+                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                    <h3 className="font-bold text-slate-700 mb-4">
+                      Top Skills
+                    </h3>
+                    <div className="space-y-4">
+                      {[
+                        {
+                          label: "UI/UX Design",
+                          val: "90%",
+                          color: "bg-orange-400",
+                        },
+                        {
+                          label: "Illustration",
+                          val: "85%",
+                          color: "bg-purple-400",
+                        },
+                        {
+                          label: "Animation",
+                          val: "78%",
+                          color: "bg-blue-400",
+                        },
+                      ].map((skill) => (
+                        <div
+                          key={skill.label}
+                          className="flex items-center gap-3"
+                        >
+                          <div
+                            className={`w-10 h-10 rounded-full border-4 border-white flex items-center justify-center text-[10px] font-bold text-slate-600 shadow-sm`}
+                          >
+                            {skill.val}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-700">
+                              {skill.label}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              100+ projects
+                            </p>
                           </div>
                         </div>
                       ))}
-
-                    {incomingRequests.filter((r) => r.status === "pending")
-                      .length === 0 && (
-                      <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                        No pending requests right now.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div>
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                      <Users size={18} className="text-purple-600" />
-                      Sent Requests
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Track the requests you have already sent.
-                    </p>
-                  </div>
-                </div>
-                {!userId && (
-                  <p className="text-sm text-slate-600">
-                    Please sign in to view requests.
-                  </p>
-                )}
-                {userId && connectLoading && (
-                  <p className="text-sm text-slate-600">Loading...</p>
-                )}
-                {userId && !connectLoading && (
-                  <div className="space-y-3">
-                    {outgoingRequests.slice(0, 5).map((r) => (
-                      <div
-                        key={r.id}
-                        className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex items-start gap-3 min-w-0">
-                          <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
-                            {(profileNames[r.toUserId || ""] || "U")
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-800 truncate">
-                              {getPeerName(r)}
-                            </p>
-                            <div className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border bg-slate-100 text-slate-700 border-slate-200">
-                              <Clock3 size={11} />
-                              {r.status || "pending"}
-                            </div>
-                            <p className="text-xs text-slate-600 mt-2">
-                              Offer:{" "}
-                              <span className="font-semibold">
-                                {r.offeredSkill || "Not specified"}
-                              </span>{" "}
-                              · Learn:{" "}
-                              <span className="font-semibold">
-                                {r.requestedSkill || "Not specified"}
-                              </span>
-                            </p>
-                            {r.message && (
-                              <p className="text-xs text-slate-600 mt-2 bg-white/60 rounded-xl px-3 py-2">
-                                {r.message}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {getPeerId(r) && (
-                          <Link
-                            href={`/profile/${getPeerId(r)}`}
-                            className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
-                          >
-                            <UserRound size={14} />
-                            View
-                          </Link>
-                        )}
-                      </div>
-                    ))}
-
-                    {outgoingRequests.length === 0 && (
-                      <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                        No sent requests yet.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div>
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                      <MessageSquare size={18} className="text-purple-600" />
-                      Active Chats
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Accepted requests automatically unlock chat access.
-                    </p>
-                  </div>
-                </div>
-
-                {userId && connectLoading && (
-                  <p className="text-sm text-slate-600">Loading chats...</p>
-                )}
-
-                {userId && !connectLoading && activeConnections.length === 0 && (
-                  <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                    No active chats yet.
-                  </div>
-                )}
-
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {activeConnections.map((c) => {
-                    const peerId = getPeerId(c);
-                    const peerName = getPeerName(c);
-                    return (
-                      <div
-                        key={c.id}
-                        className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate">
-                            {peerName}
-                          </p>
-                          <p className="text-[11px] text-slate-500 mt-1">
-                            {c.offeredSkill || "Skill"} ↔ {c.requestedSkill || "Skill"}
-                          </p>
-                        </div>
-                        {peerId && (
-                          <Link
-                            href={`/chating?connectionId=${encodeURIComponent(c.id)}&peer=${encodeURIComponent(peerId)}`}
-                            className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition"
-                          >
-                            <MessageSquare size={14} />
-                            Chat
-                          </Link>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div>
-                    <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                      <Bell size={18} className="text-purple-600" />
-                      Notifications
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Recent request updates and skill swap alerts.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full bg-white/70 border border-white/70 text-slate-700 hover:bg-white transition"
-                    onClick={() => userId && loadDashboardNotifications(userId)}
-                  >
-                    <Clock3 size={14} />
-                    Refresh
-                  </button>
-                </div>
-
-                {userId && notificationsLoading && (
-                  <p className="text-sm text-slate-600">Loading...</p>
-                )}
-
-                {userId && !notificationsLoading && dashboardNotifications.length === 0 && (
-                  <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                    No notifications yet.
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  {dashboardNotifications.map((notification) => {
-                    const peerId =
-                      notification.fromUserId ||
-                      notification.senderId ||
-                      notification.receiverId ||
-                      "";
-                    const peerName =
-                      notification.fromUserName ||
-                      notification.senderName ||
-                      profileNames[peerId] ||
-                      "User";
-
-                    return (
-                      <div
-                        key={notification.id}
-                        className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-bold text-slate-800 truncate">
-                              {notification.title || "Notification"}
-                            </p>
-                            {!notification.read && (
-                              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700">
-                                New
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {notification.message || "You have a new update."}
-                          </p>
-                          {notification.offeredSkill || notification.requestedSkill ? (
-                            <p className="text-[11px] text-slate-500 mt-2">
-                              {peerName} · {notification.offeredSkill || "Skill"} ↔{" "}
-                              {notification.requestedSkill || "Skill"}
-                            </p>
-                          ) : null}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 sm:justify-end">
-                          {peerId && (
-                            <Link
-                              href={`/profile/${peerId}`}
-                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-white border border-white/70 text-slate-700 hover:bg-slate-50 transition"
-                            >
-                              <UserRound size={14} />
-                              View
-                            </Link>
-                          )}
-                          {!notification.read && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                await fetch("/api/notifications", {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({
-                                    notificationId: notification.id,
-                                    userId,
-                                  }),
-                                });
-                                if (userId) {
-                                  await loadDashboardNotifications(userId);
-                                }
-                              }}
-                              className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition"
-                            >
-                              Mark read
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* TOP GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              {/* Total Employees (Donut) */}
-              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-slate-700">Total Employees</h3>
-                  <span className="text-2xl font-black text-slate-800">32</span>
-                </div>
-                <div className="h-40 flex items-center justify-center relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={genderData}
-                        innerRadius={45}
-                        outerRadius={60}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {genderData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute flex flex-col items-center">
-                    <div className="flex gap-4 text-[10px] font-bold">
-                      <span className="text-blue-400">● Men</span>
-                      <span className="text-pink-400">● Woman</span>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Top Skills */}
-              <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                <h3 className="font-bold text-slate-700 mb-4">Top Skills</h3>
-                <div className="space-y-4">
-                  {[
-                    {
-                      label: "UI/UX Design",
-                      val: "90%",
-                      color: "bg-orange-400",
-                    },
-                    {
-                      label: "Illustration",
-                      val: "85%",
-                      color: "bg-purple-400",
-                    },
-                    { label: "Animation", val: "78%", color: "bg-blue-400" },
-                  ].map((skill) => (
-                    <div key={skill.label} className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full border-4 border-white flex items-center justify-center text-[10px] font-bold text-slate-600 shadow-sm`}
-                      >
-                        {skill.val}
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-700">
-                          {skill.label}
-                        </p>
-                        <p className="text-[10px] text-slate-500">
-                          100+ projects
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Stats Summary (Attendance/Late/Absent) */}
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "Attendance", val: 30 },
-                    { label: "Late", val: 3 },
-                    { label: "Absent", val: 2 },
-                  ].map((s) => (
-                    <div
-                      key={s.label}
-                      className="bg-white/50 rounded-2xl p-3 text-center border border-white/40"
-                    >
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">
-                        {s.label}
-                      </p>
-                      <p className="text-lg font-black text-slate-800">
-                        {s.val}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                {/* Birthday Card */}
-                <div className="bg-gradient-to-br from-slate-100/80 to-slate-200/80 rounded-[30px] p-4 flex items-center gap-4 relative overflow-hidden border border-white">
-                  <img
-                    src="https://i.pravatar.cc/150?u=terry"
-                    className="w-12 h-12 rounded-full border-2 border-white"
-                    alt="Terry"
-                  />
-                  <div>
-                    <h4 className="font-bold text-sm">Terry Calzoni</h4>
-                    <p className="text-[10px] text-slate-500">
-                      Has birthday today
-                    </p>
-                    <button className="mt-2 bg-white px-4 py-1 rounded-full text-[10px] font-bold shadow-sm hover:shadow-md transition-all">
-                      Wish Him
-                    </button>
-                  </div>
-                  <div className="absolute right-2 top-2 opacity-20">🎈</div>
-                </div>
-              </div>
-            </div>
-            {/* BOTTOM GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Weekly Activity Line Chart */}
-              <div className="lg:col-span-2 bg-white/40 border border-white/60 rounded-[30px] p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-bold text-slate-700">Weekly Activity</h3>
-                  <button className="text-[10px] bg-white/60 px-3 py-1.5 rounded-lg border border-white/40 font-bold flex items-center gap-2">
-                    December, 14 - 18th <ChevronDown size={14} />
-                  </button>
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={activityData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#ffffff"
-                      />
-                      <XAxis
-                        dataKey="day"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 10, fontWeight: "bold" }}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 10, fontWeight: "bold" }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "15px",
-                          border: "none",
-                          boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="animation"
-                        stroke="#00C2FF"
-                        strokeWidth={3}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="illustration"
-                        stroke="#FF85B8"
-                        strokeWidth={3}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="uiux"
-                        stroke="#FFB347"
-                        strokeWidth={3}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-6 mt-4">
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                    <span className="w-3 h-3 rounded-full bg-blue-400"></span>{" "}
-                    Animation
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                    <span className="w-3 h-3 rounded-full bg-pink-400"></span>{" "}
-                    Illustration
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                    <span className="w-3 h-3 rounded-full bg-orange-400"></span>{" "}
-                    UI/UX Design
-                  </div>
-                </div>
-              </div>
-
-              {/* Holiday / Calendar */}
-              <div className="space-y-6">
-                <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                  <h3 className="font-bold text-sm mb-4">
-                    Employees on holiday
-                  </h3>
+                  {/* Stats Summary (Attendance/Late/Absent) */}
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-orange-100" />
-                        <span className="text-xs font-bold">Unhealthy</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-red-400">
-                        Only today
-                      </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: "Attendance", val: 30 },
+                        { label: "Late", val: 3 },
+                        { label: "Absent", val: 2 },
+                      ].map((s) => (
+                        <div
+                          key={s.label}
+                          className="bg-white/50 rounded-2xl p-3 text-center border border-white/40"
+                        >
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">
+                            {s.label}
+                          </p>
+                          <p className="text-lg font-black text-slate-800">
+                            {s.val}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100" />
-                        <span className="text-xs font-bold">On holiday</span>
+                    {/* Birthday Card */}
+                    <div className="bg-gradient-to-br from-slate-100/80 to-slate-200/80 rounded-[30px] p-4 flex items-center gap-4 relative overflow-hidden border border-white">
+                      <img
+                        src="https://i.pravatar.cc/150?u=terry"
+                        className="w-12 h-12 rounded-full border-2 border-white"
+                        alt="Terry"
+                      />
+                      <div>
+                        <h4 className="font-bold text-sm">Terry Calzoni</h4>
+                        <p className="text-[10px] text-slate-500">
+                          Has birthday today
+                        </p>
+                        <button className="mt-2 bg-white px-4 py-1 rounded-full text-[10px] font-bold shadow-sm hover:shadow-md transition-all">
+                          Wish Him
+                        </button>
                       </div>
-                      <span className="text-[10px] font-bold text-red-400">
-                        21st to 22nd
-                      </span>
+                      <div className="absolute right-2 top-2 opacity-20">
+                        🎈
+                      </div>
                     </div>
                   </div>
                 </div>
+                {/* BOTTOM GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Weekly Activity Line Chart */}
+                  <div className="lg:col-span-2 bg-white/40 border border-white/60 rounded-[30px] p-4 sm:p-6 overflow-hidden">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+                      <h3 className="font-bold text-slate-700 text-base sm:text-lg">
+                        Weekly Activity
+                      </h3>
 
-                {/* Mini Calendar mockup */}
-                <div className="bg-white/60 rounded-[30px] p-4 border border-white shadow-sm text-center">
-                  <p className="text-[10px] font-bold text-slate-400 mb-2">
-                    December
-                  </p>
-                  <div className="grid grid-cols-7 gap-1 text-[9px] font-bold">
-                    {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((d) => (
-                      <span key={d} className="text-slate-400">
-                        {d}
-                      </span>
-                    ))}
-                    {Array.from({ length: 31 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={`p-1 ${i + 1 === 21 ? "bg-blue-400 text-white rounded-full" : ""}`}
-                      >
-                        {i + 1}
-                      </span>
-                    ))}
+                      <button className="text-[10px] sm:text-xs bg-white/60 px-3 py-2 rounded-lg border border-white/40 font-bold flex items-center gap-2 w-fit self-start sm:self-auto">
+                        December, 14 - 18th
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
+
+                    {/* Chart */}
+                    <div className="h-52 sm:h-64 w-full -ml-3 sm:ml-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={activityData}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            stroke="#ffffff"
+                          />
+
+                          <XAxis
+                            dataKey="day"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fontWeight: "bold" }}
+                          />
+
+                          <YAxis
+                            hide={window.innerWidth < 640}
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fontWeight: "bold" }}
+                          />
+
+                          <Tooltip
+                            contentStyle={{
+                              borderRadius: "15px",
+                              border: "none",
+                              boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                            }}
+                          />
+
+                          <Line
+                            type="monotone"
+                            dataKey="animation"
+                            stroke="#00C2FF"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+
+                          <Line
+                            type="monotone"
+                            dataKey="illustration"
+                            stroke="#FF85B8"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+
+                          <Line
+                            type="monotone"
+                            dataKey="uiux"
+                            stroke="#FFB347"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mt-4">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                        <span className="w-3 h-3 rounded-full bg-blue-400"></span>
+                        Animation
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                        <span className="w-3 h-3 rounded-full bg-pink-400"></span>
+                        Illustration
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                        <span className="w-3 h-3 rounded-full bg-orange-400"></span>
+                        UI/UX Design
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Holiday / Calendar */}
+                  <div className="space-y-6">
+                    <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                      <h3 className="font-bold text-sm mb-4">
+                        Employees on holiday
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-orange-100" />
+                            <span className="text-xs font-bold">Unhealthy</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-red-400">
+                            Only today
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-100" />
+                            <span className="text-xs font-bold">
+                              On holiday
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold text-red-400">
+                            21st to 22nd
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mini Calendar mockup */}
+                    <div className="bg-white/60 rounded-[30px] p-4 border border-white shadow-sm text-center">
+                      <p className="text-[10px] font-bold text-slate-400 mb-2">
+                        December
+                      </p>
+                      <div className="grid grid-cols-7 gap-1 text-[9px] font-bold">
+                        {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((d) => (
+                          <span key={d} className="text-slate-400">
+                            {d}
+                          </span>
+                        ))}
+                        {Array.from({ length: 31 }).map((_, i) => (
+                          <span
+                            key={i}
+                            className={`p-1 ${i + 1 === 21 ? "bg-blue-400 text-white rounded-full" : ""}`}
+                          >
+                            {i + 1}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
               </>
             )}
           </main>
@@ -1236,7 +1351,9 @@ export default function EmployeeDashboard() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="h-20 w-20 overflow-hidden rounded-3xl border border-white/25 bg-white/15 shadow-lg">
                     <img
-                      src={myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"}
+                      src={
+                        myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"
+                      }
                       alt={myProfile?.fullName || "Profile"}
                       className="h-full w-full object-cover"
                     />
@@ -1271,8 +1388,14 @@ export default function EmployeeDashboard() {
                       {myProfile?.bio || "No bio has been added yet."}
                     </p>
                     <div className="mt-4 space-y-1 text-sm text-slate-600">
-                      <p>{myProfile?.phone ? `Phone: ${myProfile.phone}` : ""}</p>
-                      <p>{myProfile?.location ? `Location: ${myProfile.location}` : ""}</p>
+                      <p>
+                        {myProfile?.phone ? `Phone: ${myProfile.phone}` : ""}
+                      </p>
+                      <p>
+                        {myProfile?.location
+                          ? `Location: ${myProfile.location}`
+                          : ""}
+                      </p>
                     </div>
                   </div>
 
@@ -1288,10 +1411,14 @@ export default function EmployeeDashboard() {
                             key={`${edu.degree || "edu"}-${idx}`}
                             className="rounded-2xl bg-purple-50 px-3 py-2 text-sm text-purple-800"
                           >
-                            <p className="font-semibold">{edu.degree || "Education"}</p>
+                            <p className="font-semibold">
+                              {edu.degree || "Education"}
+                            </p>
                             <p className="text-xs text-purple-700/80">
                               {edu.institute || "Institute"}
-                              {edu.start || edu.end ? ` · ${edu.start || "?"} - ${edu.end || "?"}` : ""}
+                              {edu.start || edu.end
+                                ? ` · ${edu.start || "?"} - ${edu.end || "?"}`
+                                : ""}
                             </p>
                           </div>
                         ))
