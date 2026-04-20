@@ -88,7 +88,7 @@ export default function HeroSection() {
             transition={{ delay: 0.6, duration: 0.6 }}
             viewport={{ once: false }}
           >
-            {!isEnrolled && (
+            {/* {!isEnrolled && (
               <motion.button
                 onClick={() => setOpen(true)}
                 whileHover={{ scale: 1.05 }}
@@ -97,16 +97,16 @@ export default function HeroSection() {
               >
                 Enroll Now
               </motion.button>
-            )}
+            )} */}
 
-            <Link href="/about">
+            <div>
               <motion.button
                 whileHover={{ x: 6 }}
                 className="bg-gradient-to-r from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:opacity-90 transition-all"
               >
                 <span>More Details</span>
               </motion.button>
-            </Link>
+            </div>
           </motion.div>
         </motion.div>
 

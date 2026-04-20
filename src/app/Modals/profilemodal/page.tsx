@@ -9,6 +9,7 @@ import Step4 from "@/app/components/profile steps/step4";
 import Image from "next/image";
 import { db, auth } from "@/app/lib/firebase";
 import { arrayUnion, doc, setDoc } from "firebase/firestore";
+import { ArrowLeft } from "lucide-react";
 
 interface ProfileStepModalProps {
   readonly open: boolean;
@@ -63,7 +64,7 @@ export default function ProfileStepModal({
       await setDoc(
         doc(db, "profiles", userId),
         { completedSteps: arrayUnion(stepNumber) },
-        { merge: true }
+        { merge: true },
       );
     } catch (err) {
       console.error("Error saving step:", err);
@@ -87,7 +88,6 @@ export default function ProfileStepModal({
     <div className="fixed inset-0 z-50 bg-black/50 px-3 sm:px-4 overflow-y-auto">
       <div className="min-h-screen flex items-start md:items-center justify-center py-3 md:py-8">
         <div className="w-full max-w-none md:max-w-4xl rounded-none md:rounded-2xl shadow-xl relative p-4 sm:p-5 md:p-10 max-h-[calc(100vh-1.5rem)] md:max-h-[90vh] overflow-y-auto bg-gradient-to-br from-indigo-50/80 via-purple-50/70 to-pink-50/80 border border-purple-100 backdrop-blur-xl">
-          
           {/* Close button */}
           <button
             onClick={() => setOpen(false)}
@@ -104,35 +104,54 @@ export default function ProfileStepModal({
           <p className="text-sm sm:text-base text-gray-500 text-center mt-2 mb-6 md:mb-8 max-w-xl mx-auto">
             Follow the steps to complete your profile
           </p>
-
           {/* MOBILE STEPPER */}
-          <div className="md:hidden mb-6 text-center">
-            <p className="text-sm text-gray-500 font-medium">
-              Step {step} of {visibleSteps.length - 1}
-            </p>
-            <h3 className="text-lg font-semibold text-gray-800">
+          <div className="md:hidden mb-6">
+            <div className="flex items-center justify-between mb-3">
+              {step > 0 ? (
+                <button
+                  onClick={() => setStep(step - 1)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full 
+  bg-gradient-to-r from-purple-600 to-pink-500 text-white 
+  shadow-md hover:shadow-lg active:scale-95 transition-all duration-200"
+                >
+                  <ArrowLeft size={18} strokeWidth={2.5} />
+                  <span className="text-sm font-semibold">Back</span>
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <p className="text-sm text-gray-500 font-medium">
+                Step {step} of {visibleSteps.length - 1}
+              </p>
+            </div>
+
+            <h3 className="text-lg font-semibold text-gray-800 text-center">
               {visibleSteps[step]?.title}
             </h3>
+
             <div className="w-full bg-gray-200 h-2 rounded-full mt-3">
               <div
                 className="h-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 transition-all"
-                style={{ width: `${(step / (visibleSteps.length - 1)) * 100}%` }}
+                style={{
+                  width: `${(step / (visibleSteps.length - 1)) * 100}%`,
+                }}
               />
             </div>
           </div>
 
           {/* DESKTOP/TABLET STEPPER */}
-           <div className="hidden md:flex justify-between items-start mb-12 relative gap-2">
-             {visibleSteps.map((item, index) => {
-               const current = index === step;
-               const isDisabled =
-                 mode !== "edit" &&
-                 index > 0 &&
-                 !completedSteps.includes(index - 1);
+          <div className="hidden md:flex justify-between items-start mb-12 relative gap-2">
+            {visibleSteps.map((item, index) => {
+              const current = index === step;
+              const isDisabled =
+                mode !== "edit" &&
+                index > 0 &&
+                !completedSteps.includes(index - 1);
 
-               return (
-                 <div
-                   key={item.step}
+              return (
+                <div
+                  key={item.step}
                   className="flex-1 min-w-[90px] flex flex-col items-center relative"
                 >
                   <span className="text-sm font-semibold text-gray-500 mb-2">
@@ -199,12 +218,9 @@ export default function ProfileStepModal({
           {step === 1 && <Step1 onNext={handleNextStep} onSaved={onSaved} />}
           {step === 2 && <Step2 onNext={handleNextStep} />}
           {mode !== "edit" && step === 3 && <Step3 onNext={handleNextStep} />}
-          {mode !== "edit" && step === 4 && <Step4 skills={selectedSkills} /> 
-            
-          }
+          {mode !== "edit" && step === 4 && <Step4 skills={selectedSkills} />}
         </div>
       </div>
     </div>
   );
 }
-

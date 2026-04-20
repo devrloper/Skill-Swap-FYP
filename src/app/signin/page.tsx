@@ -171,7 +171,7 @@ const LoginPage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500); // 2.5 seconds - adjust as needed
+    }, 1400);
     return () => clearTimeout(timer);
   }, []);
   return (
@@ -309,7 +309,7 @@ const LoginPage = () => {
                   </label>
 
                   <a
-                    href="#"
+                    href="/forgot-password"
                     className="text-blue-400 hover:text-blue-600 transition"
                   >
                     Forgot password?

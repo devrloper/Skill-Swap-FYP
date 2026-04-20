@@ -303,7 +303,7 @@ export default function Navbar() {
             <div className="relative" ref={notificationsDesktopRef}>
               <button
                 type="button"
-                className="relative"
+                className="relative mt-2" 
                 onClick={async () => {
                   const next = !notificationsOpen;
                   setNotificationsOpen(next);

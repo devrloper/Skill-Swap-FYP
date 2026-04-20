@@ -102,7 +102,7 @@ export default function WorkableChat() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500);
+    }, 1400);
     return () => clearTimeout(timer);
   }, []);
 

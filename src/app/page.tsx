@@ -1,7 +1,7 @@
 "use client";
 import { useState,useEffect } from "react";
 import Navbar from "@/app/components/navbar/page";
-import Landing from "@/app/components/landing/page";
+import Landingindex from "@/app/components/landingindex/page";
 import Image from "next/image";
 import Footer from "@/app/components/footer/page";
 import { motion, AnimatePresence } from "framer-motion";import Link from "next/link";
@@ -35,7 +35,7 @@ const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500); // 2.5 seconds - adjust as needed
+    }, 1400); 
     return () => clearTimeout(timer);
   }, []);
   return (
@@ -56,7 +56,7 @@ const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
       </AnimatePresence>
     <div>
       <Navbar />
-      <Landing />
+      <Landingindex />
 
       {/* About Us Section */}
       <About />

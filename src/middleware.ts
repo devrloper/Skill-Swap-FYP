@@ -11,6 +11,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/trendingskills",
   "/signin",
   "/signup",
+  "/forgot-password",
 ];
 
 function isPublicPath(pathname: string) {
@@ -44,18 +45,18 @@ export function middleware(request: NextRequest) {
 
   // Allow Next internals & common public files
   if (
-  pathname.startsWith("/_next") ||   // Next.js internals
-  pathname.startsWith("/favicon") || // favicon
-  pathname.startsWith("/images") ||  // public images
-  pathname.startsWith("/assets") ||  // optional other public assets
-  pathname.endsWith(".png") ||       // allow png, jpg, svg, etc.
-  pathname.endsWith(".jpg") ||
-  pathname.endsWith(".jpeg") ||
-  pathname.endsWith(".svg") ||
-  pathname.endsWith(".webp")
-) {
-  return NextResponse.next();
-}
+    pathname.startsWith("/_next") || // Next.js internals
+    pathname.startsWith("/favicon") || // favicon
+    pathname.startsWith("/images") || // public images
+    pathname.startsWith("/assets") || // optional other public assets
+    pathname.endsWith(".png") || // allow png, jpg, svg, etc.
+    pathname.endsWith(".jpg") ||
+    pathname.endsWith(".jpeg") ||
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".webp")
+  ) {
+    return NextResponse.next();
+  }
 
   // Keep APIs reachable (route protection here is for pages).
   if (pathname.startsWith("/api")) return NextResponse.next();
