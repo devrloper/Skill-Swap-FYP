@@ -13,7 +13,7 @@ const ForgotPassword = () => {
       />
 
       {/* DARK OVERLAY */}
-      <div className="absolute inset-0 bg-black/40" />
+      {/* <div className="absolute inset-0 bg-black/40" /> */}
 
       {/* BACKGROUND DOTS  */}
       <div className="absolute inset-0 pointer-events-none">
