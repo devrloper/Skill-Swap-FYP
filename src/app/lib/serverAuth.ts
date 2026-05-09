@@ -30,6 +30,23 @@ export async function getSessionUser(): Promise<DecodedIdToken | null> {
   }
 }
 
+export async function getRequestUser(req: Request): Promise<DecodedIdToken | null> {
+  const authHeader = req.headers.get("authorization") || "";
+  const bearerToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length).trim()
+    : "";
+
+  if (bearerToken) {
+    try {
+      return await adminAuth.verifyIdToken(bearerToken, true);
+    } catch {
+      return null;
+    }
+  }
+
+  return getSessionUser();
+}
+
 export async function requireSessionUser(): Promise<DecodedIdToken> {
   const user = await getSessionUser();
   if (!user) redirect("/signin");

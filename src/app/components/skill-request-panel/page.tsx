@@ -255,9 +255,13 @@ export default function SkillRequestPanel({
 
     try {
       setSubmitting(true);
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/connect-requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({
           receiverId,
           offeredSkill,

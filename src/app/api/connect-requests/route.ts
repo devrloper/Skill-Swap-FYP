@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/app/lib/firebaseAdmin";
-import { getSessionUser } from "@/app/lib/serverAuth";
+import { getRequestUser } from "@/app/lib/serverAuth";
 import {
   buildRequestKey,
   canSendSkillRequest,
@@ -31,7 +31,7 @@ function isRecentPending(createdAt: unknown) {
 
 export async function POST(req: Request) {
   try {
-    const sessionUser = await getSessionUser();
+    const sessionUser = await getRequestUser(req);
     if (!sessionUser?.uid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

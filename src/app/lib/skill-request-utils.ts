@@ -9,6 +9,34 @@ export function normalizeSkillValue(value: unknown) {
     .toLowerCase();
 }
 
+function normalizeSkillKey(value: unknown) {
+  return normalizeSkillValue(value).replace(/[^a-z0-9]/g, "");
+}
+
+function readSkillName(value: unknown) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const skill = value as Record<string, unknown>;
+    return (
+      skill.name ||
+      skill.skill ||
+      skill.title ||
+      skill.label ||
+      skill.value ||
+      ""
+    );
+  }
+  return "";
+}
+
+function collectSkills(...values: unknown[]) {
+  return values
+    .flatMap((value) => (Array.isArray(value) ? value : value ? [value] : []))
+    .map(readSkillName)
+    .map((skill) => normalizeSkillValue(skill))
+    .filter(Boolean);
+}
+
 export function pairId(leftId: string, rightId: string) {
   return [leftId, rightId].sort().join("__");
 }
@@ -40,19 +68,35 @@ export function toMillis(value: unknown): number {
 
 export function extractProfileSkills(profile: Record<string, unknown>) {
   const skills = (profile.skills as Record<string, unknown> | undefined) || {};
-  const teachSkills = [
-    ...((skills.teachSkills as string[] | undefined) || []),
-    ...((skills.customTeachSkills as string[] | undefined) || []),
-  ]
-    .map((skill) => normalizeSkillValue(skill))
-    .filter(Boolean);
+  const teachSkills = collectSkills(
+    skills.teachSkills,
+    skills.customTeachSkills,
+    skills.skillsToTeach,
+    skills.teaching,
+    skills.offer,
+    profile.teachSkills,
+    profile.customTeachSkills,
+    profile.skillsToTeach,
+    profile.teachingSkills,
+    profile.offeredSkills,
+    profile.skillsOffered,
+    profile.canTeach,
+  );
 
-  const learnSkills = [
-    ...((skills.learnSkills as string[] | undefined) || []),
-    ...((skills.customLearnSkills as string[] | undefined) || []),
-  ]
-    .map((skill) => normalizeSkillValue(skill))
-    .filter(Boolean);
+  const learnSkills = collectSkills(
+    skills.learnSkills,
+    skills.customLearnSkills,
+    skills.skillsToLearn,
+    skills.learning,
+    skills.seek,
+    profile.learnSkills,
+    profile.customLearnSkills,
+    profile.skillsToLearn,
+    profile.learningSkills,
+    profile.requestedSkills,
+    profile.skillsWanted,
+    profile.wantToLearn,
+  );
 
   return {
     teach: Array.from(new Set(teachSkills)),
@@ -119,7 +163,11 @@ export function canSendSkillRequest(
 
 export function hasMatchingSkill(skills: string[], targetSkill: string) {
   const normalizedTarget = normalizeSkillValue(targetSkill);
-  return skills.some((skill) => normalizeSkillValue(skill) === normalizedTarget);
+  const targetKey = normalizeSkillKey(targetSkill);
+  return skills.some((skill) => {
+    const normalizedSkill = normalizeSkillValue(skill);
+    return normalizedSkill === normalizedTarget || normalizeSkillKey(skill) === targetKey;
+  });
 }
 
 export function buildRequestKey(
