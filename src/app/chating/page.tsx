@@ -200,11 +200,18 @@ function WorkableChatContent() {
 
     let isMounted = true;
 
-    fetch(`/api/chat/users?userId=${encodeURIComponent(user.uid)}`, {
-      cache: "no-store",
-    })
-      .then((response) => response.json())
-      .then((data) => {
+    const loadAcceptedChatUsers = async () => {
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(
+          `/api/chat/users?userId=${encodeURIComponent(user.uid)}`,
+          {
+            cache: "no-store",
+            credentials: "include",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const data = await response.json();
         if (!isMounted) return;
         const directoryUsers = Array.isArray(data?.users) ? data.users : [];
         setUsersMap(
@@ -214,11 +221,13 @@ function WorkableChatContent() {
               .map((item: FirestoreRecord) => [String(item.id), item]),
           ),
         );
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Failed to load chat users:", error);
         if (isMounted) setUsersMap(new Map());
-      });
+      }
+    };
+
+    loadAcceptedChatUsers();
 
     const unsubChats = onSnapshot(
       collection(db, "users", user.uid, "chats"),
@@ -241,7 +250,7 @@ function WorkableChatContent() {
       isMounted = false;
       unsubChats();
     };
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
     if (!activeUserId && filteredContacts.length) {
@@ -486,7 +495,7 @@ function WorkableChatContent() {
 
               {!filteredContacts.length && (
                 <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-                  No users found yet.
+                  No accepted chat users yet.
                 </div>
               )}
             </div>
@@ -622,7 +631,7 @@ function WorkableChatContent() {
                 </div>
                 <p className="font-semibold text-slate-800">No chat users available</p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Jab doosre users signup/profile create karenge, wo yahan show honge.
+                  Jab skill swap request accept hogi, woh user yahan show hoga.
                 </p>
               </div>
             </div>

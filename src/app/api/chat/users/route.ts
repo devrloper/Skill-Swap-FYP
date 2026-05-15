@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/app/lib/firebaseAdmin";
+import { getRequestUser } from "@/app/lib/serverAuth";
 import { toMillis } from "@/app/lib/skill-request-utils";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +22,37 @@ function normalizeDoc(id: string, data: Record<string, unknown>): DirectoryUser 
 
 export async function GET(req: Request) {
   try {
+    const sessionUser = await getRequestUser(req);
+    if (!sessionUser?.uid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const currentUserId = searchParams.get("userId")?.trim() || "";
+    const requestedUserId = searchParams.get("userId")?.trim();
+    const currentUserId = sessionUser.uid.trim();
+
+    if (requestedUserId && requestedUserId !== currentUserId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const connectionsSnap = await adminDb
+      .collection("connections")
+      .where("users", "array-contains", currentUserId)
+      .get();
+
+    const acceptedPeerIds = new Set<string>();
+    connectionsSnap.docs.forEach((doc) => {
+      const data = doc.data() as Record<string, unknown>;
+      const users = Array.isArray(data.users) ? data.users.map(String) : [];
+      if (data.status !== "accepted" || data.chatEnabled === false) return;
+
+      const peerId = users.find((id) => id && id !== currentUserId);
+      if (peerId) acceptedPeerIds.add(peerId);
+    });
+
+    if (!acceptedPeerIds.size) {
+      return NextResponse.json({ users: [] });
+    }
 
     const [usersSnap, profilesSnap] = await Promise.all([
       adminDb.collection("users").get(),
@@ -43,7 +73,7 @@ export async function GET(req: Request) {
     });
 
     const users = Array.from(usersMap.values())
-      .filter((user) => user.id && user.id !== currentUserId)
+      .filter((user) => acceptedPeerIds.has(user.id))
       .sort((a, b) => {
         const aName = String(a.fullName || a.name || a.displayName || "User");
         const bName = String(b.fullName || b.name || b.displayName || "User");
