@@ -19,6 +19,8 @@ import {
   MapPin,
   ChevronLeft,
   Loader2,
+  CalendarDays,
+  CheckCircle2,
 } from "lucide-react";
 import {
   addDoc,
@@ -60,6 +62,23 @@ type ChatMessage = {
   senderId: string;
   receiverId: string;
   createdAt: number;
+  type?: "text" | "schedule";
+  schedule?: {
+    topic: string;
+    dateTime: number;
+    duration: number;
+    notes?: string;
+    status: "pending" | "accepted";
+    proposedBy: string;
+    acceptedBy?: string;
+  };
+};
+
+type ScheduleForm = {
+  topic: string;
+  dateTime: string;
+  duration: string;
+  notes: string;
 };
 
 function getStringValue(source: FirestoreRecord, keys: string[], fallback = "") {
@@ -101,6 +120,27 @@ function formatLastSeen(value: number) {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(value);
+}
+
+function formatScheduleDateTime(value: number) {
+  if (!value) return "Time not selected";
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
+}
+
+function buildDefaultScheduleTime() {
+  const date = new Date();
+  date.setMinutes(0, 0, 0);
+  date.setHours(date.getHours() + 1);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}`;
 }
 
 function mergeUserRecords(
@@ -157,6 +197,15 @@ function WorkableChatContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [acceptingScheduleId, setAcceptingScheduleId] = useState("");
+  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>({
+    topic: "",
+    dateTime: buildDefaultScheduleTime(),
+    duration: "30",
+    notes: "",
+  });
   const [chatError, setChatError] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -283,6 +332,25 @@ function WorkableChatContent() {
               senderId: getStringValue(data, ["senderId"]),
               receiverId: getStringValue(data, ["receiverId"]),
               createdAt: toMillis(data.createdAt),
+              type: data.type === "schedule" ? "schedule" : "text",
+              schedule:
+                data.schedule && typeof data.schedule === "object"
+                  ? {
+                      topic: getStringValue(data.schedule as FirestoreRecord, ["topic"], "Skill Swap Meeting"),
+                      dateTime: toMillis((data.schedule as FirestoreRecord).dateTime),
+                      duration:
+                        typeof (data.schedule as FirestoreRecord).duration === "number"
+                          ? ((data.schedule as FirestoreRecord).duration as number)
+                          : 30,
+                      notes: getStringValue(data.schedule as FirestoreRecord, ["notes"]),
+                      status:
+                        (data.schedule as FirestoreRecord).status === "accepted"
+                          ? "accepted"
+                          : "pending",
+                      proposedBy: getStringValue(data.schedule as FirestoreRecord, ["proposedBy"]),
+                      acceptedBy: getStringValue(data.schedule as FirestoreRecord, ["acceptedBy"]),
+                    }
+                  : undefined,
             };
           }),
         );
@@ -385,6 +453,104 @@ function WorkableChatContent() {
       setChatError("Message send nahi hua. Firestore write permissions check karein.");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleCreateSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeUser || !user?.uid || isScheduling) return;
+
+    const topic = scheduleForm.topic.trim() || "Skill Swap Meeting";
+    const dateTime = new Date(scheduleForm.dateTime).getTime();
+    const duration = Number(scheduleForm.duration) || 30;
+
+    if (!dateTime || Number.isNaN(dateTime)) {
+      setChatError("Meeting ke liye valid date aur time select karein.");
+      return;
+    }
+
+    const previewText = `Meeting proposed: ${topic} - ${formatScheduleDateTime(dateTime)}`;
+    setIsScheduling(true);
+    setChatError("");
+
+    try {
+      const chatId = await ensureChatRoom(activeUser, previewText);
+      await addDoc(collection(db, "chatRooms", chatId, "messages"), {
+        text: previewText,
+        senderId: user.uid,
+        receiverId: activeUser.id,
+        readBy: [user.uid],
+        type: "schedule",
+        schedule: {
+          topic,
+          dateTime: Timestamp.fromMillis(dateTime),
+          duration,
+          notes: scheduleForm.notes.trim(),
+          status: "pending",
+          proposedBy: user.uid,
+        },
+        createdAt: Timestamp.now(),
+      });
+      setScheduleForm({
+        topic: "",
+        dateTime: buildDefaultScheduleTime(),
+        duration: "30",
+        notes: "",
+      });
+      setIsScheduleOpen(false);
+    } catch (error) {
+      console.error("Failed to create schedule:", error);
+      setChatError("Schedule send nahi hua. Firestore write permissions check karein.");
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleAcceptSchedule = async (message: ChatMessage) => {
+    if (!activeUser || !user?.uid || !message.schedule || acceptingScheduleId) return;
+    const chatId = pairId(user.uid, activeUser.id);
+    setAcceptingScheduleId(message.id);
+    setChatError("");
+
+    try {
+      await updateDoc(doc(db, "chatRooms", chatId, "messages", message.id), {
+        "schedule.status": "accepted",
+        "schedule.acceptedBy": user.uid,
+        "schedule.acceptedAt": Timestamp.now(),
+        text: `Meeting confirmed: ${message.schedule.topic} - ${formatScheduleDateTime(
+          message.schedule.dateTime,
+        )}`,
+      });
+
+      await setDoc(
+        doc(db, "sessions", `${chatId}_${message.id}`),
+        {
+          id: `${chatId}_${message.id}`,
+          chatId,
+          scheduleMessageId: message.id,
+          participants: [user.uid, activeUser.id],
+          topic: message.schedule.topic,
+          dateTime: Timestamp.fromMillis(message.schedule.dateTime),
+          duration: message.schedule.duration,
+          notes: message.schedule.notes || "",
+          status: "scheduled",
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        },
+        { merge: true },
+      );
+
+      await ensureChatRoom(
+        activeUser,
+        `Meeting confirmed: ${message.schedule.topic} - ${formatScheduleDateTime(
+          message.schedule.dateTime,
+        )}`,
+      );
+    } catch (error) {
+      console.error("Failed to accept schedule:", error);
+      setChatError("Schedule accept nahi hua. Firestore permissions check karein.");
+    } finally {
+      setAcceptingScheduleId("");
     }
   };
 
@@ -559,6 +725,11 @@ function WorkableChatContent() {
 
                 {messages.map((message) => {
                   const isMine = message.senderId === user?.uid;
+                  const isSchedule = message.type === "schedule" && message.schedule;
+                  const canAcceptSchedule =
+                    isSchedule &&
+                    message.schedule?.status === "pending" &&
+                    message.senderId !== user?.uid;
                   return (
                     <div
                       key={message.id}
@@ -578,15 +749,86 @@ function WorkableChatContent() {
                           {isMine ? "You" : activeUser.name.split(" ")[0]}{" "}
                           {formatMessageTime(message.createdAt)}
                         </p>
-                        <div
-                          className={`p-4 rounded-[24px] text-sm shadow-sm break-words ${
-                            isMine
-                              ? "bg-[#4B164C] text-white rounded-tr-none shadow-purple-100"
-                              : "bg-white border border-slate-100 text-slate-600 rounded-tl-none"
-                          }`}
-                        >
-                          {message.text}
-                        </div>
+                        {isSchedule ? (
+                          <div
+                            className={`w-72 max-w-full rounded-[24px] p-4 text-sm shadow-sm ${
+                              isMine
+                                ? "bg-[#4B164C] text-white rounded-tr-none shadow-purple-100"
+                                : "bg-white border border-slate-100 text-slate-700 rounded-tl-none"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                                  isMine ? "bg-white/15" : "bg-[#4B164C]/10 text-[#4B164C]"
+                                }`}
+                              >
+                                <CalendarDays className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-bold leading-tight">
+                                  {message.schedule?.topic}
+                                </p>
+                                <p className={`mt-1 text-xs ${isMine ? "text-white/75" : "text-slate-500"}`}>
+                                  {formatScheduleDateTime(message.schedule?.dateTime || 0)}
+                                </p>
+                                <p className={`mt-1 text-xs ${isMine ? "text-white/75" : "text-slate-500"}`}>
+                                  {message.schedule?.duration} minutes
+                                </p>
+                                {message.schedule?.notes && (
+                                  <p className={`mt-3 text-xs leading-relaxed ${isMine ? "text-white/85" : "text-slate-600"}`}>
+                                    {message.schedule.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-between gap-3">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                  message.schedule?.status === "accepted"
+                                    ? isMine
+                                      ? "bg-emerald-400/20 text-emerald-50"
+                                      : "bg-emerald-50 text-emerald-700"
+                                    : isMine
+                                      ? "bg-white/15 text-white"
+                                      : "bg-amber-50 text-amber-700"
+                                }`}
+                              >
+                                {message.schedule?.status === "accepted" && (
+                                  <CheckCircle2 className="h-3 w-3" />
+                                )}
+                                {message.schedule?.status === "accepted" ? "Accepted" : "Pending"}
+                              </span>
+
+                              {canAcceptSchedule && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAcceptSchedule(message)}
+                                  disabled={acceptingScheduleId === message.id}
+                                  className="inline-flex items-center gap-1.5 rounded-full bg-[#4B164C] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {acceptingScheduleId === message.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="h-3 w-3" />
+                                  )}
+                                  Accept
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className={`p-4 rounded-[24px] text-sm shadow-sm break-words ${
+                              isMine
+                                ? "bg-[#4B164C] text-white rounded-tr-none shadow-purple-100"
+                                : "bg-white border border-slate-100 text-slate-600 rounded-tl-none"
+                            }`}
+                          >
+                            {message.text}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -608,6 +850,14 @@ function WorkableChatContent() {
                   />
                   <div className="flex items-center gap-2 pr-1">
                     <Paperclip className="hidden sm:block w-5 h-5 text-slate-400 rotate-45" />
+                    <button
+                      type="button"
+                      onClick={() => setIsScheduleOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full border border-[#4B164C]/15 bg-white px-3 py-2 text-xs font-semibold text-[#4B164C] transition hover:bg-[#4B164C]/5"
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                      Schedule
+                    </button>
                     <button
                       type="submit"
                       disabled={!inputText.trim() || isSending}
@@ -637,6 +887,118 @@ function WorkableChatContent() {
             </div>
           )}
         </main>
+
+        <AnimatePresence>
+          {isScheduleOpen && activeUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4"
+            >
+              <motion.div
+                initial={{ y: 24, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 24, opacity: 0 }}
+                className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl"
+              >
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-lg font-bold text-slate-800">Schedule Meeting</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Send a meeting proposal to {activeUser.name}.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsScheduleOpen(false)}
+                    className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-200"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateSchedule} className="space-y-4">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Topic
+                    </span>
+                    <input
+                      value={scheduleForm.topic}
+                      onChange={(event) =>
+                        setScheduleForm((prev) => ({ ...prev, topic: event.target.value }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      placeholder="Skill swap session"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Date & time
+                      </span>
+                      <input
+                        type="datetime-local"
+                        value={scheduleForm.dateTime}
+                        onChange={(event) =>
+                          setScheduleForm((prev) => ({ ...prev, dateTime: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                        required
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Duration
+                      </span>
+                      <select
+                        value={scheduleForm.duration}
+                        onChange={(event) =>
+                          setScheduleForm((prev) => ({ ...prev, duration: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      >
+                        <option value="15">15 min</option>
+                        <option value="30">30 min</option>
+                        <option value="45">45 min</option>
+                        <option value="60">60 min</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Notes
+                    </span>
+                    <textarea
+                      value={scheduleForm.notes}
+                      onChange={(event) =>
+                        setScheduleForm((prev) => ({ ...prev, notes: event.target.value }))
+                      }
+                      className="min-h-24 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      placeholder="Add agenda or meeting details"
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isScheduling}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4B164C] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isScheduling ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CalendarDays className="h-4 w-4" />
+                    )}
+                    Send Schedule
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {activeUser && (
           <aside className="hidden xl:flex w-72 lg:w-70 bg-white rounded-[28px] p-8 shadow-sm flex-col items-center shrink-0">
