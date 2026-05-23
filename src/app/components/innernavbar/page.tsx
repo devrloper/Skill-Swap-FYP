@@ -7,6 +7,7 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   Clock3,
+  Coins,
   UserRound,
   XCircle,
 } from "lucide-react";
@@ -16,7 +17,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase";
 import type { User } from "firebase/auth";
 import Button from "@/app/ui/button";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 type NotificationItem = {
   id: string;
@@ -51,6 +52,7 @@ export default function Navbar() {
   const [notifLoading, setNotifLoading] = useState<boolean>(false);
   const [profilePhotoURL, setProfilePhotoURL] = useState<string>("");
   const [profileName, setProfileName] = useState<string>("");
+  const [credits, setCredits] = useState<number>(0);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationsDesktopRef = useRef<HTMLDivElement>(null);
@@ -92,12 +94,13 @@ export default function Navbar() {
     return () => {
       cancelled = true;
     };
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
     if (!user?.uid) {
       setProfilePhotoURL("");
       setProfileName("");
+      setCredits(0);
       return;
     }
 
@@ -129,6 +132,39 @@ export default function Navbar() {
       cancelled = true;
     };
   }, [user?.uid, user?.displayName]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setCredits(0);
+      return;
+    }
+
+    const userRef = doc(db, "users", user.uid);
+    const profileRef = doc(db, "profiles", user.uid);
+    let userCredits: number | null = null;
+    let profileCredits: number | null = null;
+
+    const syncCredits = () => {
+      setCredits(userCredits ?? profileCredits ?? 0);
+    };
+
+    const unsubUser = onSnapshot(userRef, (snap) => {
+      const value = snap.data()?.credits;
+      userCredits = typeof value === "number" ? value : null;
+      syncCredits();
+    });
+
+    const unsubProfile = onSnapshot(profileRef, (snap) => {
+      const value = snap.data()?.credits;
+      profileCredits = typeof value === "number" ? value : null;
+      syncCredits();
+    });
+
+    return () => {
+      unsubUser();
+      unsubProfile();
+    };
+  }, [user]);
   // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -186,10 +222,24 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!user?.uid) return;
+
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        await fetch("/api/credits/sync", {
+          method: "POST",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (err) {
+        console.error("Credit sync failed:", err);
+      }
+    })();
+
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [user?.uid]);
+  }, [user]);
 
   const markNotificationRead = async (notificationId: string) => {
     const userId = auth.currentUser?.uid;
@@ -251,6 +301,20 @@ export default function Navbar() {
 
   const navLinkClass =
     "relative text-gray-700 hover:text-purple-600 transition font-medium after:absolute after:left-1/2 after:-bottom-1 after:w-0 after:h-[2px] after:bg-gradient-to-r after:from-purple-600 after:to-pink-500 after:transition-all after:duration-300 hover:after:w-full hover:after:left-0";
+  const creditsBadge = (
+    <Link
+      href="/pricing"
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+        credits > 0
+          ? "border-purple-100 bg-purple-50 text-purple-700 hover:bg-purple-100"
+          : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+      }`}
+      title={credits > 0 ? "Available credits" : "No credits left. Buy paid credits."}
+    >
+      <Coins className="h-4 w-4" />
+      {credits} Credits
+    </Link>
+  );
 
   return (
     <>
@@ -303,6 +367,7 @@ export default function Navbar() {
 
           {/* Desktop Right Section */}
           <div className="hidden lg:flex items-center gap-4">
+            {creditsBadge}
             {/* Notifications */}
             <div className="relative" ref={notificationsDesktopRef}>
               <button
@@ -491,6 +556,7 @@ export default function Navbar() {
 
           {/* Mobile Right Section */}
           <div className="flex items-center gap-3 lg:hidden">
+            {creditsBadge}
             <div className="relative" ref={notificationsMobileRef}>
               <button
                 type="button"

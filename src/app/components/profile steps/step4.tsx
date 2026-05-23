@@ -42,6 +42,7 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const [score, setScore] = useState<number | null>(null);
   const [correctCount, setCorrectCount] = useState<number | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [creditsDelta, setCreditsDelta] = useState(0);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(5 * 60); // 5 minutes
   const [mounted, setMounted] = useState(false);
@@ -86,6 +87,7 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
     setScore(null);
     setCorrectCount(null);
     setTotalCount(null);
+    setCreditsDelta(0);
     setTimeLeft(5 * 60);
     setStarted(true);
     await generateQuestions(interviewParts[0].type);
@@ -144,9 +146,13 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   ) => {
     setLoading(true);
     try {
+      const token = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/evaluate-answers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ answers: finalAnswers, questions: finalQuestions }),
       });
       const data = await res.json();
@@ -154,6 +160,7 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
       setScore(typeof data.score === "number" ? data.score : null);
       setCorrectCount(typeof data.correct === "number" ? data.correct : null);
       setTotalCount(typeof data.total === "number" ? data.total : null);
+      setCreditsDelta(typeof data.creditsDelta === "number" ? data.creditsDelta : 0);
 
       if (userId) {
         const wrongAnswers: WrongAnswerItem[] = Array.isArray(data?.wrongAnswers)
@@ -229,6 +236,7 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
           )}
           {result === "Pass" && (
             <p className="text-sm text-slate-300 mt-2">
+              {creditsDelta > 0 ? `+${creditsDelta} credits added. ` : ""}
               Redirecting to matching...
             </p>
           )}

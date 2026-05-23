@@ -140,11 +140,13 @@ const LoginPage = () => {
           name: user.displayName || "",
           email: user.email,
           role: "exchanger", // default role
+          credits: 0,
           createdAt: serverTimestamp(),
         });
       }
 
-      const { role } = (await getDoc(userRef)).data();
+      const userData = (await getDoc(userRef)).data() as { role?: string } | undefined;
+      const role = userData?.role;
 
       // Role-based redirect
       if (user.email === "aroobaadmin123@gmail.com") {

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { saveInterviewResultAndAwardCredits } from "@/app/lib/creditLogic";
+import { getRequestUser } from "@/app/lib/serverAuth";
 
 interface QuestionItem {
   question: string;
@@ -24,6 +26,7 @@ type WrongAnswerItem = {
 export async function POST(req: NextRequest) {
   try {
     const { answers = [], questions = [] } = await req.json();
+    const sessionUser = await getRequestUser(req);
 
     const safeQuestions: QuestionItem[] = Array.isArray(questions) ? questions : [];
     const safeAnswers: string[] = Array.isArray(answers) ? answers : [];
@@ -62,8 +65,28 @@ export async function POST(req: NextRequest) {
 
     const score = total > 0 ? Math.round((correct / total) * 100) : 0;
     const result = total > 0 && correct / total > 0.5 ? "Pass" : "Fail";
+    let creditResult = { awardedCredits: false, creditsDelta: 0 };
 
-    return NextResponse.json({ result, score, correct, total, breakdown, wrongAnswers });
+    if (sessionUser?.uid) {
+      creditResult = await saveInterviewResultAndAwardCredits(sessionUser.uid, {
+        result,
+        score,
+        correct,
+        total,
+        wrongAnswers,
+      });
+    }
+
+    return NextResponse.json({
+      result,
+      score,
+      correct,
+      total,
+      breakdown,
+      wrongAnswers,
+      creditsDelta: creditResult.creditsDelta,
+      awardedInterviewCredits: creditResult.awardedCredits,
+    });
   } catch (error) {
     console.error("Evaluation Error:", error);
     return NextResponse.json(

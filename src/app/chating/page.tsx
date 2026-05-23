@@ -21,6 +21,7 @@ import {
   Loader2,
   CalendarDays,
   CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import {
   addDoc,
@@ -68,7 +69,7 @@ type ChatMessage = {
     dateTime: number;
     duration: number;
     notes?: string;
-    status: "pending" | "accepted";
+    status: "pending" | "accepted" | "completed" | "cancelled";
     proposedBy: string;
     acceptedBy?: string;
   };
@@ -200,6 +201,7 @@ function WorkableChatContent() {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [acceptingScheduleId, setAcceptingScheduleId] = useState("");
+  const [updatingSessionId, setUpdatingSessionId] = useState("");
   const [scheduleForm, setScheduleForm] = useState<ScheduleForm>({
     topic: "",
     dateTime: buildDefaultScheduleTime(),
@@ -343,10 +345,14 @@ function WorkableChatContent() {
                           ? ((data.schedule as FirestoreRecord).duration as number)
                           : 30,
                       notes: getStringValue(data.schedule as FirestoreRecord, ["notes"]),
-                      status:
-                        (data.schedule as FirestoreRecord).status === "accepted"
-                          ? "accepted"
-                          : "pending",
+                      status: ["accepted", "completed", "cancelled"].includes(
+                        String((data.schedule as FirestoreRecord).status),
+                      )
+                        ? (String((data.schedule as FirestoreRecord).status) as
+                            | "accepted"
+                            | "completed"
+                            | "cancelled")
+                        : "pending",
                       proposedBy: getStringValue(data.schedule as FirestoreRecord, ["proposedBy"]),
                       acceptedBy: getStringValue(data.schedule as FirestoreRecord, ["acceptedBy"]),
                     }
@@ -513,32 +519,25 @@ function WorkableChatContent() {
     setChatError("");
 
     try {
-      await updateDoc(doc(db, "chatRooms", chatId, "messages", message.id), {
-        "schedule.status": "accepted",
-        "schedule.acceptedBy": user.uid,
-        "schedule.acceptedAt": Timestamp.now(),
-        text: `Meeting confirmed: ${message.schedule.topic} - ${formatScheduleDateTime(
-          message.schedule.dateTime,
-        )}`,
-      });
-
-      await setDoc(
-        doc(db, "sessions", `${chatId}_${message.id}`),
-        {
-          id: `${chatId}_${message.id}`,
+      const token = await user.getIdToken();
+      const response = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          peerId: activeUser.id,
           chatId,
           scheduleMessageId: message.id,
-          participants: [user.uid, activeUser.id],
-          topic: message.schedule.topic,
-          dateTime: Timestamp.fromMillis(message.schedule.dateTime),
-          duration: message.schedule.duration,
-          notes: message.schedule.notes || "",
-          status: "scheduled",
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        },
-        { merge: true },
-      );
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Schedule accept nahi hua.");
+      }
 
       await ensureChatRoom(
         activeUser,
@@ -548,9 +547,56 @@ function WorkableChatContent() {
       );
     } catch (error) {
       console.error("Failed to accept schedule:", error);
-      setChatError("Schedule accept nahi hua. Firestore permissions check karein.");
+      const message = error instanceof Error ? error.message : "Schedule accept nahi hua.";
+      setChatError(
+        message.includes("at least 1 credit")
+          ? `${message} Please buy paid credits from the credits badge in the navbar.`
+          : message,
+      );
     } finally {
       setAcceptingScheduleId("");
+    }
+  };
+
+  const handleUpdateSessionStatus = async (
+    message: ChatMessage,
+    status: "completed" | "cancelled",
+  ) => {
+    if (!activeUser || !user?.uid || !message.schedule || updatingSessionId) return;
+
+    const chatId = pairId(user.uid, activeUser.id);
+    const sessionId = `${chatId}_${message.id}`;
+    setUpdatingSessionId(sessionId);
+    setChatError("");
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/sessions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({ sessionId, status }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Session update nahi hua.");
+      }
+
+      await ensureChatRoom(
+        activeUser,
+        status === "completed"
+          ? `Meeting completed: ${message.schedule.topic}`
+          : `Meeting cancelled: ${message.schedule.topic}`,
+      );
+    } catch (error) {
+      console.error("Failed to update session:", error);
+      setChatError(error instanceof Error ? error.message : "Session update nahi hua.");
+    } finally {
+      setUpdatingSessionId("");
     }
   };
 
@@ -730,6 +776,13 @@ function WorkableChatContent() {
                     isSchedule &&
                     message.schedule?.status === "pending" &&
                     message.senderId !== user?.uid;
+                  const canCloseSchedule =
+                    isSchedule && message.schedule?.status === "accepted";
+                  const scheduleSessionId =
+                    isSchedule && activeUser && user?.uid
+                      ? `${pairId(user.uid, activeUser.id)}_${message.id}`
+                      : "";
+                  const isUpdatingSession = scheduleSessionId === updatingSessionId;
                   return (
                     <div
                       key={message.id}
@@ -786,19 +839,32 @@ function WorkableChatContent() {
                             <div className="mt-4 flex items-center justify-between gap-3">
                               <span
                                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                                  message.schedule?.status === "accepted"
+                                  ["accepted", "completed"].includes(message.schedule?.status || "")
                                     ? isMine
                                       ? "bg-emerald-400/20 text-emerald-50"
                                       : "bg-emerald-50 text-emerald-700"
+                                    : message.schedule?.status === "cancelled"
+                                      ? isMine
+                                        ? "bg-red-400/20 text-red-50"
+                                        : "bg-red-50 text-red-700"
                                     : isMine
                                       ? "bg-white/15 text-white"
                                       : "bg-amber-50 text-amber-700"
                                 }`}
                               >
-                                {message.schedule?.status === "accepted" && (
+                                {["accepted", "completed"].includes(message.schedule?.status || "") && (
                                   <CheckCircle2 className="h-3 w-3" />
                                 )}
-                                {message.schedule?.status === "accepted" ? "Accepted" : "Pending"}
+                                {message.schedule?.status === "cancelled" && (
+                                  <XCircle className="h-3 w-3" />
+                                )}
+                                {message.schedule?.status === "completed"
+                                  ? "Completed"
+                                  : message.schedule?.status === "cancelled"
+                                    ? "Cancelled"
+                                    : message.schedule?.status === "accepted"
+                                      ? "Accepted"
+                                      : "Pending"}
                               </span>
 
                               {canAcceptSchedule && (
@@ -815,6 +881,33 @@ function WorkableChatContent() {
                                   )}
                                   Accept
                                 </button>
+                              )}
+
+                              {canCloseSchedule && (
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateSessionStatus(message, "completed")}
+                                    disabled={isUpdatingSession}
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {isUpdatingSession ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 className="h-3 w-3" />
+                                    )}
+                                    Complete
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateSessionStatus(message, "cancelled")}
+                                    disabled={isUpdatingSession}
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    <XCircle className="h-3 w-3" />
+                                    Cancel
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>

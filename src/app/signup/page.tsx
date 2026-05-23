@@ -84,6 +84,7 @@ export default function SignupPage() {
         name,
         email,
         role,
+        credits: 0,
         createdAt: serverTimestamp(),
       });
 
