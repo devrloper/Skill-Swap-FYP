@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, GraduationCap, Sparkles } from "lucide-react";
+import { X, MapPin, GraduationCap, Sparkles, Star } from "lucide-react";
 import Navbar from "@/app/components/innernavbar/page";
 import SearchBar from "@/app/components/searchbar/page";
 import MatchCard from "@/app/components/matchcard/page";
@@ -18,6 +18,17 @@ interface ProfileData {
   photoURL?: string | null;
   photoUpdatedAt?: number;
   bio?: string;
+  rating?: number;
+  reviewCount?: number;
+  reviews?: Array<{
+    id: string;
+    reviewerId?: string;
+    reviewerName?: string;
+    rating?: number;
+    comment?: string;
+    topic?: string | null;
+    createdAt?: unknown;
+  }>;
   skills?: {
     learnSkills?: string[];
     teachSkills?: string[];
@@ -94,6 +105,11 @@ export default function FindMatchPage() {
   };
 
   const closeProfileModal = () => setSelectedProfile(null);
+  const selectedReviews = selectedProfile?.reviews || [];
+  const selectedRating =
+    typeof selectedProfile?.rating === "number" && Number.isFinite(selectedProfile.rating)
+      ? selectedProfile.rating
+      : 0;
 
   return (
     <>
@@ -322,6 +338,12 @@ export default function FindMatchPage() {
                           tags={tags.length ? tags : ["No skills set"]}
                           education={education}
                           imageUrl={getProfileImageUrl(currentUserProfile)}
+                          rating={currentUserProfile.rating || 0}
+                          reviewCount={
+                            currentUserProfile.reviewCount ||
+                            currentUserProfile.reviews?.length ||
+                            0
+                          }
                           showConnect={false}
                         />
                       </motion.div>
@@ -375,6 +397,10 @@ export default function FindMatchPage() {
                           tags={tags.length ? tags : ["No skills set"]}
                           education={education}
                           imageUrl={getProfileImageUrl(profile)}
+                          rating={profile.rating || 0}
+                          reviewCount={
+                            profile.reviewCount || profile.reviews?.length || 0
+                          }
                           onConnect={() => openProfileModal(profile)}
                           connectDisabled={false}
                           connectLabel="View Profile"
@@ -446,6 +472,11 @@ export default function FindMatchPage() {
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1">
                         <MapPin size={14} />
                         {selectedProfile.location || "Location not set"}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1">
+                        <Star size={14} fill="currentColor" />
+                        {selectedRating ? selectedRating.toFixed(1) : "No rating"}{" "}
+                        ({selectedProfile.reviewCount || selectedReviews.length} reviews)
                       </span>
                     </div>
                   </div>
@@ -522,6 +553,57 @@ export default function FindMatchPage() {
                 </div>
 
                 <div className="self-start">
+                  <div className="mb-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-slate-800">
+                        <Star size={18} className="text-amber-500" fill="currentColor" />
+                        <h3 className="font-bold">Feedback</h3>
+                      </div>
+                      <span className="text-sm font-semibold text-slate-500">
+                        {selectedRating ? `${selectedRating.toFixed(1)} / 5` : "No rating yet"}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      {selectedReviews.length ? (
+                        selectedReviews.slice(0, 5).map((review) => {
+                          const rating =
+                            typeof review.rating === "number" && Number.isFinite(review.rating)
+                              ? review.rating
+                              : Number(review.rating) || 0;
+                          return (
+                            <div
+                              key={review.id}
+                              className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-bold text-slate-800">
+                                  {review.reviewerName || "Skill Swap Member"}
+                                </p>
+                                <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-500">
+                                  <Star size={14} fill="currentColor" />
+                                  {rating || "-"}
+                                </span>
+                              </div>
+                              {review.topic && (
+                                <p className="mt-1 text-xs font-semibold text-purple-600">
+                                  {review.topic}
+                                </p>
+                              )}
+                              <p className="mt-2 text-sm leading-6 text-slate-600">
+                                {review.comment || "No written comment."}
+                              </p>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-slate-500">
+                          No feedback has been added for this profile yet.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   <SkillRequestPanel
                     receiverId={selectedProfile.id}
                     receiverName={selectedProfile.fullName || "Profile"}

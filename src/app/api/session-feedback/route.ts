@@ -11,6 +11,10 @@ type FeedbackBody = {
   comment?: string;
 };
 
+function readDisplayName(data: Record<string, unknown> | undefined, fallback: string) {
+  return String(data?.fullName || data?.name || data?.displayName || fallback).trim();
+}
+
 export async function POST(req: Request) {
   try {
     const sessionUser = await getRequestUser(req);
@@ -51,14 +55,36 @@ export async function POST(req: Request) {
       );
     }
 
+    const reviewerId = sessionUser.uid;
+    const targetUserId = participants.find((participantId) => participantId !== reviewerId);
+    if (!targetUserId) {
+      return NextResponse.json({ error: "Feedback recipient could not be determined." }, { status: 422 });
+    }
+
+    const [reviewerProfileSnap, reviewerUserSnap] = await Promise.all([
+      adminDb.collection("profiles").doc(reviewerId).get(),
+      adminDb.collection("users").doc(reviewerId).get(),
+    ]);
+    const reviewerName = readDisplayName(
+      {
+        ...(reviewerUserSnap.exists ? reviewerUserSnap.data() || {} : {}),
+        ...(reviewerProfileSnap.exists ? reviewerProfileSnap.data() || {} : {}),
+      },
+      "Skill Swap Member",
+    );
+
     const feedbackId = `${sessionId}_${sessionUser.uid}`;
     await adminDb.collection("sessionFeedback").doc(feedbackId).set(
       {
         id: feedbackId,
         sessionId,
-        userId: sessionUser.uid,
+        userId: reviewerId,
+        reviewerId,
+        reviewerName,
+        targetUserId,
         rating: Math.round(rating),
         comment,
+        topic: session.topic || null,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       },
@@ -68,11 +94,31 @@ export async function POST(req: Request) {
     await adminDb.collection("sessions").doc(sessionId).set(
       {
         feedback: {
-          [sessionUser.uid]: {
+          [reviewerId]: {
             rating: Math.round(rating),
+            targetUserId,
             submittedAt: FieldValue.serverTimestamp(),
           },
         },
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    const targetFeedbackSnap = await adminDb
+      .collection("sessionFeedback")
+      .where("targetUserId", "==", targetUserId)
+      .get();
+    const ratings = targetFeedbackSnap.docs
+      .map((doc) => Number(doc.data().rating))
+      .filter((value) => Number.isFinite(value) && value >= 1 && value <= 5);
+    const ratingTotal = ratings.reduce((sum, value) => sum + value, 0);
+    const ratingAverage = ratings.length ? Number((ratingTotal / ratings.length).toFixed(1)) : 0;
+
+    await adminDb.collection("profiles").doc(targetUserId).set(
+      {
+        rating: ratingAverage,
+        reviewCount: ratings.length,
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },

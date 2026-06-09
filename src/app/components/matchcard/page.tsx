@@ -1,5 +1,5 @@
 import Button from "@/app/ui/button";
-import { Briefcase, MapPin, GraduationCap } from "lucide-react";
+import { Briefcase, MapPin, GraduationCap, Star } from "lucide-react";
 
 export default function MatchCard({
   name,
@@ -11,9 +11,15 @@ export default function MatchCard({
   showConnect = true,
   connectDisabled = false,
   connectLabel = "View Profile",
+  rating = 0,
+  reviewCount = 0,
   onConnect,
 }) {
   const displayImage = imageUrl || "/girl.png";
+  const numericRating =
+    typeof rating === "number" && Number.isFinite(rating)
+      ? rating
+      : Number(rating) || 0;
 
   return (
     <div className="relative group mt-10">
@@ -39,6 +45,14 @@ export default function MatchCard({
             {/* Online Indicator */}
             <div className="absolute bottom-1 right-1 bg-green-500 w-5 h-5 rounded-full border-4 border-white shadow-sm"></div>
           </div>
+        </div>
+
+        <div className="absolute right-8 top-6 inline-flex items-center gap-1.5 rounded-full bg-white/75 px-3 py-1.5 text-sm font-extrabold text-amber-500 shadow-md ring-1 ring-white/70 backdrop-blur">
+          <Star size={16} fill="currentColor" />
+          <span>{numericRating ? numericRating.toFixed(1) : "New"}</span>
+          <span className="text-xs font-bold text-gray-500">
+            ({reviewCount || 0})
+          </span>
         </div>
 
         {/* Content */}

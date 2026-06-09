@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/app/lib/firebaseAdmin";
+import { toMillis } from "@/app/lib/skill-request-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +11,32 @@ export async function GET() {
       .where("interviewStatus", "==", "Pass")
       .get();
 
-    const profiles = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const profiles = await Promise.all(
+      snap.docs.map(async (doc) => {
+        const reviewsSnap = await adminDb
+          .collection("sessionFeedback")
+          .where("targetUserId", "==", doc.id)
+          .get();
+        const reviews = reviewsSnap.docs
+          .map((reviewDoc) => ({ id: reviewDoc.id, ...reviewDoc.data() }))
+          .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+
+        return {
+          id: doc.id,
+          ...doc.data(),
+          reviews,
+          reviewCount: reviews.length,
+          rating: reviews.length
+            ? Number(
+                (
+                  reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) /
+                  reviews.length
+                ).toFixed(1),
+              )
+            : doc.data().rating || 0,
+        };
+      }),
+    );
 
     return NextResponse.json({ profiles });
   } catch (err) {
