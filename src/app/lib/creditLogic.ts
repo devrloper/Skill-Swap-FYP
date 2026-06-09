@@ -6,6 +6,7 @@ import {
   SESSION_SCHEDULE_COST,
   SESSION_COMPLETION_BONUS,
 } from "@/app/lib/creditConstants";
+import { createZoomMeeting } from "@/app/lib/zoom";
 
 type CreditTransactionType =
   | "interview_pass"
@@ -13,6 +14,15 @@ type CreditTransactionType =
   | "session_cancel_refund"
   | "session_completion_bonus"
   | "paid_credit_purchase";
+
+type SessionStatus =
+  | "pending"
+  | "accepted"
+  | "scheduled"
+  | "ongoing"
+  | "completed"
+  | "cancelled"
+  | "rejected";
 
 function transactionRef(id: string) {
   return adminDb.collection("creditTransactions").doc(id);
@@ -28,6 +38,59 @@ function profileRef(userId: string) {
 
 function readCredits(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function toDate(value: unknown) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === "string" || typeof value === "number") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof (value as { toDate?: unknown }).toDate === "function"
+  ) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  return null;
+}
+
+function minutesFrom(value: unknown, fallback = 30) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(Math.round(parsed), 15), 240);
+}
+
+function rangesOverlap(startA: number, endA: number, startB: number, endB: number) {
+  return startA < endB && startB < endA;
+}
+
+async function hasOverlappingSession(userIds: string[], start: Date, duration: number, ignoreSessionId?: string) {
+  const end = start.getTime() + duration * 60 * 1000;
+  const snapshots = await Promise.all(
+    userIds.map((userId) =>
+      adminDb.collection("sessions").where("participants", "array-contains", userId).get(),
+    ),
+  );
+
+  return snapshots.some((snapshot) =>
+    snapshot.docs.some((doc) => {
+      if (doc.id === ignoreSessionId) return false;
+      const data = doc.data();
+      if (["completed", "cancelled", "rejected"].includes(String(data.status || ""))) return false;
+      const existingStart = toDate(data.dateTime || data.meetingDateTime);
+      if (!existingStart) return false;
+      const existingDuration = minutesFrom(data.duration, 30);
+      return rangesOverlap(
+        start.getTime(),
+        end,
+        existingStart.getTime(),
+        existingStart.getTime() + existingDuration * 60 * 1000,
+      );
+    }),
+  );
 }
 
 function applyCreditDelta(
@@ -201,7 +264,11 @@ export async function scheduleSessionWithCreditDebit(input: {
     const schedule = (message.schedule || {}) as Record<string, unknown>;
     const requesterId = String(schedule.proposedBy || message.senderId || "");
     const receiverId = String(message.receiverId || "");
+    const providerId = input.actorId;
+    const learnerId = requesterId;
     const participants = [String(message.senderId || ""), receiverId].filter(Boolean);
+    const dateTime = toDate(schedule.dateTime);
+    const duration = minutesFrom(schedule.duration, 30);
 
     if (!requesterId || !participants.includes(input.actorId)) {
       throw new Error("FORBIDDEN");
@@ -215,6 +282,14 @@ export async function scheduleSessionWithCreditDebit(input: {
       return { alreadyScheduled: true, requesterId, deductedCredits: false };
     }
 
+    if (!dateTime || dateTime.getTime() <= Date.now()) {
+      throw new Error("INVALID_MEETING_TIME");
+    }
+
+    if (await hasOverlappingSession(participants, dateTime, duration, input.sessionId)) {
+      throw new Error("OVERLAPPING_SESSION");
+    }
+
     const userSnap = await transaction.get(userRef(requesterId));
     const credits = readCredits(userSnap.data()?.credits);
 
@@ -222,10 +297,20 @@ export async function scheduleSessionWithCreditDebit(input: {
       throw new Error("INSUFFICIENT_CREDITS");
     }
 
+    const zoomMeeting = await createZoomMeeting({
+      topic: String(schedule.topic || "Skill Swap Meeting"),
+      startTime: dateTime,
+      duration,
+      agenda: String(schedule.notes || ""),
+    });
+
     transaction.update(messageRef, {
       "schedule.status": "accepted",
       "schedule.acceptedBy": input.actorId,
       "schedule.acceptedAt": FieldValue.serverTimestamp(),
+      "schedule.zoomMeetingId": zoomMeeting.zoomMeetingId,
+      "schedule.joinUrl": zoomMeeting.joinUrl,
+      "schedule.startUrl": zoomMeeting.startUrl,
       text: `Meeting confirmed: ${schedule.topic || "Skill Swap Meeting"}`,
     });
 
@@ -237,13 +322,24 @@ export async function scheduleSessionWithCreditDebit(input: {
         scheduleMessageId: input.scheduleMessageId,
         participants,
         requesterId,
+        learnerId,
+        providerId,
         acceptedBy: input.actorId,
         topic: schedule.topic || "Skill Swap Meeting",
-        dateTime: schedule.dateTime || null,
-        duration: schedule.duration || 30,
+        dateTime,
+        meetingDateTime: dateTime,
+        duration,
         notes: schedule.notes || "",
+        zoomMeetingId: zoomMeeting.zoomMeetingId,
+        joinUrl: zoomMeeting.joinUrl,
+        startUrl: zoomMeeting.startUrl,
         status: "scheduled",
+        attendanceStatus: {
+          learner: "pending",
+          provider: "pending",
+        },
         creditDeducted: true,
+        creditsUsed: SESSION_SCHEDULE_COST,
         creditRefunded: false,
         completionBonusAwarded: false,
         createdAt: FieldValue.serverTimestamp(),
@@ -264,7 +360,117 @@ export async function scheduleSessionWithCreditDebit(input: {
       );
     }
 
-    return { alreadyScheduled: false, requesterId, deductedCredits: !debitSnap.exists };
+    return {
+      alreadyScheduled: false,
+      requesterId,
+      deductedCredits: !debitSnap.exists,
+      zoomMeeting,
+    };
+  });
+}
+
+export async function scheduleAcceptedRequestWithZoom(input: {
+  sessionId: string;
+  requestId: string;
+  learnerId: string;
+  providerId: string;
+  skillId?: string | null;
+  topic?: string | null;
+  dateTime: string | Date;
+  duration: number | string;
+  message?: string | null;
+}) {
+  const start = toDate(input.dateTime);
+  const duration = minutesFrom(input.duration, 30);
+  const participants = [input.learnerId, input.providerId].filter(Boolean);
+  const transactionId = `session-scheduled-${input.sessionId}`;
+
+  if (!start || start.getTime() <= Date.now()) {
+    throw new Error("INVALID_MEETING_TIME");
+  }
+
+  if (await hasOverlappingSession(participants, start, duration, input.sessionId)) {
+    throw new Error("OVERLAPPING_SESSION");
+  }
+
+  const existingDebit = await transactionRef(transactionId).get();
+  if (!existingDebit.exists) {
+    const learnerSnap = await userRef(input.learnerId).get();
+    if (readCredits(learnerSnap.data()?.credits) < SESSION_SCHEDULE_COST) {
+      throw new Error("INSUFFICIENT_CREDITS");
+    }
+  }
+
+  const zoomMeeting = await createZoomMeeting({
+    topic: input.topic || "Skill Swap Meeting",
+    startTime: start,
+    duration,
+    agenda: input.message || input.topic || "Skill Swap Meeting",
+  });
+
+  return adminDb.runTransaction(async (transaction) => {
+    const sessionRef = adminDb.collection("sessions").doc(input.sessionId);
+    const sessionSnap = await transaction.get(sessionRef);
+    const debitSnap = await transaction.get(transactionRef(transactionId));
+
+    if (sessionSnap.exists) {
+      return { alreadyScheduled: true, deductedCredits: false, zoomMeeting };
+    }
+
+    const learnerSnap = await transaction.get(userRef(input.learnerId));
+    const credits = readCredits(learnerSnap.data()?.credits);
+    if (!debitSnap.exists && credits < SESSION_SCHEDULE_COST) {
+      throw new Error("INSUFFICIENT_CREDITS");
+    }
+
+    transaction.set(
+      sessionRef,
+      {
+        id: input.sessionId,
+        requestId: input.requestId,
+        learnerId: input.learnerId,
+        providerId: input.providerId,
+        participants,
+        requesterId: input.learnerId,
+        acceptedBy: input.providerId,
+        skillId: input.skillId || null,
+        topic: input.topic || "Skill Swap Meeting",
+        dateTime: start,
+        meetingDateTime: start,
+        duration,
+        notes: input.message || "",
+        zoomMeetingId: zoomMeeting.zoomMeetingId,
+        joinUrl: zoomMeeting.joinUrl,
+        startUrl: zoomMeeting.startUrl,
+        status: "scheduled" as SessionStatus,
+        meetingStatus: "scheduled",
+        attendanceStatus: {
+          learner: "pending",
+          provider: "pending",
+        },
+        creditsUsed: SESSION_SCHEDULE_COST,
+        creditDeducted: true,
+        creditRefunded: false,
+        completionBonusAwarded: false,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    if (!debitSnap.exists) {
+      applyCreditDelta(transaction, input.learnerId, -SESSION_SCHEDULE_COST);
+      writeCreditTransaction(
+        transaction,
+        transactionId,
+        input.learnerId,
+        -SESSION_SCHEDULE_COST,
+        "session_scheduled",
+        { sessionId: input.sessionId, requestId: input.requestId },
+      );
+    }
+
+    return { alreadyScheduled: false, deductedCredits: !debitSnap.exists, zoomMeeting };
   });
 }
 
@@ -273,6 +479,8 @@ export async function updateSessionStatusWithCredits(input: {
   actorId: string;
   status: "completed" | "cancelled";
   rewardBonusCredit?: boolean;
+  cancellationReason?: string;
+  refundRatio?: number;
 }) {
   return adminDb.runTransaction(async (transaction) => {
     const sessionRef = adminDb.collection("sessions").doc(input.sessionId);
@@ -292,11 +500,11 @@ export async function updateSessionStatusWithCredits(input: {
     }
 
     const currentStatus = String(session.status || "scheduled");
-    if (currentStatus !== "scheduled") {
+    if (!["scheduled", "ongoing"].includes(currentStatus)) {
       return { alreadyHandled: true, status: currentStatus, creditsDelta: 0 };
     }
 
-    const requesterId = String(session.requesterId || session.requestedBy || "");
+    const requesterId = String(session.requesterId || session.learnerId || session.requestedBy || "");
     if (!requesterId) {
       throw new Error("SESSION_REQUESTER_MISSING");
     }
@@ -324,9 +532,19 @@ export async function updateSessionStatusWithCredits(input: {
         : null;
     const topic = String(session.topic || "Skill Swap Meeting");
 
+    const refundRatio =
+      typeof input.refundRatio === "number" && Number.isFinite(input.refundRatio)
+        ? Math.min(Math.max(input.refundRatio, 0), 1)
+        : 1;
+    const refundCredits = Math.round(SESSION_SCHEDULE_COST * refundRatio);
+
     transaction.update(sessionRef, {
       status: input.status,
+      meetingStatus: input.status,
       [nowField]: FieldValue.serverTimestamp(),
+      ...(input.status === "cancelled"
+        ? { cancellationReason: input.cancellationReason || null, cancelledBy: input.actorId }
+        : {}),
       updatedAt: FieldValue.serverTimestamp(),
     });
 
@@ -340,19 +558,19 @@ export async function updateSessionStatusWithCredits(input: {
       });
     }
 
-    if (input.status === "cancelled" && session.creditDeducted && !session.creditRefunded) {
+    if (input.status === "cancelled" && session.creditDeducted && !session.creditRefunded && refundCredits > 0) {
       if (!refundSnap?.exists) {
-        applyCreditDelta(transaction, requesterId, SESSION_SCHEDULE_COST);
+        applyCreditDelta(transaction, requesterId, refundCredits);
         writeCreditTransaction(
           transaction,
           refundId,
           requesterId,
-          SESSION_SCHEDULE_COST,
+          refundCredits,
           "session_cancel_refund",
-          { sessionId: input.sessionId },
+          { sessionId: input.sessionId, refundRatio },
         );
         transaction.update(sessionRef, { creditRefunded: true });
-        creditsDelta += SESSION_SCHEDULE_COST;
+        creditsDelta += refundCredits;
       }
     }
 
@@ -464,10 +682,11 @@ export async function confirmStripePaidCredits(input: {
 
   return adminDb.runTransaction(async (transaction) => {
     // Find and update the pending purchase
-    const purchaseSnap = await transaction
+    const purchaseSnap = await transaction.get(
+      adminDb
       .collection("creditPurchases")
       .where("stripeSessionId", "==", input.stripeSessionId)
-      .get();
+    );
 
     if (purchaseSnap.empty) {
       throw new Error("Purchase record not found");

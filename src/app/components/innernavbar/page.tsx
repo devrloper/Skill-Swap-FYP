@@ -17,6 +17,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase";
 import type { User } from "firebase/auth";
 import Button from "@/app/ui/button";
+import { showErrorToast } from "@/app/lib/authToast";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 type NotificationItem = {
@@ -213,6 +214,7 @@ export default function Navbar() {
       setUnreadCount(Number(data?.unreadCount) || 0);
     } catch (err) {
       console.error("Notification fetch error:", err);
+      showErrorToast("Notifications could not be loaded", "Please refresh and try again.");
       setNotifications([]);
       setUnreadCount(0);
     } finally {
@@ -285,7 +287,10 @@ export default function Navbar() {
       await fetchNotifications();
     } catch (err) {
       console.error("Respond error:", err);
-      alert(err instanceof Error ? err.message : "Failed to respond.");
+      showErrorToast(
+        action === "accept" ? "Request could not be accepted" : "Request could not be rejected",
+        err instanceof Error ? err.message : "Failed to respond.",
+      );
     }
   };
 

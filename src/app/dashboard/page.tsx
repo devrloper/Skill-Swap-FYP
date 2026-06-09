@@ -31,6 +31,7 @@ import {
   ArrowRightLeft,
   UserRound,
   MessageSquare,
+  Video,
   Sparkles,
   GraduationCap,
 } from "lucide-react";
@@ -42,6 +43,8 @@ import { auth, db } from "@/app/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore";
+import { showErrorToast } from "@/app/lib/authToast";
+import { toMillis } from "@/app/lib/skill-request-utils";
 
 type ConnectRequestItem = {
   id: string;
@@ -79,6 +82,25 @@ type DashboardNotification = {
   status?: string;
   read?: boolean;
   createdAt?: unknown;
+};
+
+type DashboardSession = {
+  id: string;
+  learnerId?: string;
+  providerId?: string;
+  requesterId?: string;
+  acceptedBy?: string;
+  topic?: string;
+  dateTime?: unknown;
+  meetingDateTime?: unknown;
+  duration?: number;
+  status?: string;
+  meetingStatus?: string;
+  joinUrl?: string | null;
+  startUrl?: string | null;
+  canOpenMeeting?: boolean;
+  meetingStartsInMs?: number | null;
+  expired?: boolean;
 };
 
 type WrongAnswerItem = {
@@ -152,6 +174,27 @@ function getRequestBadge(status?: string) {
   }
 }
 
+function formatSessionDate(value: unknown) {
+  const millis = toMillis(value);
+  if (!millis) return "Time not selected";
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(millis);
+}
+
+function formatStartsIn(value?: number | null) {
+  if (value == null) return "";
+  if (value <= 0) return "Ready to join";
+  const minutes = Math.ceil(value / 60000);
+  if (minutes < 60) return `Starts in ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return `Starts in ${hours}h ${minutes % 60}m`;
+}
+
 export default function UserDashboard() {
   // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
   const [isLoading, setIsLoading] = useState(true);
@@ -178,6 +221,8 @@ export default function UserDashboard() {
   const [dashboardNotifications, setDashboardNotifications] = useState<
     DashboardNotification[]
   >([]);
+  const [sessions, setSessions] = useState<DashboardSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [notificationsLoading, setNotificationsLoading] =
     useState<boolean>(false);
 
@@ -236,6 +281,7 @@ export default function UserDashboard() {
       );
     } catch (err) {
       console.error("Failed to load connect requests:", err);
+      showErrorToast("Requests could not be loaded", "Please refresh and try again.");
       setIncomingRequests([]);
       setOutgoingRequests([]);
       setActiveConnections([]);
@@ -264,9 +310,32 @@ export default function UserDashboard() {
       );
     } catch (err) {
       console.error("Failed to load dashboard notifications:", err);
+      showErrorToast("Notifications could not be loaded", "Please refresh and try again.");
       setDashboardNotifications([]);
     } finally {
       setNotificationsLoading(false);
+    }
+  };
+
+  const loadSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/sessions", {
+        cache: "no-store",
+        headers: {
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to load sessions");
+      setSessions(Array.isArray(data?.sessions) ? (data.sessions as DashboardSession[]) : []);
+    } catch (err) {
+      console.error("Failed to load sessions:", err);
+      showErrorToast("Sessions could not be loaded", "Please refresh and try again.");
+      setSessions([]);
+    } finally {
+      setSessionsLoading(false);
     }
   };
 
@@ -289,6 +358,7 @@ export default function UserDashboard() {
     loadProfilesMap();
     loadConnectRequests(userId);
     loadDashboardNotifications(userId);
+    loadSessions();
   }, [userId]);
 
   useEffect(() => {
@@ -319,9 +389,13 @@ export default function UserDashboard() {
       if (!res.ok) throw new Error(data?.error || "Failed to respond");
 
       await loadConnectRequests(userId);
+      await loadSessions();
     } catch (err) {
       console.error("Respond failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to respond.");
+      showErrorToast(
+        action === "accept" ? "Request could not be accepted" : "Request could not be rejected",
+        err instanceof Error ? err.message : "Failed to respond.",
+      );
     } finally {
       setRespondingTo((prev) => ({ ...prev, [fromUserId]: false }));
     }
@@ -344,6 +418,14 @@ export default function UserDashboard() {
       peerId ||
       fallback
     );
+  };
+
+  const getSessionPeerName = (session: DashboardSession) => {
+    const isProvider = userId === session.providerId || userId === session.acceptedBy;
+    const peerId = isProvider
+      ? session.learnerId || session.requesterId || ""
+      : session.providerId || session.acceptedBy || "";
+    return profileNames[peerId] || peerId || "User";
   };
 
   const myProfilePhotoURL =
@@ -650,6 +732,88 @@ export default function UserDashboard() {
 
             {activeTab === "dashboard" && (
               <>
+                <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm mb-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                        <Video size={18} className="text-purple-600" />
+                        Upcoming Sessions
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Zoom links unlock at meeting time for booked users.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-full bg-white/70 border border-white/70 text-slate-700 hover:bg-white transition"
+                      onClick={() => loadSessions()}
+                    >
+                      <Clock3 size={14} />
+                      Refresh
+                    </button>
+                  </div>
+
+                  {sessionsLoading && <p className="text-sm text-slate-600">Loading sessions...</p>}
+                  {!sessionsLoading && sessions.length === 0 && (
+                    <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
+                      No upcoming sessions yet.
+                    </div>
+                  )}
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {sessions
+                      .filter((session) => !["completed", "cancelled", "rejected"].includes(String(session.status || "")))
+                      .slice(0, 6)
+                      .map((session) => {
+                        const isProvider = userId === session.providerId || userId === session.acceptedBy;
+                        const meetingUrl = isProvider ? session.startUrl : session.joinUrl;
+                        return (
+                          <div
+                            key={session.id}
+                            className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-800 truncate">
+                                  {session.topic || "Skill Swap Meeting"}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {isProvider ? "Learner" : "Provider"}: {getSessionPeerName(session)}
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                                {session.status || "scheduled"}
+                              </span>
+                            </div>
+                            <div className="mt-3 space-y-1 text-xs text-slate-600">
+                              <p>{formatSessionDate(session.dateTime || session.meetingDateTime)}</p>
+                              <p>{session.duration || 30} minutes</p>
+                              <p className="font-semibold text-purple-700">
+                                {formatStartsIn(session.meetingStartsInMs)}
+                              </p>
+                            </div>
+                            <a
+                              href={meetingUrl || "#"}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-disabled={!session.canOpenMeeting || !meetingUrl}
+                              onClick={(event) => {
+                                if (!session.canOpenMeeting || !meetingUrl) event.preventDefault();
+                              }}
+                              className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-semibold transition ${
+                                session.canOpenMeeting && meetingUrl
+                                  ? "bg-slate-900 text-white hover:bg-slate-800"
+                                  : "cursor-not-allowed bg-slate-100 text-slate-400"
+                              }`}
+                            >
+                              <Video size={14} />
+                              {isProvider ? "Start Meeting" : "Join Meeting"}
+                            </a>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
                 {/* CONNECT REQUESTS */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                   <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">

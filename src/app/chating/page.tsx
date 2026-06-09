@@ -22,6 +22,7 @@ import {
   CalendarDays,
   CheckCircle2,
   XCircle,
+  Star,
 } from "lucide-react";
 import {
   addDoc,
@@ -40,6 +41,7 @@ import ChipLoader from "@/app/components/loader/page";
 import { ProtectedRoute } from "@/app/ui/ProtectedRoute";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { db } from "@/app/lib/firebase";
+import { showAuthToast, showErrorToast } from "@/app/lib/authToast";
 import { pairId, toMillis } from "@/app/lib/skill-request-utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,6 +74,8 @@ type ChatMessage = {
     status: "pending" | "accepted" | "completed" | "cancelled";
     proposedBy: string;
     acceptedBy?: string;
+    joinUrl?: string;
+    startUrl?: string;
   };
 };
 
@@ -80,6 +84,11 @@ type ScheduleForm = {
   dateTime: string;
   duration: string;
   notes: string;
+};
+
+type FeedbackTarget = {
+  sessionId: string;
+  topic: string;
 };
 
 function getStringValue(source: FirestoreRecord, keys: string[], fallback = "") {
@@ -144,6 +153,23 @@ function buildDefaultScheduleTime() {
   )}:${pad(date.getMinutes())}`;
 }
 
+async function readApiResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return response.json().catch(() => ({}));
+  }
+
+  const text = await response.text().catch(() => "");
+  return {
+    error:
+      text && !text.startsWith("<!DOCTYPE")
+        ? text
+        : response.ok
+          ? ""
+          : "Server returned an unexpected response.",
+  };
+}
+
 function mergeUserRecords(
   usersMap: Map<string, FirestoreRecord>,
   profilesMap: Map<string, FirestoreRecord>,
@@ -202,6 +228,10 @@ function WorkableChatContent() {
   const [isScheduling, setIsScheduling] = useState(false);
   const [acceptingScheduleId, setAcceptingScheduleId] = useState("");
   const [updatingSessionId, setUpdatingSessionId] = useState("");
+  const [feedbackTarget, setFeedbackTarget] = useState<FeedbackTarget | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [scheduleForm, setScheduleForm] = useState<ScheduleForm>({
     topic: "",
     dateTime: buildDefaultScheduleTime(),
@@ -262,7 +292,7 @@ function WorkableChatContent() {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        const data = await response.json();
+        const data = await readApiResponse(response);
         if (!isMounted) return;
         const directoryUsers = Array.isArray(data?.users) ? data.users : [];
         setUsersMap(
@@ -272,10 +302,11 @@ function WorkableChatContent() {
               .map((item: FirestoreRecord) => [String(item.id), item]),
           ),
         );
-      } catch (error) {
-        console.error("Failed to load chat users:", error);
-        if (isMounted) setUsersMap(new Map());
-      }
+    } catch (error) {
+      console.error("Failed to load chat users:", error);
+      showErrorToast("Chat users could not be loaded", "Please refresh and try again.");
+      if (isMounted) setUsersMap(new Map());
+    }
     };
 
     loadAcceptedChatUsers();
@@ -355,6 +386,8 @@ function WorkableChatContent() {
                         : "pending",
                       proposedBy: getStringValue(data.schedule as FirestoreRecord, ["proposedBy"]),
                       acceptedBy: getStringValue(data.schedule as FirestoreRecord, ["acceptedBy"]),
+                      joinUrl: getStringValue(data.schedule as FirestoreRecord, ["joinUrl"]),
+                      startUrl: getStringValue(data.schedule as FirestoreRecord, ["startUrl"]),
                     }
                   : undefined,
             };
@@ -362,8 +395,10 @@ function WorkableChatContent() {
         );
       },
       (error) => {
-        console.error("Chat listener failed:", error);
-        setChatError("Messages load nahi ho pa rahe. Firestore permissions/index check karein.");
+      console.error("Chat listener failed:", error);
+      const message = "Messages could not be loaded. Please check Firestore permissions or indexes.";
+      showErrorToast("Messages could not be loaded", message);
+      setChatError(message);
       },
     );
 
@@ -456,7 +491,9 @@ function WorkableChatContent() {
       setInputText("");
     } catch (error) {
       console.error("Failed to send message:", error);
-      setChatError("Message send nahi hua. Firestore write permissions check karein.");
+      const message = "Message could not be sent. Please check Firestore write permissions.";
+      showErrorToast("Message could not be sent", message);
+      setChatError(message);
     } finally {
       setIsSending(false);
     }
@@ -471,7 +508,7 @@ function WorkableChatContent() {
     const duration = Number(scheduleForm.duration) || 30;
 
     if (!dateTime || Number.isNaN(dateTime)) {
-      setChatError("Meeting ke liye valid date aur time select karein.");
+      setChatError("Please select a valid meeting date and time.");
       return;
     }
 
@@ -506,7 +543,9 @@ function WorkableChatContent() {
       setIsScheduleOpen(false);
     } catch (error) {
       console.error("Failed to create schedule:", error);
-      setChatError("Schedule send nahi hua. Firestore write permissions check karein.");
+      const message = "Schedule could not be sent. Please check Firestore write permissions.";
+      showErrorToast("Schedule could not be sent", message);
+      setChatError(message);
     } finally {
       setIsScheduling(false);
     }
@@ -533,11 +572,18 @@ function WorkableChatContent() {
           scheduleMessageId: message.id,
         }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
-        throw new Error(data?.error || "Schedule accept nahi hua.");
+        throw new Error(data?.error || "Schedule could not be accepted.");
       }
+
+      showAuthToast(
+        "Meeting accepted",
+        data?.deductedCredits
+          ? "1 credit has been deducted from the requester."
+          : "This meeting was already scheduled.",
+      );
 
       await ensureChatRoom(
         activeUser,
@@ -547,12 +593,13 @@ function WorkableChatContent() {
       );
     } catch (error) {
       console.error("Failed to accept schedule:", error);
-      const message = error instanceof Error ? error.message : "Schedule accept nahi hua.";
-      setChatError(
+      const message = error instanceof Error ? error.message : "Schedule could not be accepted.";
+      const displayMessage =
         message.includes("at least 1 credit")
           ? `${message} Please buy paid credits from the credits badge in the navbar.`
-          : message,
-      );
+          : message;
+      showErrorToast("Schedule could not be accepted", displayMessage);
+      setChatError(displayMessage);
     } finally {
       setAcceptingScheduleId("");
     }
@@ -580,10 +627,10 @@ function WorkableChatContent() {
         credentials: "include",
         body: JSON.stringify({ sessionId, status }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
-        throw new Error(data?.error || "Session update nahi hua.");
+        throw new Error(data?.error || "Session could not be updated.");
       }
 
       await ensureChatRoom(
@@ -592,11 +639,60 @@ function WorkableChatContent() {
           ? `Meeting completed: ${message.schedule.topic}`
           : `Meeting cancelled: ${message.schedule.topic}`,
       );
+
+      if (status === "completed") {
+        setFeedbackRating(5);
+        setFeedbackComment("");
+        setFeedbackTarget({
+          sessionId,
+          topic: message.schedule.topic,
+        });
+      }
     } catch (error) {
       console.error("Failed to update session:", error);
-      setChatError(error instanceof Error ? error.message : "Session update nahi hua.");
+      const message = error instanceof Error ? error.message : "Session could not be updated.";
+      showErrorToast("Session could not be updated", message);
+      setChatError(message);
     } finally {
       setUpdatingSessionId("");
+    }
+  };
+
+  const handleSubmitFeedback = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!feedbackTarget || !user?.uid || isSubmittingFeedback) return;
+
+    setIsSubmittingFeedback(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/session-feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          sessionId: feedbackTarget.sessionId,
+          rating: feedbackRating,
+          comment: feedbackComment,
+        }),
+      });
+      const data = await readApiResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Feedback could not be submitted.");
+      }
+
+      showAuthToast("Feedback submitted", "Thank you for sharing your experience.");
+      setFeedbackTarget(null);
+      setFeedbackComment("");
+      setFeedbackRating(5);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Feedback could not be submitted.";
+      showErrorToast("Feedback could not be submitted", message);
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -778,6 +874,16 @@ function WorkableChatContent() {
                     message.senderId !== user?.uid;
                   const canCloseSchedule =
                     isSchedule && message.schedule?.status === "accepted";
+                  const isZoomHost =
+                    isSchedule &&
+                    message.schedule?.status === "accepted" &&
+                    message.schedule.acceptedBy === user?.uid;
+                  const zoomUrl =
+                    isSchedule && message.schedule?.status === "accepted"
+                      ? isZoomHost
+                        ? message.schedule.startUrl || message.schedule.joinUrl
+                        : message.schedule.joinUrl
+                      : "";
                   const scheduleSessionId =
                     isSchedule && activeUser && user?.uid
                       ? `${pairId(user.uid, activeUser.id)}_${message.id}`
@@ -804,7 +910,7 @@ function WorkableChatContent() {
                         </p>
                         {isSchedule ? (
                           <div
-                            className={`w-72 max-w-full rounded-[24px] p-4 text-sm shadow-sm ${
+                            className={`w-[min(100%,26rem)] rounded-[24px] p-4 text-sm shadow-sm ${
                               isMine
                                 ? "bg-[#4B164C] text-white rounded-tr-none shadow-purple-100"
                                 : "bg-white border border-slate-100 text-slate-700 rounded-tl-none"
@@ -836,7 +942,7 @@ function WorkableChatContent() {
                               </div>
                             </div>
 
-                            <div className="mt-4 flex items-center justify-between gap-3">
+                            <div className="mt-4 space-y-3">
                               <span
                                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                                   ["accepted", "completed"].includes(message.schedule?.status || "")
@@ -862,17 +968,18 @@ function WorkableChatContent() {
                                   ? "Completed"
                                   : message.schedule?.status === "cancelled"
                                     ? "Cancelled"
-                                    : message.schedule?.status === "accepted"
+                                  : message.schedule?.status === "accepted"
                                       ? "Accepted"
                                       : "Pending"}
                               </span>
 
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                               {canAcceptSchedule && (
                                 <button
                                   type="button"
                                   onClick={() => handleAcceptSchedule(message)}
                                   disabled={acceptingScheduleId === message.id}
-                                  className="inline-flex items-center gap-1.5 rounded-full bg-[#4B164C] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-[#4B164C] px-3 py-2 text-xs font-semibold leading-none text-white transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   {acceptingScheduleId === message.id ? (
                                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -884,12 +991,40 @@ function WorkableChatContent() {
                               )}
 
                               {canCloseSchedule && (
-                                <div className="flex gap-2">
+                                zoomUrl ? (
+                                  <a
+                                    href={zoomUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-blue-600 px-3 py-2 text-xs font-semibold leading-none text-white transition hover:bg-blue-700"
+                                  >
+                                    <Video className="h-3 w-3" />
+                                    {isZoomHost ? "Start Zoom" : "Join Zoom"}
+                                  </a>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      showErrorToast(
+                                        "Zoom link is not available",
+                                        "This accepted schedule does not have a saved Zoom link. Send a new schedule and accept it again.",
+                                      )
+                                    }
+                                    className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-slate-500 px-3 py-2 text-xs font-semibold leading-none text-white transition hover:bg-slate-600"
+                                  >
+                                    <Video className="h-3 w-3" />
+                                    {isZoomHost ? "Start Zoom" : "Join Zoom"}
+                                  </button>
+                                )
+                              )}
+
+                              {canCloseSchedule && (
+                                <>
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateSessionStatus(message, "completed")}
                                     disabled={isUpdatingSession}
-                                    className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold leading-none text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                                   >
                                     {isUpdatingSession ? (
                                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -902,13 +1037,14 @@ function WorkableChatContent() {
                                     type="button"
                                     onClick={() => handleUpdateSessionStatus(message, "cancelled")}
                                     disabled={isUpdatingSession}
-                                    className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-red-600 px-3 py-2 text-xs font-semibold leading-none text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                                   >
                                     <XCircle className="h-3 w-3" />
                                     Cancel
                                   </button>
-                                </div>
+                                </>
                               )}
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -974,7 +1110,7 @@ function WorkableChatContent() {
                 </div>
                 <p className="font-semibold text-slate-800">No chat users available</p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Jab skill swap request accept hogi, woh user yahan show hoga.
+                  Users will appear here after a skill swap request is accepted.
                 </p>
               </div>
             </div>
@@ -1086,6 +1222,88 @@ function WorkableChatContent() {
                       <CalendarDays className="h-4 w-4" />
                     )}
                     Send Schedule
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {feedbackTarget && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4"
+            >
+              <motion.div
+                initial={{ y: 24, opacity: 0, scale: 0.96 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 24, opacity: 0, scale: 0.96 }}
+                className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl"
+              >
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-lg font-bold text-slate-800">Rate this meeting</p>
+                    <p className="mt-1 text-sm text-slate-500">{feedbackTarget.topic}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackTarget(null)}
+                    className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-200"
+                  >
+                    Skip
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmitFeedback} className="space-y-5">
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Rating
+                    </p>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setFeedbackRating(value)}
+                          className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${
+                            value <= feedbackRating
+                              ? "border-amber-300 bg-amber-50 text-amber-500"
+                              : "border-slate-200 bg-white text-slate-300 hover:bg-slate-50"
+                          }`}
+                          aria-label={`Rate ${value} out of 5`}
+                        >
+                          <Star className="h-5 w-5" fill={value <= feedbackRating ? "currentColor" : "none"} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Feedback
+                    </span>
+                    <textarea
+                      value={feedbackComment}
+                      onChange={(event) => setFeedbackComment(event.target.value)}
+                      className="min-h-28 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      placeholder="Share what went well or what could be improved"
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingFeedback}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4B164C] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmittingFeedback ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Star className="h-4 w-4" />
+                    )}
+                    Submit Feedback
                   </button>
                 </form>
               </motion.div>

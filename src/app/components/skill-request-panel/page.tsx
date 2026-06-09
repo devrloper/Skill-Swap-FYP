@@ -154,16 +154,20 @@ export default function SkillRequestPanel({
   }, [userId]);
 
   const available = useMemo(() => mergeSkills(currentProfile), [currentProfile]);
+  const providerSkillOptions = useMemo(
+    () => (receiverTeachSkills.length ? receiverTeachSkills : receiverLearnSkills),
+    [receiverLearnSkills, receiverTeachSkills],
+  );
   const profileReady = hasCompletedProfile(currentProfile);
   const interviewReady = hasInterviewCompleted(currentProfile, currentInterview);
   const canSend = canSendSkillRequest(currentProfile, currentInterview);
 
   useEffect(() => {
     if (!offeredSkill && available.teach.length) setOfferedSkill(available.teach[0]);
-    if (!requestedSkill && receiverLearnSkills.length) {
-      setRequestedSkill(receiverLearnSkills[0]);
+    if (!requestedSkill && providerSkillOptions.length) {
+      setRequestedSkill(providerSkillOptions[0]);
     }
-  }, [available.teach, offeredSkill, receiverLearnSkills, requestedSkill]);
+  }, [available.teach, offeredSkill, providerSkillOptions, requestedSkill]);
 
   useEffect(() => {
     if (!userId || !receiverId) {
@@ -250,6 +254,17 @@ export default function SkillRequestPanel({
 
     if (isPendingRequest) {
       setError("Request already sent. Waiting for response.");
+      return;
+    }
+
+    if (!schedule) {
+      setError("Please select meeting date and time.");
+      return;
+    }
+
+    const scheduleDate = new Date(schedule);
+    if (Number.isNaN(scheduleDate.getTime()) || scheduleDate.getTime() <= Date.now()) {
+      setError("Please select a future meeting date and time.");
       return;
     }
 
@@ -388,11 +403,11 @@ export default function SkillRequestPanel({
             <select
               value={requestedSkill}
               onChange={(e) => setRequestedSkill(e.target.value)}
-              disabled={!userId || loadingProfile || !receiverLearnSkills.length || isPendingRequest || isAlreadyConnected}
+              disabled={!userId || loadingProfile || !providerSkillOptions.length || isPendingRequest || isAlreadyConnected}
               className="mt-2 w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 ring-purple-200 disabled:opacity-60"
             >
-              {!receiverLearnSkills.length && <option value="">No learning skills found</option>}
-              {receiverLearnSkills.map((skill) => (
+              {!providerSkillOptions.length && <option value="">No teaching skills found</option>}
+              {providerSkillOptions.map((skill) => (
                 <option key={skill} value={skill}>
                   {skill}
                 </option>
@@ -416,12 +431,13 @@ export default function SkillRequestPanel({
 
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Schedule
+              Meeting date & time
             </span>
             <input
+              type="datetime-local"
               value={schedule}
               onChange={(e) => setSchedule(e.target.value)}
-              placeholder="Optional schedule"
+              required
               disabled={isPendingRequest || isAlreadyConnected}
               className="mt-2 w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 ring-purple-200 disabled:opacity-60"
             />
@@ -431,13 +447,19 @@ export default function SkillRequestPanel({
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               Duration
             </span>
-            <input
+            <select
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              placeholder="Optional duration"
               disabled={isPendingRequest || isAlreadyConnected}
               className="mt-2 w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 ring-purple-200 disabled:opacity-60"
-            />
+            >
+              <option value="">30 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">60 minutes</option>
+              <option value="90">90 minutes</option>
+            </select>
           </label>
 
           {error && (

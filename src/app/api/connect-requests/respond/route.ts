@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/app/lib/firebaseAdmin";
 import { getRequestUser } from "@/app/lib/serverAuth";
 import { pairId, toMillis } from "@/app/lib/skill-request-utils";
+import { scheduleAcceptedRequestWithZoom } from "@/app/lib/creditLogic";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ type RespondBody = {
   fromUserId?: string;
   toUserId?: string;
   action?: "accept" | "reject" | "cancel";
+  cancellationReason?: string;
 };
 
 function isPendingExpired(createdAt: unknown, expiresAt: unknown) {
@@ -141,26 +143,84 @@ export async function PATCH(req: Request) {
     }
 
     const newStatus = action === "accept" ? "accepted" : action === "reject" ? "rejected" : "cancelled";
-    await requestRef.update({ status: newStatus, respondedAt: FieldValue.serverTimestamp(), respondedBy: actorId });
 
     if (newStatus === "accepted") {
       const connectionId = pairId(requestSenderId, requestReceiverId);
+      const sessionId = `request_${requestRef.id}`;
+      const scheduleDate = request.meetingDateTime || request.schedule;
+      const duration = request.duration || 30;
+
+      if (!scheduleDate) {
+        return NextResponse.json({ error: "Request is missing meeting date/time" }, { status: 422 });
+      }
+
+      const sessionResult = await scheduleAcceptedRequestWithZoom({
+        sessionId,
+        requestId: requestRef.id,
+        learnerId: requestSenderId,
+        providerId: requestReceiverId,
+        skillId: String(request.requestedSkill || request.offeredSkill || "") || null,
+        topic: `Skill Swap: ${request.offeredSkill || "Skill"} - ${request.requestedSkill || "Session"}`,
+        dateTime: scheduleDate as string | Date,
+        duration: duration as string | number,
+        message: String(request.message || ""),
+      });
+
+      await requestRef.update({
+        status: "accepted",
+        meetingStatus: "scheduled",
+        sessionId,
+        zoomMeetingId: sessionResult.zoomMeeting.zoomMeetingId,
+        joinUrl: sessionResult.zoomMeeting.joinUrl,
+        startUrl: sessionResult.zoomMeeting.startUrl,
+        respondedAt: FieldValue.serverTimestamp(),
+        respondedBy: actorId,
+      });
       await createConnectionArtifacts(connectionId, requestSenderId, requestReceiverId, { ...request, id: requestRef.id });
       await requestRef.update({ connectionId, chatEnabled: true });
-      await adminDb.collection("notifications").add({
-        userId: requestSenderId,
-        type: "skill_request_response",
-        title: "Skill swap request accepted",
-        message: `Your request for ${request.offeredSkill} - ${request.requestedSkill} was accepted.`,
-        senderId: requestReceiverId,
-        receiverId: requestSenderId,
-        requestId: requestRef.id,
-        connectionId,
-        status: "accepted",
-        read: false,
-        createdAt: FieldValue.serverTimestamp(),
-      });
+      await Promise.all([
+        adminDb.collection("notifications").add({
+          userId: requestSenderId,
+          type: "session_accepted",
+          title: "Session accepted",
+          message: `Your session for ${request.offeredSkill} - ${request.requestedSkill} was accepted and scheduled.`,
+          senderId: requestReceiverId,
+          receiverId: requestSenderId,
+          requestId: requestRef.id,
+          sessionId,
+          connectionId,
+          status: "scheduled",
+          read: false,
+          createdAt: FieldValue.serverTimestamp(),
+        }),
+        adminDb.collection("notifications").add({
+          userId: requestReceiverId,
+          type: "session_scheduled",
+          title: "Meeting scheduled",
+          message: `Zoom meeting is ready for ${request.offeredSkill} - ${request.requestedSkill}.`,
+          senderId: requestSenderId,
+          receiverId: requestReceiverId,
+          requestId: requestRef.id,
+          sessionId,
+          connectionId,
+          status: "scheduled",
+          read: false,
+          createdAt: FieldValue.serverTimestamp(),
+        }),
+      ]);
     } else {
+      await requestRef.update({
+        status: newStatus,
+        meetingStatus: newStatus,
+        respondedAt: FieldValue.serverTimestamp(),
+        respondedBy: actorId,
+        ...(newStatus === "cancelled"
+          ? {
+              cancelledAt: FieldValue.serverTimestamp(),
+              cancellationReason: body.cancellationReason || null,
+            }
+          : {}),
+      });
       await adminDb.collection("notifications").add({
         userId: requestSenderId,
         type: "skill_request_response",
@@ -182,10 +242,37 @@ export async function PATCH(req: Request) {
       ok: true,
       status: newStatus,
       requestId: requestRef.id,
+      sessionId: newStatus === "accepted" ? `request_${requestRef.id}` : null,
       connectionId: newStatus === "accepted" ? pairId(requestSenderId, requestReceiverId) : request.connectionId || null,
     });
   } catch (err) {
     console.error("Error responding to skill request:", err);
+    if (err instanceof Error) {
+      if (err.message === "INSUFFICIENT_CREDITS") {
+        return NextResponse.json(
+          { error: "The learner needs at least 1 credit before this session can be accepted." },
+          { status: 402 },
+        );
+      }
+      if (err.message === "INVALID_MEETING_TIME") {
+        return NextResponse.json({ error: "Meeting must be scheduled in the future." }, { status: 400 });
+      }
+      if (err.message === "OVERLAPPING_SESSION") {
+        return NextResponse.json({ error: "This meeting overlaps with another booking." }, { status: 409 });
+      }
+      if (err.message === "ZOOM_CONFIG_MISSING") {
+        return NextResponse.json({ error: "Zoom API credentials are not configured." }, { status: 500 });
+      }
+      if (err.message === "ZOOM_AUTH_FAILED") {
+        return NextResponse.json(
+          { error: "Zoom authentication failed. Please update the Zoom account ID, client ID, and client secret." },
+          { status: 502 },
+        );
+      }
+      if (err.message === "ZOOM_MEETING_FAILED") {
+        return NextResponse.json({ error: "Zoom meeting could not be created." }, { status: 502 });
+      }
+    }
     return NextResponse.json({ error: "Failed to respond to skill request" }, { status: 500 });
   }
 }

@@ -76,7 +76,7 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       await updateProfile(user, {
-        displayName: name, // yehi avatar ke first letter ke liye use hoga
+        displayName: name, // Used for the avatar initial.
       });
 
       await setDoc(doc(db, "users", user.uid), {

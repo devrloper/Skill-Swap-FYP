@@ -24,6 +24,60 @@ type CreateSkillRequestBody = {
   duration?: string;
 };
 
+function parseDuration(value?: string) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 30;
+  return Math.min(Math.max(Math.round(parsed), 15), 240);
+}
+
+function rangesOverlap(startA: number, endA: number, startB: number, endB: number) {
+  return startA < endB && startB < endA;
+}
+
+async function hasScheduleOverlap(userIds: string[], start: Date, duration: number) {
+  const startMs = start.getTime();
+  const endMs = startMs + duration * 60 * 1000;
+  const [sessionsByUser, pendingRequests] = await Promise.all([
+    Promise.all(
+      userIds.map((userId) =>
+        adminDb.collection("sessions").where("participants", "array-contains", userId).get(),
+      ),
+    ),
+    adminDb
+      .collection("skillRequests")
+      .where("status", "in", ["pending", "accepted"])
+      .get(),
+  ]);
+
+  const sessionOverlap = sessionsByUser.some((snap) =>
+    snap.docs.some((doc) => {
+      const data = doc.data();
+      if (["completed", "cancelled", "rejected"].includes(String(data.status || ""))) return false;
+      const existingStart = toMillis(data.dateTime || data.meetingDateTime);
+      const existingDuration = Number(data.duration) || 30;
+      return Boolean(
+        existingStart &&
+          rangesOverlap(startMs, endMs, existingStart, existingStart + existingDuration * 60 * 1000),
+      );
+    }),
+  );
+
+  if (sessionOverlap) return true;
+
+  return pendingRequests.docs.some((doc) => {
+    const data = doc.data();
+    const senderId = String(data.senderId || "");
+    const receiverId = String(data.receiverId || "");
+    if (!userIds.includes(senderId) && !userIds.includes(receiverId)) return false;
+    const existingStart = toMillis(data.schedule);
+    const existingDuration = Number(data.duration) || 30;
+    return Boolean(
+      existingStart &&
+        rangesOverlap(startMs, endMs, existingStart, existingStart + existingDuration * 60 * 1000),
+    );
+  });
+}
+
 function isRecentPending(createdAt: unknown) {
   const millis = toMillis(createdAt);
   return millis ? Date.now() - millis < 24 * 60 * 60 * 1000 : false;
@@ -43,7 +97,7 @@ export async function POST(req: Request) {
     const requestedSkill = body?.requestedSkill?.trim();
     const message = body?.message?.trim();
     const schedule = body?.schedule?.trim();
-    const duration = body?.duration?.trim();
+    const duration = parseDuration(body?.duration?.trim());
 
     if (!receiverId || !offeredSkill || !requestedSkill) {
       return NextResponse.json(
@@ -61,6 +115,19 @@ export async function POST(req: Request) {
 
     if (!normalizeSkillValue(offeredSkill) || !normalizeSkillValue(requestedSkill)) {
       return NextResponse.json({ error: "Please choose valid skills" }, { status: 400 });
+    }
+
+    if (!schedule) {
+      return NextResponse.json({ error: "Please select meeting date and time" }, { status: 400 });
+    }
+
+    const scheduleDate = new Date(schedule);
+    if (Number.isNaN(scheduleDate.getTime())) {
+      return NextResponse.json({ error: "Please select a valid meeting date and time" }, { status: 400 });
+    }
+
+    if (scheduleDate.getTime() <= Date.now()) {
+      return NextResponse.json({ error: "Meeting cannot be scheduled in the past" }, { status: 400 });
     }
 
     const [senderProfileSnap, receiverProfileSnap, senderUserSnap, receiverUserSnap, senderInterviewSnap] = await Promise.all([
@@ -98,9 +165,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!hasMatchingSkill(receiverSkills.learn, requestedSkill)) {
+    if (!hasMatchingSkill(receiverSkills.teach, requestedSkill)) {
       return NextResponse.json(
-        { error: `The selected skill \"${requestedSkill}\" is not listed on the receiver profile.` },
+        { error: `The selected skill \"${requestedSkill}\" is not listed as a teaching skill on the provider profile.` },
         { status: 400 },
       );
     }
@@ -118,6 +185,13 @@ export async function POST(req: Request) {
       .collection("skillRequests")
       .where("senderId", "==", senderId)
       .get();
+
+    if (await hasScheduleOverlap([senderId, receiverId], scheduleDate, duration)) {
+      return NextResponse.json(
+        { error: "This date/time overlaps with an existing booking." },
+        { status: 409 },
+      );
+    }
 
     const matchingRequest = senderRequestsSnap.docs.find((doc) => {
       const data = doc.data();
@@ -194,7 +268,10 @@ export async function POST(req: Request) {
       requestedSkill,
       message: message || null,
       schedule: schedule || null,
-      duration: duration || null,
+      meetingDateTime: scheduleDate,
+      duration,
+      creditsUsed: 1,
+      meetingStatus: "pending",
       status: "pending",
       createdAt: FieldValue.serverTimestamp(),
       expiresAt,

@@ -1,16 +1,19 @@
 "use client";
 
 import toast from "react-hot-toast";
-import { CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
-type AuthToastType = "success";
+type AuthToastType = "success" | "error";
 
 export function showAuthToast(
   title: string,
   description?: string,
   type: AuthToastType = "success",
 ) {
+  const isError = type === "error";
+  const Icon = isError ? AlertCircle : CheckCircle2;
+
   toast.custom(
     (t) => (
       <motion.div
@@ -24,12 +27,22 @@ export function showAuthToast(
         transition={{ type: "spring", stiffness: 520, damping: 34 }}
       >
         <div className="relative w-[min(92vw,22rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_-24px_rgba(15,23,42,0.28)]">
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300" />
+          <div
+            className={`absolute inset-x-0 top-0 h-1 ${
+              isError
+                ? "bg-gradient-to-r from-rose-300 via-rose-500 to-rose-300"
+                : "bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300"
+            }`}
+          />
 
           <div className="relative p-4 sm:p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700">
-                <CheckCircle2 className="h-5 w-5" strokeWidth={2.4} />
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                  isError ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-700"
+                }`}
+              >
+                <Icon className="h-5 w-5" strokeWidth={2.4} />
               </div>
 
               <div className="min-w-0 flex-1">
@@ -47,7 +60,9 @@ export function showAuthToast(
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ duration: 3.2, ease: "linear" }}
-                className="h-full origin-left rounded-full bg-slate-400"
+                className={`h-full origin-left rounded-full ${
+                  isError ? "bg-rose-400" : "bg-slate-400"
+                }`}
               />
             </div>
           </div>
@@ -56,4 +71,8 @@ export function showAuthToast(
     ),
     { id: `${type}:${title}:${description ?? ""}`, duration: 4200 },
   );
+}
+
+export function showErrorToast(title: string, description?: string) {
+  showAuthToast(title, description, "error");
 }
