@@ -19,7 +19,6 @@ import {
   Users,
   BarChart3,
   ClipboardCheck,
-  Settings,
   Search,
   Bell,
   LogOut,
@@ -40,8 +39,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/app/components/innernavbar/page";
 import Modal from "@/app/Modals/profilemodal/page";
 import { auth, db } from "@/app/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { showErrorToast } from "@/app/lib/authToast";
 import { toMillis } from "@/app/lib/skill-request-utils";
@@ -197,11 +197,12 @@ function formatStartsIn(value?: number | null) {
 
 export default function UserDashboard() {
   // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "profile">(
-    "dashboard",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "profile" | "sessions" | "requests" | "chats" | "notifications" | "analytics"
+  >("overview");
   const [incomingRequests, setIncomingRequests] = useState<
     ConnectRequestItem[]
   >([]);
@@ -225,6 +226,7 @@ export default function UserDashboard() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [notificationsLoading, setNotificationsLoading] =
     useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -420,6 +422,19 @@ export default function UserDashboard() {
     );
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout cookie clear failed:", err);
+    }
+    await signOut(auth);
+    router.push("/signin");
+  };
+
   const getSessionPeerName = (session: DashboardSession) => {
     const isProvider = userId === session.providerId || userId === session.acceptedBy;
     const peerId = isProvider
@@ -428,12 +443,77 @@ export default function UserDashboard() {
     return profileNames[peerId] || peerId || "User";
   };
 
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const matchesSearch = (...values: Array<unknown>) => {
+    if (!normalizedSearch) return true;
+    return values
+      .filter((value) => value != null)
+      .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+  };
+
+  const filteredIncomingRequests = incomingRequests.filter((request) =>
+    matchesSearch(
+      getPeerName(request),
+      request.offeredSkill,
+      request.requestedSkill,
+      request.message,
+      request.status,
+    ),
+  );
+  const filteredOutgoingRequests = outgoingRequests.filter((request) =>
+    matchesSearch(
+      getPeerName(request),
+      request.offeredSkill,
+      request.requestedSkill,
+      request.message,
+      request.status,
+    ),
+  );
+  const filteredActiveConnections = activeConnections.filter((connection) =>
+    matchesSearch(
+      getPeerName(connection),
+      connection.offeredSkill,
+      connection.requestedSkill,
+      connection.status,
+    ),
+  );
+  const filteredSessions = sessions.filter((session) =>
+    matchesSearch(
+      session.topic,
+      session.status,
+      session.meetingStatus,
+      getSessionPeerName(session),
+    ),
+  );
+  const filteredNotifications = dashboardNotifications.filter((notification) =>
+    matchesSearch(
+      notification.title,
+      notification.message,
+      notification.fromUserName,
+      notification.senderName,
+      notification.offeredSkill,
+      notification.requestedSkill,
+      notification.status,
+      notification.type,
+    ),
+  );
+
   const myProfilePhotoURL =
     myProfile?.photoURL && !myProfile.photoURL.startsWith("blob:")
       ? myProfile.photoURL.startsWith("data:")
         ? myProfile.photoURL
         : `${myProfile.photoURL}${myProfile.photoUpdatedAt ? `?v=${myProfile.photoUpdatedAt}` : ""}`
       : "";
+  const activeTitle =
+    {
+      overview: `Welcome ${myProfile?.fullName || "User"}!`,
+      profile: "My Profile",
+      sessions: "My Sessions",
+      requests: "Skill Requests",
+      chats: "Active Chats",
+      notifications: "Notifications",
+      analytics: "Analytics",
+    }[activeTab] || "Dashboard";
 
   return (
     <>
@@ -468,28 +548,22 @@ export default function UserDashboard() {
             <nav className="space-y-2 flex-1">
               {[
                 {
-                  name: "Dashboard",
+                  name: "Overview",
                   icon: LayoutDashboard,
-                  tab: "dashboard" as const,
+                  tab: "overview" as const,
                 },
                 { name: "View Profile", icon: Users, tab: "profile" as const },
-                { name: "Attendance", icon: CalendarCheck, tab: undefined },
-                { name: "Employees", icon: Users, tab: undefined },
-                { name: "Analytics", icon: BarChart3, tab: undefined },
-                {
-                  name: "Report Attendance",
-                  icon: ClipboardCheck,
-                  tab: undefined,
-                },
-                { name: "Settings", icon: Settings, tab: undefined },
+                { name: "Sessions", icon: CalendarCheck, tab: "sessions" as const },
+                { name: "Requests", icon: ClipboardCheck, tab: "requests" as const },
+                { name: "Chats", icon: MessageSquare, tab: "chats" as const },
+                { name: "Notifications", icon: Bell, tab: "notifications" as const },
+                { name: "Analytics", icon: BarChart3, tab: "analytics" as const },
               ].map((item) => (
                 <div
                   key={item.name}
-                  onClick={() => item.tab && setActiveTab(item.tab)}
+                  onClick={() => setActiveTab(item.tab)}
                   className={`flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all ${
-                    item.tab
-                      ? item.tab === activeTab
-                      : false
+                    item.tab === activeTab
                         ? "bg-gradient-to-r from-blue-100/50 to-purple-100/50 shadow-sm border border-white/50 text-indigo-700"
                         : "text-slate-500 hover:bg-white/20"
                   }`}
@@ -497,11 +571,7 @@ export default function UserDashboard() {
                   <item.icon
                     size={20}
                     className={
-                      item.tab
-                        ? item.tab === activeTab
-                          ? "text-indigo-600"
-                          : ""
-                        : ""
+                      item.tab === activeTab ? "text-indigo-600" : ""
                     }
                   />
                   <span className="text-sm font-semibold">{item.name}</span>
@@ -522,14 +592,20 @@ export default function UserDashboard() {
                     size={18}
                   />
                   <input
-                    placeholder="search employee"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search dashboard"
                     className="w-full bg-white/40 border border-white/60 rounded-full py-2.5 pl-12 pr-4 outline-none focus:ring-2 ring-purple-200 transition-all text-sm placeholder:text-slate-400"
                   />
                 </div>
 
                 {/* Icons & Actions - Wraps or shrinks on small screens */}
                 <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto justify-between md:justify-end">
-                  <div className="flex items-center gap-2 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("notifications")}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
                     <img
                       src="https://i.pravatar.cc/150?u=admin"
                       className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
@@ -540,9 +616,13 @@ export default function UserDashboard() {
                       Notifications
                     </span>
                     <Bell size={18} className="text-blue-500" />
-                  </div>
+                  </button>
 
-                  <button className="flex items-center gap-2 text-slate-600 font-bold text-sm hover:text-red-500 transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 text-slate-600 font-bold text-sm hover:text-red-500 transition-colors"
+                  >
                     <span className="hidden sm:inline">Logout</span>{" "}
                     <LogOut size={18} />
                   </button>
@@ -551,10 +631,72 @@ export default function UserDashboard() {
             </header>
 
             <h1 className="text-3xl font-bold text-slate-800 mb-6">
-              {activeTab === "profile"
-                ? "My Profile"
-                : `Welcome ${myProfile?.fullName || "User"}!`}
+              {activeTitle}
             </h1>
+
+            {activeTab === "overview" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-8">
+                {[
+                  {
+                    label: "Upcoming Sessions",
+                    value: filteredSessions.filter((session) => !["completed", "cancelled", "rejected"].includes(String(session.status || ""))).length,
+                    icon: Video,
+                    tab: "sessions" as const,
+                  },
+                  {
+                    label: "Pending Requests",
+                    value: filteredIncomingRequests.filter((request) => request.status === "pending").length,
+                    icon: ArrowRightLeft,
+                    tab: "requests" as const,
+                  },
+                  {
+                    label: "Active Chats",
+                    value: filteredActiveConnections.length,
+                    icon: MessageSquare,
+                    tab: "chats" as const,
+                  },
+                  {
+                    label: "Notifications",
+                    value: filteredNotifications.length,
+                    icon: Bell,
+                    tab: "notifications" as const,
+                  },
+                  {
+                    label: "Profile Status",
+                    value: myProfile ? "Ready" : "Missing",
+                    icon: UserRound,
+                    tab: "profile" as const,
+                  },
+                  {
+                    label: "Interview",
+                    value: myProfile?.interview?.result || myProfile?.interviewStatus || "Pending",
+                    icon: Sparkles,
+                    tab: "analytics" as const,
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => setActiveTab(item.tab)}
+                    className="rounded-[28px] border border-white/60 bg-white/45 p-5 text-left shadow-sm transition hover:bg-white/65 hover:shadow-md"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          {item.label}
+                        </p>
+                        <p className="mt-2 text-2xl font-black text-slate-800">
+                          {item.value}
+                        </p>
+                      </div>
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70 text-purple-600 shadow-sm">
+                        <item.icon size={22} />
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* MY PROFILE */}
             {activeTab === "profile" && (
@@ -730,7 +872,7 @@ export default function UserDashboard() {
               </div>
             )}
 
-            {activeTab === "dashboard" && (
+            {activeTab === "sessions" && (
               <>
                 <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm mb-6">
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -754,13 +896,13 @@ export default function UserDashboard() {
                   </div>
 
                   {sessionsLoading && <p className="text-sm text-slate-600">Loading sessions...</p>}
-                  {!sessionsLoading && sessions.length === 0 && (
+                  {!sessionsLoading && filteredSessions.length === 0 && (
                     <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                      No upcoming sessions yet.
+                      {normalizedSearch ? "No sessions match your search." : "No upcoming sessions yet."}
                     </div>
                   )}
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {sessions
+                    {filteredSessions
                       .filter((session) => !["completed", "cancelled", "rejected"].includes(String(session.status || "")))
                       .slice(0, 6)
                       .map((session) => {
@@ -814,6 +956,11 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
+              </>
+            )}
+
+            {activeTab === "requests" && (
+              <>
                 {/* CONNECT REQUESTS */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                   <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
@@ -852,7 +999,7 @@ export default function UserDashboard() {
 
                     {userId && !connectLoading && (
                       <div className="space-y-3">
-                        {incomingRequests
+                        {filteredIncomingRequests
                           .filter((r) => r.status === "pending")
                           .slice(0, 5)
                           .map((r) => (
@@ -936,10 +1083,10 @@ export default function UserDashboard() {
                             </div>
                           ))}
 
-                        {incomingRequests.filter((r) => r.status === "pending")
+                        {filteredIncomingRequests.filter((r) => r.status === "pending")
                           .length === 0 && (
                           <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                            No pending requests right now.
+                            {normalizedSearch ? "No pending requests match your search." : "No pending requests right now."}
                           </div>
                         )}
                       </div>
@@ -968,7 +1115,7 @@ export default function UserDashboard() {
                     )}
                     {userId && !connectLoading && (
                       <div className="space-y-3">
-                        {outgoingRequests.slice(0, 5).map((r) => (
+                        {filteredOutgoingRequests.slice(0, 5).map((r) => (
                           <div
                             key={r.id}
                             className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -1016,9 +1163,9 @@ export default function UserDashboard() {
                           </div>
                         ))}
 
-                        {outgoingRequests.length === 0 && (
+                        {filteredOutgoingRequests.length === 0 && (
                           <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                            No sent requests yet.
+                            {normalizedSearch ? "No sent requests match your search." : "No sent requests yet."}
                           </div>
                         )}
                       </div>
@@ -1026,6 +1173,11 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
+              </>
+            )}
+
+            {activeTab === "chats" && (
+              <>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
                     <div className="flex items-center justify-between gap-3 mb-4">
@@ -1049,14 +1201,14 @@ export default function UserDashboard() {
 
                     {userId &&
                       !connectLoading &&
-                      activeConnections.length === 0 && (
+                      filteredActiveConnections.length === 0 && (
                         <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                          No active chats yet.
+                          {normalizedSearch ? "No active chats match your search." : "No active chats yet."}
                         </div>
                       )}
 
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {activeConnections.map((c) => {
+                      {filteredActiveConnections.map((c) => {
                         const peerId = getPeerId(c);
                         const peerName = getPeerName(c);
                         return (
@@ -1089,6 +1241,11 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
+              </>
+            )}
+
+            {activeTab === "notifications" && (
+              <>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -1122,14 +1279,14 @@ export default function UserDashboard() {
 
                     {userId &&
                       !notificationsLoading &&
-                      dashboardNotifications.length === 0 && (
+                      filteredNotifications.length === 0 && (
                         <div className="rounded-3xl border border-dashed border-white/70 bg-white/50 p-5 text-sm text-slate-600">
-                          No notifications yet.
+                          {normalizedSearch ? "No notifications match your search." : "No notifications yet."}
                         </div>
                       )}
 
                     <div className="space-y-3">
-                      {dashboardNotifications.map((notification) => {
+                      {filteredNotifications.map((notification) => {
                         const peerId =
                           notification.fromUserId ||
                           notification.senderId ||
@@ -1212,6 +1369,11 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
+              </>
+            )}
+
+            {activeTab === "analytics" && (
+              <>
                 {/* TOP GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   {/* Total Employees (Donut) */}

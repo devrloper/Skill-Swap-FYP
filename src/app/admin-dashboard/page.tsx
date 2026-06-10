@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Brain,
   Calendar,
@@ -165,10 +165,9 @@ export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
+  const loadAdminSummary = useCallback(async (mounted = true) => {
       setLoading(true);
       setError("");
       try {
@@ -193,12 +192,15 @@ export default function AdminDashboardPage() {
       } finally {
         if (mounted) setLoading(false);
       }
-    };
-    load();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    loadAdminSummary(mounted);
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAdminSummary]);
 
   const pass = summary?.totals.interviewsPass || 0;
   const fail = summary?.totals.interviewsFail || 0;
@@ -231,6 +233,26 @@ export default function AdminDashboardPage() {
       trend: [4, 5, 6, 7, 6, 8, 9],
     },
   ];
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const matchesSearch = (...values: Array<unknown>) => {
+    if (!normalizedSearch) return true;
+    return values
+      .filter((value) => value != null)
+      .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+  };
+  const pendingConnect = (summary?.recent.pendingConnect || []).filter((request) =>
+    matchesSearch(
+      request.fromUserName,
+      request.toUserName,
+      request.fromUserId,
+      request.toUserId,
+      request.status,
+    ),
+  );
+  const failedInterviews = (summary?.recent.failedInterviews || []).filter((user) =>
+    matchesSearch(user.name, user.userId, user.interviewScore),
+  );
 
   const handleLogout = async () => {
     try {
@@ -344,6 +366,7 @@ export default function AdminDashboardPage() {
                 </div>
               )}
 
+              {active === "Dashboard" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
                 {kpis.map((kpi) => (
                   <div
@@ -369,8 +392,10 @@ export default function AdminDashboardPage() {
                   </div>
                 ))}
               </div>
+              )}
 
               <div className="flex flex-col gap-6 mt-6">
+                {active === "Skill Matching" && (
                 <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-7 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -473,6 +498,9 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
+                )}
+
+                {active === "AI Interviews" && (
                 <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-6 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -532,6 +560,16 @@ export default function AdminDashboardPage() {
                     )}
                   </div>
                 </div>
+                )}
+
+                {["Messages", "Schedule", "Settings"].includes(active) && (
+                  <div className="rounded-2xl border border-white/50 bg-white/40 backdrop-blur p-7 shadow-sm">
+                    <p className="font-black text-slate-900">{active}</p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      This section is separated now. Add dedicated {active.toLowerCase()} controls here when needed.
+                    </p>
+                  </div>
+                )}
               </div>
             </main>
           </div>
