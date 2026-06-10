@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent, type ReactNode } from "react";
 import { db, auth } from "@/app/lib/firebase";
 import { doc, setDoc, getDoc, DocumentData } from "firebase/firestore";
 import { X } from "lucide-react";
@@ -65,13 +65,30 @@ export default function EducationStep({ onNext }: EducationStepProps) {
     }
   };
 
+  const isValidYear = (value: string) => /^(19|20)\d{2}$/.test(value.trim());
+
+  const isCompleteEducation = (edu: Education) =>
+    Boolean(
+      edu.degree.trim() &&
+        edu.institute.trim() &&
+        isValidYear(edu.start) &&
+        (isValidYear(edu.end) || edu.end.trim().toLowerCase() === "present"),
+    );
+
   const addEducation = () => {
-    const { degree, institute, start, end } = newEdu;
-    if (!degree || !institute || !start || !end) {
-      alert("Please fill all fields!");
+    if (!isCompleteEducation(newEdu)) {
+      alert("Please enter complete education details in the required format.");
       return;
     }
-    const updatedEducations = [...educations, newEdu];
+    const updatedEducations = [
+      ...educations,
+      {
+        degree: newEdu.degree.trim(),
+        institute: newEdu.institute.trim(),
+        start: newEdu.start.trim(),
+        end: newEdu.end.trim(),
+      },
+    ];
     setEducations(updatedEducations);
     setNewEdu({ degree: "", institute: "", start: "", end: "" });
     saveEducation(updatedEducations);
@@ -97,13 +114,11 @@ export default function EducationStep({ onNext }: EducationStepProps) {
   // Validation: check if all newEdu fields and table fields are filled
   const isFormValid =
     educations.length > 0 && // must have at least one education
-    educations.every(
-      (edu) => edu.degree && edu.institute && edu.start && edu.end,
-    );
+    educations.every(isCompleteEducation);
 
   const handleNext = () => {
     if (!isFormValid) {
-      alert("Please fill all education fields before continuing!");
+      alert("Please add at least one complete education record before continuing.");
       return;
     }
     onNext();
@@ -111,37 +126,60 @@ export default function EducationStep({ onNext }: EducationStepProps) {
 
   return (
     <div className="space-y-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h3 className="text-2xl font-semibold text-gray-900">Education</h3>
+      <div>
+        <h3 className="text-2xl font-semibold text-gray-900">
+          Education Details
+        </h3>
+        <p className="mt-2 text-sm text-gray-600">
+          Add your formal academic qualification with degree, institute, and year range.
+        </p>
+      </div>
 
       {/* Input Fields */}
       <div className="rounded-2xl p-6 bg-gradient-to-br from-indigo-50/70 via-purple-50/60 to-pink-50/70 border border-purple-100 shadow-sm space-y-4">
         <h4 className="text-xs font-semibold tracking-widest text-gray-600 uppercase">
-          Add New Education
+          Add Academic Qualification
         </h4>
 
-        <SoftInput
-          placeholder="Degree / Qualification"
-          value={newEdu.degree}
-          onChange={(e) => updateNewEdu("degree", e.target.value)}
-        />
-        <SoftInput
-          placeholder="Institute Name"
-          value={newEdu.institute}
-          onChange={(e) => updateNewEdu("institute", e.target.value)}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Degree / Program">
+            <SoftInput
+              placeholder="BS Computer Science"
+              value={newEdu.degree}
+              onChange={(e) => updateNewEdu("degree", e.target.value)}
+            />
+          </Field>
+          <Field label="Institute / University">
+            <SoftInput
+              placeholder="University of Karachi"
+              value={newEdu.institute}
+              onChange={(e) => updateNewEdu("institute", e.target.value)}
+            />
+          </Field>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SoftInput
-            placeholder="Start Year"
-            value={newEdu.start}
-            onChange={(e) => updateNewEdu("start", e.target.value)}
-          />
-          <SoftInput
-            placeholder="End Year"
-            value={newEdu.end}
-            onChange={(e) => updateNewEdu("end", e.target.value)}
-          />
+          <Field label="Start Year">
+            <SoftInput
+              placeholder="2021"
+              value={newEdu.start}
+              onChange={(e) => updateNewEdu("start", e.target.value)}
+              inputMode="numeric"
+              maxLength={4}
+            />
+          </Field>
+          <Field label="End Year">
+            <SoftInput
+              placeholder="2025 or Present"
+              value={newEdu.end}
+              onChange={(e) => updateNewEdu("end", e.target.value)}
+              maxLength={7}
+            />
+          </Field>
         </div>
+        <p className="text-xs text-gray-500">
+          Use a 4-digit year for start/end, or write Present if you are still studying.
+        </p>
 
         <button
           onClick={addEducation}
@@ -161,10 +199,10 @@ export default function EducationStep({ onNext }: EducationStepProps) {
                   #
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                  Degree
+                  Degree / Program
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                  Institute
+                  Institute / University
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
                   Start Year
@@ -189,7 +227,8 @@ export default function EducationStep({ onNext }: EducationStepProps) {
                       onChange={(e) =>
                         updateTableEdu(index, "degree", e.target.value)
                       }
-                      className="w-full px-2 py-1 border border-gray-200 rounded"
+                      placeholder="BS Computer Science"
+                      className="w-full min-w-[170px] px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
@@ -198,7 +237,8 @@ export default function EducationStep({ onNext }: EducationStepProps) {
                       onChange={(e) =>
                         updateTableEdu(index, "institute", e.target.value)
                       }
-                      className="w-full px-2 py-1 border border-gray-200 rounded"
+                      placeholder="University of Karachi"
+                      className="w-full min-w-[190px] px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
@@ -207,7 +247,9 @@ export default function EducationStep({ onNext }: EducationStepProps) {
                       onChange={(e) =>
                         updateTableEdu(index, "start", e.target.value)
                       }
-                      className="w-full px-2 py-1 border border-gray-200 rounded"
+                      placeholder="2021"
+                      maxLength={4}
+                      className="w-full min-w-[90px] px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
@@ -216,7 +258,9 @@ export default function EducationStep({ onNext }: EducationStepProps) {
                       onChange={(e) =>
                         updateTableEdu(index, "end", e.target.value)
                       }
-                      className="w-full px-2 py-1 border border-gray-200 rounded"
+                      placeholder="2025 or Present"
+                      maxLength={7}
+                      className="w-full min-w-[120px] px-2 py-1 border border-gray-200 rounded"
                     />
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-700">
@@ -274,6 +318,8 @@ interface SoftInputProps {
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   type?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
 }
 
 function SoftInput({
@@ -281,6 +327,8 @@ function SoftInput({
   value,
   onChange,
   type = "text",
+  inputMode,
+  maxLength,
 }: SoftInputProps) {
   return (
     <input
@@ -288,7 +336,24 @@ function SoftInput({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
+      inputMode={inputMode}
+      maxLength={maxLength}
       className="w-full rounded-xl px-4 py-3 bg-indigo-50/60 border border-indigo-100 text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition"
     />
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="block text-sm font-medium text-gray-700">{label}</span>
+      {children}
+    </label>
   );
 }

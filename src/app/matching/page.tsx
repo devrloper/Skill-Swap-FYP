@@ -40,11 +40,18 @@ interface ProfileData {
 
 export default function FindMatchPage() {
   const [profiles, setProfiles] = useState<ProfileData[]>([]);
+  const [filteredProfiles, setFilteredProfiles] = useState<ProfileData[]>([]);
   const [currentUserProfile, setCurrentUserProfile] =
     useState<ProfileData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<ProfileData | null>(null);
+  const [filters, setFilters] = useState({
+    offering: "",
+    seeking: "",
+    location: "",
+    skillLevel: "",
+  });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -99,6 +106,52 @@ export default function FindMatchPage() {
     }, 1400);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleFilterChange = (newFilters: {
+    offering: string;
+    seeking: string;
+    location: string;
+    skillLevel: string;
+  }) => {
+    setFilters(newFilters);
+
+    let filtered = [...profiles];
+
+    // Filter by offering (teaching skills)
+    if (newFilters.offering) {
+      filtered = filtered.filter((profile) => {
+        const teachSkills = [
+          ...(profile.skills?.teachSkills || []),
+          ...(profile.skills?.customTeachSkills || []),
+        ];
+        return teachSkills.some((skill) =>
+          skill.toLowerCase().includes(newFilters.offering.toLowerCase()),
+        );
+      });
+    }
+
+    // Filter by seeking (learning skills)
+    if (newFilters.seeking) {
+      filtered = filtered.filter((profile) => {
+        const learnSkills = [
+          ...(profile.skills?.learnSkills || []),
+          ...(profile.skills?.customLearnSkills || []),
+        ];
+        return learnSkills.some((skill) =>
+          skill.toLowerCase().includes(newFilters.seeking.toLowerCase()),
+        );
+      });
+    }
+
+    // Filter by location
+    if (newFilters.location) {
+      filtered = filtered.filter((profile) =>
+        profile.location?.toLowerCase().includes(newFilters.location.toLowerCase()),
+      );
+    }
+
+    setFilteredProfiles(filtered);
+  };
 
   const openProfileModal = (profile: ProfileData) => {
     setSelectedProfile(profile);
@@ -276,7 +329,7 @@ export default function FindMatchPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.7 }}
             >
-              <SearchBar />
+              <SearchBar onFilter={handleFilterChange} />
             </motion.div>
 
             {/* Layout */}
@@ -287,12 +340,19 @@ export default function FindMatchPage() {
                   <div className="text-white/80">Loading profiles...</div>
                 )}
 
-                {!loading && profiles.length === 0 && (
+                {!loading && (filters.offering || filters.seeking || filters.location) && filteredProfiles.length === 0 && (
+                  <div className="text-white/80">
+                    No profiles found matching your criteria.
+                  </div>
+                )}
+
+                {!loading && !filters.offering && !filters.seeking && !filters.location && profiles.length === 0 && (
                   <div className="text-white/80">
                     No other profiles found yet.
                   </div>
                 )}
 
+                {/* Display current user profile */}
                 {!loading &&
                   currentUserProfile &&
                   (() => {
@@ -313,12 +373,6 @@ export default function FindMatchPage() {
                     const seek = learnSkills.length
                       ? learnSkills.join(", ")
                       : "Not set";
-                    const education = currentUserProfile.educations?.length
-                      ? currentUserProfile.educations
-                          .map((e) => e.degree || e.institute)
-                          .filter(Boolean)
-                          .join(", ")
-                      : "";
                     return (
                       <motion.div
                         key={currentUserProfile.id}
@@ -328,7 +382,6 @@ export default function FindMatchPage() {
                         transition={{ duration: 0.5 }}
                       >
                         <MatchCard
-                          id={currentUserProfile.id}
                           name={currentUserProfile.fullName || "Your Profile"}
                           offer={offer}
                           seek={seek}
@@ -336,7 +389,6 @@ export default function FindMatchPage() {
                             currentUserProfile.location || "Location not set"
                           }
                           tags={tags.length ? tags : ["No skills set"]}
-                          education={education}
                           imageUrl={getProfileImageUrl(currentUserProfile)}
                           rating={currentUserProfile.rating || 0}
                           reviewCount={
@@ -345,13 +397,18 @@ export default function FindMatchPage() {
                             0
                           }
                           showConnect={false}
+                          onConnect={() => {}}
                         />
                       </motion.div>
                     );
                   })()}
 
+                {/* Display filtered or all profiles */}
                 {!loading &&
-                  profiles.map((profile, i) => {
+                  (filters.offering || filters.seeking || filters.location
+                    ? filteredProfiles
+                    : profiles
+                  ).map((profile, i) => {
                     const learnSkills = [
                       ...(profile.skills?.learnSkills || []),
                       ...(profile.skills?.customLearnSkills || []),
@@ -370,12 +427,6 @@ export default function FindMatchPage() {
                     const seek = learnSkills.length
                       ? learnSkills.join(", ")
                       : "Not set";
-                    const education = profile.educations?.length
-                      ? profile.educations
-                          .map((e) => e.degree || e.institute)
-                          .filter(Boolean)
-                          .join(", ")
-                      : "";
                     return (
                       <motion.div
                         key={profile.id}
@@ -383,19 +434,13 @@ export default function FindMatchPage() {
                         initial="hidden"
                         animate="visible"
                         transition={{ duration: 0.5, delay: 0.1 * i }}
-                        // whileHover={{
-                        //   scale: 1.03,
-                        //   boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                        // }}
                       >
                         <MatchCard
-                          id={profile.id}
                           name={profile.fullName || "Profile"}
                           offer={offer}
                           seek={seek}
                           location={profile.location || "Location not set"}
                           tags={tags.length ? tags : ["No skills set"]}
-                          education={education}
                           imageUrl={getProfileImageUrl(profile)}
                           rating={profile.rating || 0}
                           reviewCount={

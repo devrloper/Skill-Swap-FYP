@@ -93,9 +93,9 @@ export default function MatchCard({
 
           {/* Tags */}
           <div className="flex flex-wrap gap-2 pt-2">
-            {tags.slice(0, 3).map((tag, i) => (
+            {tags.slice(0, 3).map((tag) => (
               <span
-                key={i}
+                key={tag}
                 className="text-[11px] font-bold bg-gray-800/5 text-gray-600 px-4 py-1.5 rounded-xl border border-gray-200/50"
               >
                 {tag}

@@ -251,13 +251,13 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
       )}
     </div>
   ) : (
-    <div className="fixed inset-0 bg-slate-950 text-white z-[9999]">
+    <div className="fixed inset-0 bg-slate-950 text-white z-[9999] overflow-y-auto">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]" />
       <div className="absolute -top-32 -left-20 h-72 w-72 rounded-full bg-fuchsia-500/20 blur-3xl" />
       <div className="absolute -bottom-32 -right-20 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
 
-      <div className="relative z-10 flex min-h-screen w-screen flex-col items-center justify-center gap-6 px-6 py-10">
-        <div className="w-full max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+      <div className="relative z-10 flex min-h-screen w-screen flex-col items-center justify-center gap-6 px-4 py-6 sm:px-6 sm:py-10">
+        <div className="flex max-h-[calc(100vh-3rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-2xl backdrop-blur sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-200">
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1">
               Section: {interviewParts[currentPartIndex].name}
@@ -269,43 +269,45 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
             Question {currentQuestionIndex + 1} of {questions.length}
           </h2>
 
-          <p className="mt-4 text-lg text-center text-slate-100">
-            {questions[currentQuestionIndex]?.question}
-          </p>
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+            <p className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-center text-base leading-7 text-slate-100 sm:text-lg">
+              {questions[currentQuestionIndex]?.question}
+            </p>
 
-          {questions[currentQuestionIndex]?.options?.length ? (
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              {questions[currentQuestionIndex].options.map((opt, idx) => {
-                const selected = currentAnswer === opt;
-                return (
-                  <button
-                    key={`${idx}-${opt}`}
-                    onClick={() => setCurrentAnswer(opt)}
-                    className={`w-full rounded-xl border px-4 py-3 text-left transition ${
-                      selected
-                        ? "border-cyan-300 bg-cyan-400/20 text-white"
-                        : "border-white/10 bg-white/5 text-slate-100 hover:border-cyan-400/50"
-                    }`}
-                  >
-                    <span className="mr-2 font-semibold text-slate-200">
-                      {String.fromCharCode(65 + idx)}.
-                    </span>
-                    {opt}
-                  </button>
-                );
-              })}
+            {questions[currentQuestionIndex]?.options?.length ? (
+              <div className="mt-6 grid grid-cols-1 gap-3">
+                {questions[currentQuestionIndex].options.map((opt, idx) => {
+                  const selected = currentAnswer === opt;
+                  return (
+                    <button
+                      key={`${idx}-${opt}`}
+                      onClick={() => setCurrentAnswer(opt)}
+                      className={`w-full rounded-xl border px-4 py-3 text-left leading-6 transition break-words ${
+                        selected
+                          ? "border-cyan-300 bg-cyan-400/20 text-white"
+                          : "border-white/10 bg-white/5 text-slate-100 hover:border-cyan-400/50"
+                      }`}
+                    >
+                      <span className="mr-2 font-semibold text-slate-200">
+                        {String.fromCharCode(65 + idx)}.
+                      </span>
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-6">
+                <input
+                  type="text"
+                  value={currentAnswer}
+                  onChange={(e) => setCurrentAnswer(e.target.value)}
+                  placeholder="Type your answer..."
+                  className="w-full rounded-xl bg-white px-4 py-3 text-gray-900 outline-none ring-2 ring-transparent focus:ring-cyan-400"
+                />
+              </div>
+            )}
             </div>
-          ) : (
-            <div className="mt-6">
-              <input
-                type="text"
-                value={currentAnswer}
-                onChange={(e) => setCurrentAnswer(e.target.value)}
-                placeholder="Type your answer..."
-                className="w-full rounded-xl bg-white px-4 py-3 text-gray-900 outline-none ring-2 ring-transparent focus:ring-cyan-400"
-              />
-            </div>
-          )}
 
           <div className="mt-6 flex justify-center">
             <button

@@ -16,6 +16,7 @@ export default function ProfileInfoStep({ onNext, onSaved }: ProfileInfoStepProp
   const [uploadingImage, setUploadingImage] = useState<boolean>(false);
   const [fullName, setFullName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
+  const [gender, setGender] = useState<string>("");
   const [location, setLocation] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [bio, setBio] = useState<string>("");
@@ -54,6 +55,7 @@ export default function ProfileInfoStep({ onNext, onSaved }: ProfileInfoStepProp
           const data = docSnap.data() as DocumentData;
           setFullName(data.fullName || "");
           setEmail(data.email || "");
+          setGender(data.gender || "");
           setLocation(data.location || "");
           setPhone(data.phone || "");
           setBio(data.bio || "");
@@ -120,6 +122,7 @@ export default function ProfileInfoStep({ onNext, onSaved }: ProfileInfoStepProp
         {
           fullName,
           email,
+          gender,
           location,
           phone,
           bio,
@@ -152,7 +155,8 @@ export default function ProfileInfoStep({ onNext, onSaved }: ProfileInfoStepProp
   };
 
   // Validation: check if all required fields are filled
-  const isFormValid = !!fullName && !!email && !!location && !!phone && !!bio && !!preview;
+  const isFormValid =
+    !!fullName && !!email && !!gender && !!location && !!phone && !!bio && !!preview;
 
   return (
     <div className="space-y-10">
@@ -203,6 +207,10 @@ export default function ProfileInfoStep({ onNext, onSaved }: ProfileInfoStepProp
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SoftSelect
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+              />
               <SoftInput
                 placeholder="Location (City, Country)"
                 value={location}
@@ -268,5 +276,26 @@ function SoftInput({ placeholder, type = "text", value, onChange }: SoftInputPro
       onChange={onChange}
       className="w-full rounded-xl px-4 py-3 bg-indigo-50/60 border border-indigo-100 text-gray-800 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition"
     />
+  );
+}
+
+interface SoftSelectProps {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+}
+
+function SoftSelect({ value, onChange }: SoftSelectProps) {
+  return (
+    <select
+      value={value}
+      onChange={onChange}
+      className="w-full rounded-xl px-4 py-3 bg-indigo-50/60 border border-indigo-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400/40 transition"
+    >
+      <option value="" disabled>
+        Select Gender
+      </option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
   );
 }
