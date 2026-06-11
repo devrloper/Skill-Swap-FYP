@@ -330,7 +330,7 @@ export default function SkillRequestPanel({
   const receiverHint = receiverTeachSkills.slice(0, 4).join(", ");
 
   return (
-    <div className="max-h-[calc(100vh-14rem)] overflow-y-auto rounded-[24px] border border-slate-200 bg-white shadow-sm">
+    <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm">
       <div className="p-6 sm:p-7">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>

@@ -489,7 +489,7 @@ export default function FindMatchPage() {
               exit={{ scale: 0.96, y: 20, opacity: 0 }}
               transition={{ duration: 0.22 }}
               onMouseDown={(e) => e.stopPropagation()}
-              className="w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-hidden rounded-[28px] border border-white/50 bg-white shadow-[0_25px_90px_rgba(15,23,42,0.25)] sm:max-h-[90vh]"
+              className="w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-hidden rounded-[28px] border border-white/50 bg-white shadow-[0_25px_90px_rgba(15,23,42,0.25)] sm:max-h-[90vh] flex flex-col"
             >
               <div className="relative border-b border-slate-100 bg-gradient-to-r from-purple-700 to-pink-600 px-6 py-5 text-white">
                 <button
@@ -531,7 +531,7 @@ export default function FindMatchPage() {
                 </div>
               </div>
 
-              <div className="grid gap-6 overflow-y-auto p-6 lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="grid gap-6 overflow-y-auto p-6 lg:grid-cols-[0.95fr_1.05fr] flex-1 min-h-0">
                 <div className="space-y-5">
                   <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 shadow-sm">
                     <div className="flex items-center gap-2 text-slate-800">
@@ -600,8 +600,8 @@ export default function FindMatchPage() {
                   </div>
                 </div>
 
-                <div className="self-start">
-                  <div className="mb-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-6">
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-slate-800">
                         <Star size={18} className="text-amber-500" fill="currentColor" />
@@ -612,38 +612,40 @@ export default function FindMatchPage() {
                       </span>
                     </div>
 
-                    <div className="mt-4 space-y-3">
+                    <div className="mt-4">
                       {selectedReviews.length ? (
-                        selectedReviews.slice(0, 5).map((review) => {
-                          const rating =
-                            typeof review.rating === "number" && Number.isFinite(review.rating)
-                              ? review.rating
-                              : Number(review.rating) || 0;
-                          return (
-                            <div
-                              key={review.id}
-                              className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-bold text-slate-800">
-                                  {review.reviewerName || "Skill Swap Member"}
+                        <div className="space-y-3">
+                          {selectedReviews.slice(0, 5).map((review) => {
+                            const rating =
+                              typeof review.rating === "number" && Number.isFinite(review.rating)
+                                ? review.rating
+                                : Number(review.rating) || 0;
+                            return (
+                              <div
+                                key={review.id}
+                                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-sm font-bold text-slate-800">
+                                    {review.reviewerName || "Skill Swap Member"}
+                                  </p>
+                                  <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-500">
+                                    <Star size={14} fill="currentColor" />
+                                    {rating || "-"}
+                                  </span>
+                                </div>
+                                {review.topic && (
+                                  <p className="mt-1 text-xs font-semibold text-purple-600">
+                                    {review.topic}
+                                  </p>
+                                )}
+                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                  {review.comment || "No written comment."}
                                 </p>
-                                <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-500">
-                                  <Star size={14} fill="currentColor" />
-                                  {rating || "-"}
-                                </span>
                               </div>
-                              {review.topic && (
-                                <p className="mt-1 text-xs font-semibold text-purple-600">
-                                  {review.topic}
-                                </p>
-                              )}
-                              <p className="mt-2 text-sm leading-6 text-slate-600">
-                                {review.comment || "No written comment."}
-                              </p>
-                            </div>
-                          );
-                        })
+                            );
+                          })}
+                        </div>
                       ) : (
                         <p className="text-sm text-slate-500">
                           No feedback has been added for this profile yet.
@@ -673,7 +675,3 @@ export default function FindMatchPage() {
     </>
   );
 }
-
-
-
-
