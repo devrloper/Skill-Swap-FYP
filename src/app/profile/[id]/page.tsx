@@ -21,6 +21,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const profile = snap.data() || {};
   const name = (profile.fullName || profile.name || "Profile") as string;
   const location = (profile.location || "") as string;
+  const gender = (profile.gender || "") as string;
   const photoURL =
     typeof profile.photoURL === "string" && !profile.photoURL.startsWith("blob:")
       ? profile.photoURL
@@ -70,6 +71,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   {name}
                 </h1>
                 {location && <p className="text-sm text-slate-600 mt-1">{location}</p>}
+                {gender && <p className="text-sm text-slate-600 mt-1 inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">{gender}</p>}
                 <p className="text-xs text-slate-500 mt-2 break-all">User ID: {id}</p>
               </div>
             </div>

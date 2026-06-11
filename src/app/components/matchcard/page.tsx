@@ -6,6 +6,7 @@ export default function MatchCard({
   offer,
   seek,
   location,
+  gender,
   tags,
   imageUrl,
   showConnect = true,
@@ -28,7 +29,7 @@ export default function MatchCard({
         className="
         relative bg-white/40 backdrop-blur-2xl cursor-pointer 
         border border-white/50 rounded-[40px] 
-        p-8 pt-14 flex flex-col min-h-[320px] 
+        p-8 pt-14 flex flex-col h-[450px] 
         shadow-[0_8px_30px_rgb(0,0,0,0.04)]
         transition-all duration-500 
         hover:bg-white/60 hover:shadow-2xl
@@ -102,6 +103,15 @@ export default function MatchCard({
               </span>
             ))}
           </div>
+
+          {/* Gender */}
+          {gender && (
+            <div className="pt-3">
+              <span className="text-[11px] font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full border border-blue-200/50">
+                {gender}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

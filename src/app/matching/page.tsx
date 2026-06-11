@@ -15,6 +15,7 @@ interface ProfileData {
   id: string;
   fullName?: string;
   location?: string;
+  gender?: string;
   photoURL?: string | null;
   photoUpdatedAt?: number;
   bio?: string;
@@ -385,6 +386,7 @@ export default function FindMatchPage() {
                           name={currentUserProfile.fullName || "Your Profile"}
                           offer={offer}
                           seek={seek}
+                          gender={currentUserProfile.gender || ""}
                           location={
                             currentUserProfile.location || "Location not set"
                           }
@@ -439,6 +441,7 @@ export default function FindMatchPage() {
                           name={profile.fullName || "Profile"}
                           offer={offer}
                           seek={seek}
+                          gender={profile.gender || ""}
                           location={profile.location || "Location not set"}
                           tags={tags.length ? tags : ["No skills set"]}
                           imageUrl={getProfileImageUrl(profile)}
