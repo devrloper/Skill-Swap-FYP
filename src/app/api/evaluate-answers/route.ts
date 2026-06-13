@@ -25,11 +25,12 @@ type WrongAnswerItem = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { answers = [], questions = [] } = await req.json();
+    const { answers = [], questions = [], forcedFailReason = "" } = await req.json();
     const sessionUser = await getRequestUser(req);
 
     const safeQuestions: QuestionItem[] = Array.isArray(questions) ? questions : [];
     const safeAnswers: string[] = Array.isArray(answers) ? answers : [];
+    const shouldForceFail = typeof forcedFailReason === "string" && forcedFailReason.trim().length > 0;
 
     const total = Math.min(safeQuestions.length, safeAnswers.length);
     let correct = 0;
@@ -63,8 +64,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const result = total > 0 && correct / total > 0.5 ? "Pass" : "Fail";
+    const score = shouldForceFail ? 0 : total > 0 ? Math.round((correct / total) * 100) : 0;
+    const result = shouldForceFail ? "Fail" : total > 0 && correct / total > 0.5 ? "Pass" : "Fail";
     let creditResult = { awardedCredits: false, creditsDelta: 0 };
 
     if (sessionUser?.uid) {
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
       total,
       breakdown,
       wrongAnswers,
+      forcedFailReason: shouldForceFail ? forcedFailReason.trim() : null,
       creditsDelta: creditResult.creditsDelta,
       awardedInterviewCredits: creditResult.awardedCredits,
     });

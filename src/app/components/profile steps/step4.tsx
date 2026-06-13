@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AIInterviewCard from "@/app/components/interviewcard/card";
@@ -28,6 +28,12 @@ type WrongAnswerItem = {
   given: string | null;
 };
 
+type FinishInterviewFn = (
+  finalAnswers?: string[],
+  finalQuestions?: QuestionItem[],
+  forcedFailReason?: string,
+) => Promise<void>;
+
 const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const router = useRouter();
   const userId = auth.currentUser?.uid;
@@ -46,6 +52,11 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(5 * 60); // 5 minutes
   const [mounted, setMounted] = useState(false);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [disqualificationReason, setDisqualificationReason] = useState<string | null>(null);
+  const tabSwitchCountRef = useRef(0);
+  const forcedFailRef = useRef(false);
+  const finishInterviewRef = useRef<FinishInterviewFn | null>(null);
 
   const interviewParts: InterviewPart[] = [
     { name: "Skill-Based", type: "skill" },
@@ -57,19 +68,42 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   // Countdown timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (started && timeLeft > 0) {
+    if (started && !result && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (started && timeLeft === 0) {
+    } else if (started && !result && timeLeft === 0) {
       alert("Time is up! Interview finished.");
-      setStarted(false);
-      finishInterview();
+      finishInterviewRef.current?.();
     }
     return () => clearInterval(timer);
-  }, [started, timeLeft]);
+  }, [result, started, timeLeft]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!started || result) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "hidden" || forcedFailRef.current) return;
+
+      const nextCount = tabSwitchCountRef.current + 1;
+      tabSwitchCountRef.current = nextCount;
+      setTabSwitchCount(nextCount);
+
+      if (nextCount > 3) {
+        forcedFailRef.current = true;
+        finishInterviewRef.current?.(
+          answers,
+          [...allQuestions, ...questions],
+          "Tab switched more than 3 times during interview",
+        );
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [allQuestions, answers, questions, result, started]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -89,6 +123,10 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
     setTotalCount(null);
     setCreditsDelta(0);
     setTimeLeft(5 * 60);
+    setTabSwitchCount(0);
+    setDisqualificationReason(null);
+    tabSwitchCountRef.current = 0;
+    forcedFailRef.current = false;
     setStarted(true);
     await generateQuestions(interviewParts[0].type);
   };
@@ -143,7 +181,12 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const finishInterview = async (
     finalAnswers: string[] = answers,
     finalQuestions: QuestionItem[] = [...allQuestions, ...questions],
+    forcedFailReason = "",
   ) => {
+    if (forcedFailReason) {
+      setDisqualificationReason(forcedFailReason);
+    }
+
     setLoading(true);
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -153,7 +196,11 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ answers: finalAnswers, questions: finalQuestions }),
+        body: JSON.stringify({
+          answers: finalAnswers,
+          questions: finalQuestions,
+          forcedFailReason,
+        }),
       });
       const data = await res.json();
       setResult(data.result);
@@ -181,6 +228,7 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
               correct: typeof data.correct === "number" ? data.correct : 0,
               total: typeof data.total === "number" ? data.total : 0,
               wrongAnswers,
+              ...(forcedFailReason ? { forcedFailReason } : {}),
               completedAt: new Date().toISOString(),
             },
           },
@@ -198,6 +246,8 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
       setLoading(false);
     }
   };
+
+  finishInterviewRef.current = finishInterview;
 
   // If interview not started, show start card
   if (!started)
@@ -226,6 +276,11 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
         <div className="relative z-10 max-w-2xl text-center">
           <h2 className="text-4xl font-bold mb-4">Interview Completed!</h2>
           <p className="text-2xl mb-2">Result: {result}</p>
+          {disqualificationReason && (
+            <p className="text-sm text-red-200 mt-2">
+              Interview failed because tabs were switched more than 3 times.
+            </p>
+          )}
           {score !== null && (
             <p className="text-xl text-slate-200">Marks: {score}/100</p>
           )}
@@ -263,6 +318,15 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
               Section: {interviewParts[currentPartIndex].name}
             </span>
             <span className="font-mono">Time Left: {formatTime(timeLeft)}</span>
+            <span
+              className={`rounded-full border px-3 py-1 ${
+                tabSwitchCount >= 3
+                  ? "border-red-300/50 bg-red-500/20 text-red-100"
+                  : "border-white/10 bg-white/10"
+              }`}
+            >
+              Tab switches: {tabSwitchCount}/3
+            </span>
           </div>
 
           <h2 className="mt-6 text-3xl font-bold text-center">
