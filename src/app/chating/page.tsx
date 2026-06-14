@@ -1250,31 +1250,34 @@ function WorkableChatContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-[90] flex h-[100dvh] items-start justify-center overflow-hidden bg-black/40 px-3 py-3 sm:items-center sm:px-4 sm:py-6"
             >
               <motion.div
                 initial={{ y: 24, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 24, opacity: 0 }}
-                className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl"
+                className="flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-md flex-col overflow-hidden rounded-[22px] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[28px] sm:p-6"
               >
-                <div className="mb-5 flex items-start justify-between gap-4">
-                  <div>
+                <div className="mb-5 flex shrink-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <p className="text-lg font-bold text-slate-800">Schedule Meeting</p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm leading-5 text-slate-500">
                       Send a meeting proposal to {activeUser.name}.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsScheduleOpen(false)}
-                    className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-200"
+                    className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-200 sm:text-sm"
                   >
                     Close
                   </button>
                 </div>
 
-                <form onSubmit={handleCreateSchedule} className="space-y-4">
+                <form
+                  onSubmit={handleCreateSchedule}
+                  className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]"
+                >
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
                       Topic
@@ -1284,7 +1287,7 @@ function WorkableChatContent() {
                       onChange={(event) =>
                         setScheduleForm((prev) => ({ ...prev, topic: event.target.value }))
                       }
-                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      className="w-full min-w-0 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
                       placeholder="Skill swap session"
                     />
                   </label>
@@ -1300,7 +1303,7 @@ function WorkableChatContent() {
                         onChange={(event) =>
                           setScheduleForm((prev) => ({ ...prev, dateTime: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                        className="w-full min-w-0 rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-[#4B164C] sm:px-4"
                         required
                       />
                     </label>
@@ -1314,7 +1317,7 @@ function WorkableChatContent() {
                         onChange={(event) =>
                           setScheduleForm((prev) => ({ ...prev, duration: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                        className="w-full min-w-0 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
                       >
                         <option value="15">15 min</option>
                         <option value="30">30 min</option>
@@ -1333,7 +1336,7 @@ function WorkableChatContent() {
                       onChange={(event) =>
                         setScheduleForm((prev) => ({ ...prev, notes: event.target.value }))
                       }
-                      className="min-h-24 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      className="min-h-24 w-full min-w-0 resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
                       placeholder="Add agenda or meeting details"
                     />
                   </label>
