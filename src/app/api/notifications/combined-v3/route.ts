@@ -79,7 +79,11 @@ export async function GET(req: Request) {
         createdAt: r.createdAt,
       }));
 
-    const rawItems = [...syntheticPending, ...notifications];
+    const rawItems = [...syntheticPending, ...notifications].filter((item) => {
+      const type = String(item.type || "");
+      if (type !== "connect_request" && type !== "skill_request") return true;
+      return String(item.status || "pending").toLowerCase() === "pending";
+    });
 
     const profileNameMap = await loadProfileNames(
       rawItems

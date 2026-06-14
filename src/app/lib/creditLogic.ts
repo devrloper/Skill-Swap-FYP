@@ -133,6 +133,7 @@ export async function saveInterviewResultAndAwardCredits(
     correct: number;
     total: number;
     wrongAnswers: unknown[];
+    forcedFailReason?: string;
   },
 ) {
   const awardId = `interview-pass-${userId}`;
@@ -141,6 +142,15 @@ export async function saveInterviewResultAndAwardCredits(
     const awardSnap = await transaction.get(transactionRef(awardId));
     const awardedCredits = interview.result === "Pass" && !awardSnap.exists;
     const completedAt = new Date().toISOString();
+    const failMetadata =
+      interview.result === "Fail"
+        ? {
+            lastFailedAt: completedAt,
+            ...(interview.forcedFailReason
+              ? { forcedFailReason: interview.forcedFailReason }
+              : {}),
+          }
+        : {};
 
     transaction.set(
       profileRef(userId),
@@ -157,6 +167,7 @@ export async function saveInterviewResultAndAwardCredits(
           correct: interview.correct,
           total: interview.total,
           wrongAnswers: interview.wrongAnswers,
+          ...failMetadata,
           completedAt,
         },
       },
@@ -172,6 +183,7 @@ export async function saveInterviewResultAndAwardCredits(
         correct: interview.correct,
         total: interview.total,
         wrongAnswers: interview.wrongAnswers,
+        ...failMetadata,
         completedAt,
         updatedAt: FieldValue.serverTimestamp(),
       },

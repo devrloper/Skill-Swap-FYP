@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AIInterviewCard from "@/app/components/interviewcard/card";
 import { auth, db } from "@/app/lib/firebase";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
 interface AIInterviewProps {
   skills: string[];
@@ -34,9 +35,79 @@ type FinishInterviewFn = (
   forcedFailReason?: string,
 ) => Promise<void>;
 
+type RetryLock = {
+  locked: boolean;
+  remainingText: string;
+  unlockAt: number;
+};
+
+const RETRY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const parseDateValue = (value: unknown) => {
+  if (!value) return null;
+  if (typeof value === "string" || typeof value === "number") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof (value as { toDate?: unknown }).toDate === "function"
+  ) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  return null;
+};
+
+const formatRetryTime = (milliseconds: number) => {
+  const totalMinutes = Math.max(1, Math.ceil(milliseconds / (60 * 1000)));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const hourLabel = hours === 1 ? "hour" : "hours";
+  const minuteLabel = minutes === 1 ? "minute" : "minutes";
+
+  if (hours <= 0) return `${minutes} ${minuteLabel}`;
+  if (minutes === 0) return `${hours} ${hourLabel}`;
+  return `${hours} ${hourLabel} ${minutes} ${minuteLabel}`;
+};
+
+const getLatestDate = (values: unknown[]) =>
+  values
+    .map(parseDateValue)
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+const createRetryLock = (failedAt: Date): RetryLock | null => {
+  const unlockAt = failedAt.getTime() + RETRY_COOLDOWN_MS;
+  const remainingMs = unlockAt - Date.now();
+
+  if (remainingMs <= 0) return null;
+
+  return {
+    locked: true,
+    remainingText: formatRetryTime(remainingMs),
+    unlockAt,
+  };
+};
+
+const createRetryLockFromUnlockAt = (unlockAt: number): RetryLock | null => {
+  const remainingMs = unlockAt - Date.now();
+
+  if (remainingMs <= 0) return null;
+
+  return {
+    locked: true,
+    remainingText: formatRetryTime(remainingMs),
+    unlockAt,
+  };
+};
+
 const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const router = useRouter();
-  const userId = auth.currentUser?.uid;
+  const [userId, setUserId] = useState<string | null>(
+    () => auth.currentUser?.uid ?? null,
+  );
+  const [authReady, setAuthReady] = useState(false);
   const [started, setStarted] = useState(false);
   const [currentPartIndex, setCurrentPartIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -54,6 +125,8 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const [mounted, setMounted] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [disqualificationReason, setDisqualificationReason] = useState<string | null>(null);
+  const [retryLock, setRetryLock] = useState<RetryLock | null>(null);
+  const [checkingRetry, setCheckingRetry] = useState(true);
   const tabSwitchCountRef = useRef(0);
   const forcedFailRef = useRef(false);
   const finishInterviewRef = useRef<FinishInterviewFn | null>(null);
@@ -80,6 +153,99 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (user) => {
+      setUserId(user?.uid ?? null);
+      setAuthReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    if (!userId) {
+      setCheckingRetry(false);
+      setRetryLock(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadRetryLock = async () => {
+      setCheckingRetry(true);
+      try {
+        const [profileSnap, interviewSnap] = await Promise.all([
+          getDoc(doc(db, "profiles", userId)),
+          getDoc(doc(db, "interviews", userId)),
+        ]);
+
+        if (cancelled) return;
+
+        const profile = profileSnap.exists() ? profileSnap.data() : null;
+        const interview = interviewSnap.exists() ? interviewSnap.data() : null;
+        const status = String(
+          profile?.interviewStatus ||
+            profile?.interview?.result ||
+            interview?.result ||
+            "",
+        )
+          .trim()
+          .toLowerCase();
+
+        if (!status.includes("fail")) {
+          setRetryLock(null);
+          return;
+        }
+
+        const failedAt = getLatestDate([
+          profile?.lastFailedAt,
+          profile?.interview?.lastFailedAt,
+          profile?.interview?.completedAt,
+          interview?.lastFailedAt,
+          interview?.completedAt,
+        ]);
+
+        if (!failedAt) {
+          setRetryLock(null);
+          return;
+        }
+
+        setRetryLock(createRetryLock(failedAt));
+      } catch (err) {
+        console.error("Failed to check interview retry lock:", err);
+        if (!cancelled) setRetryLock(null);
+      } finally {
+        if (!cancelled) setCheckingRetry(false);
+      }
+    };
+
+    loadRetryLock();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, userId]);
+
+  useEffect(() => {
+    if (!retryLock?.locked) return;
+
+    const timer = setInterval(() => {
+      const remainingMs = retryLock.unlockAt - Date.now();
+
+      if (remainingMs <= 0) {
+        setRetryLock(null);
+        return;
+      }
+
+      setRetryLock((current) =>
+        current?.locked
+          ? { ...current, remainingText: formatRetryTime(remainingMs) }
+          : current,
+      );
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [retryLock?.locked, retryLock?.unlockAt]);
 
   useEffect(() => {
     if (!started || result) return;
@@ -112,6 +278,8 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   };
 
   const handleStart = async () => {
+    if (!authReady || checkingRetry || retryLock?.locked) return;
+
     setCurrentPartIndex(0);
     setCurrentQuestionIndex(0);
     setQuestions([]);
@@ -134,12 +302,39 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
   const generateQuestions = async (partType: string) => {
     setLoading(true);
     try {
+      const token = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/generate-questions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ skills, partType }),
       });
       const data = await res.json();
+
+      if (res.status === 429 && data?.cooldownLocked) {
+        const unlockAt =
+          typeof data.unlockAt === "number" ? data.unlockAt : Date.now();
+        setRetryLock(
+          createRetryLockFromUnlockAt(unlockAt) || {
+            locked: true,
+            remainingText:
+              typeof data.remainingText === "string"
+                ? data.remainingText
+                : "24 hours",
+            unlockAt: Date.now() + RETRY_COOLDOWN_MS,
+          },
+        );
+        setStarted(false);
+        setQuestions([]);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to generate questions");
+      }
+
       setQuestions(data.questions || []);
       setCurrentQuestionIndex(0);
     } catch (err) {
@@ -213,6 +408,8 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
         const wrongAnswers: WrongAnswerItem[] = Array.isArray(data?.wrongAnswers)
           ? (data.wrongAnswers as WrongAnswerItem[])
           : [];
+        const interviewResult = data.result === "Pass" ? "Pass" : "Fail";
+        const completedAt = new Date().toISOString();
 
         await setDoc(
           doc(db, "profiles", userId),
@@ -220,20 +417,30 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
             enrolled: true,
             profileCompleted: true,
             enrolledAt: serverTimestamp(),
-            interviewStatus: data.result === "Pass" ? "Pass" : "Fail",
+            interviewStatus: interviewResult,
             interviewScore: typeof data.score === "number" ? data.score : 0,
+            ...(interviewResult === "Fail" ? { lastFailedAt: completedAt } : {}),
             interview: {
-              result: data.result === "Pass" ? "Pass" : "Fail",
+              result: interviewResult,
               score: typeof data.score === "number" ? data.score : 0,
               correct: typeof data.correct === "number" ? data.correct : 0,
               total: typeof data.total === "number" ? data.total : 0,
               wrongAnswers,
               ...(forcedFailReason ? { forcedFailReason } : {}),
-              completedAt: new Date().toISOString(),
+              ...(interviewResult === "Fail" ? { lastFailedAt: completedAt } : {}),
+              completedAt,
             },
           },
           { merge: true },
         );
+
+        if (interviewResult === "Fail") {
+          setRetryLock({
+            locked: true,
+            remainingText: "24 hours",
+            unlockAt: Date.now() + RETRY_COOLDOWN_MS,
+          });
+        }
       }
 
       if (data.result === "Pass") {
@@ -258,10 +465,48 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.06),_transparent_55%)]" />
 
         <div className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-6 px-6 py-8">
-          <AIInterviewCard onStart={handleStart} />
-          <p className="text-sm text-slate-300">
-            4 sections. 5 minutes total. Stay focused and answer clearly.
-          </p>
+          {!authReady || checkingRetry ? (
+            <p className="text-center text-xl">Checking interview status...</p>
+          ) : retryLock?.locked ? (
+            <div className="relative flex w-full max-w-md flex-col items-center justify-center rounded-3xl border border-red-300/20 bg-white/5 p-8 text-center shadow-2xl backdrop-blur md:p-12">
+              <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-cyan-400/30 blur-xl" />
+              <div className="absolute -bottom-6 -left-6 h-16 w-16 rounded-full bg-fuchsia-500/30 blur-xl" />
+
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border-4 border-cyan-300 text-cyan-200">
+                <svg
+                  className="h-10 w-10"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+
+              <h2 className="text-2xl font-bold text-white md:text-3xl">
+                You have failed the interview.
+              </h2>
+              <p className="mt-3 text-base font-semibold text-slate-200 md:text-lg">
+                Try again after 24 hours.
+              </p>
+              <p className="mt-5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-5 py-2 text-sm font-semibold text-cyan-100 md:text-base">
+                Remaining time: {retryLock.remainingText}
+              </p>
+            </div>
+          ) : (
+            <>
+              <AIInterviewCard onStart={handleStart} />
+              <p className="text-sm text-slate-300">
+                4 sections. 5 minutes total. Stay focused and answer clearly.
+              </p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -295,8 +540,14 @@ const AIInterview: React.FC<AIInterviewProps> = ({ skills }) => {
               Redirecting to matching...
             </p>
           )}
+          {result === "Fail" && retryLock?.locked && (
+            <p className="text-sm text-slate-300 mt-2">
+              Try again after 24 hours. Remaining time:{" "}
+              {retryLock.remainingText}
+            </p>
+          )}
         </div>
-      {result !== "Pass" && (
+      {result !== "Pass" && !retryLock?.locked && (
         <button
           onClick={() => window.location.reload()}
           className="relative z-10 px-8 py-3 mt-4 rounded-full bg-gradient-to-r from-fuchsia-600 to-cyan-500 font-semibold hover:scale-105 transition"

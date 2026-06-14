@@ -29,13 +29,18 @@ export default function HeroSection() {
       try {
         const snap = await getDoc(doc(db, "profiles", user.uid));
         const data = snap.exists() ? snap.data() : null;
+        const interviewStatus = String(
+          data?.interviewStatus || data?.interview?.result || "",
+        ).toLowerCase();
+        const failedInterview = interviewStatus === "fail";
         const enrolled =
-          Boolean(data?.enrolled) ||
-          Boolean(data?.profileCompleted) ||
-          Boolean(data?.interviewStatus) ||
-          Boolean(data?.interviewScore) ||
-          (Array.isArray(data?.completedSteps) &&
-            data.completedSteps.includes(4));
+          !failedInterview &&
+          (Boolean(data?.enrolled) ||
+            Boolean(data?.profileCompleted) ||
+            interviewStatus === "pass" ||
+            Boolean(data?.interviewScore) ||
+            (Array.isArray(data?.completedSteps) &&
+              data.completedSteps.includes(4)));
         if (!cancelled) setIsEnrolled(enrolled);
       } catch (err) {
         console.error("Failed to check enrollment:", err);

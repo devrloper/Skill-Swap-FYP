@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         correct,
         total,
         wrongAnswers,
+        forcedFailReason: shouldForceFail ? forcedFailReason.trim() : undefined,
       });
     }
 

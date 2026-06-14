@@ -80,6 +80,30 @@ async function createConnectionArtifacts(connectionId: string, senderId: string,
   ]);
 }
 
+async function markRequestNotificationsHandled(
+  requestId: string,
+  receiverId: string,
+  status: string,
+) {
+  const snap = await adminDb
+    .collection("notifications")
+    .where("requestId", "==", requestId)
+    .where("userId", "==", receiverId)
+    .get();
+
+  if (snap.empty) return;
+
+  const batch = adminDb.batch();
+  snap.docs.forEach((doc) => {
+    batch.update(doc.ref, {
+      status,
+      read: true,
+      handledAt: FieldValue.serverTimestamp(),
+    });
+  });
+  await batch.commit();
+}
+
 export async function PATCH(req: Request) {
   try {
     const sessionUser = await getRequestUser(req);
@@ -106,9 +130,11 @@ export async function PATCH(req: Request) {
         .collection("skillRequests")
         .where("senderId", "==", senderId)
         .where("receiverId", "==", receiverId)
-        .limit(1)
         .get();
-      requestSnap = querySnap.docs[0] ?? null;
+      requestSnap =
+        querySnap.docs.find(
+          (doc) => String(doc.data().status || "pending") === "pending",
+        ) ?? null;
       requestRef = requestSnap ? requestSnap.ref : null;
     }
 
@@ -221,17 +247,23 @@ export async function PATCH(req: Request) {
             }
           : {}),
       });
+      await markRequestNotificationsHandled(requestRef.id, requestReceiverId, newStatus);
       await adminDb.collection("notifications").add({
         userId: requestSenderId,
         type: "skill_request_response",
         title: newStatus === "rejected" ? "Skill swap request rejected" : "Skill swap request cancelled",
         message:
           newStatus === "rejected"
-            ? `Your request for ${request.offeredSkill} - ${request.requestedSkill} was rejected.`
+            ? `Your request was rejected. You can send a new request from matching.`
             : `Your request for ${request.offeredSkill} - ${request.requestedSkill} was cancelled.`,
         senderId: actorId,
+        fromUserId: actorId,
+        fromUserName: request.receiverName || null,
         receiverId: requestSenderId,
         requestId: requestRef.id,
+        connectRequestId: requestRef.id,
+        offeredSkill: request.offeredSkill || null,
+        requestedSkill: request.requestedSkill || null,
         status: newStatus,
         read: false,
         createdAt: FieldValue.serverTimestamp(),

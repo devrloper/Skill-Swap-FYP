@@ -14,6 +14,11 @@ function decorateConnection(doc: QueryDocumentSnapshot) {
   return { id: doc.id, ...doc.data() };
 }
 
+function isActiveRequest(request: Record<string, unknown>) {
+  const status = String(request.status || "pending").toLowerCase();
+  return status === "pending" || status === "accepted";
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -26,8 +31,14 @@ export async function GET(req: Request) {
       adminDb.collection("connections").where("users", "array-contains", userId).get(),
     ]);
 
-    const incoming = incomingSnap.docs.map(decorateRequest).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
-    const outgoing = outgoingSnap.docs.map(decorateRequest).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+    const incoming = incomingSnap.docs
+      .map(decorateRequest)
+      .filter(isActiveRequest)
+      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+    const outgoing = outgoingSnap.docs
+      .map(decorateRequest)
+      .filter(isActiveRequest)
+      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
     const connections = connectionsSnap.docs
       .map(decorateConnection)
       .filter((connection) => connection.status === "accepted")
