@@ -164,11 +164,11 @@ export default function PricingPage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    Cancelled meetings refund automatically
+                    Provider cancellations refund automatically
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    Completed meetings can earn bonus credits
+                    Learner cancellations refund only 24h+ before
                   </li>
                 </ul>
 

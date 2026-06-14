@@ -4,7 +4,6 @@ import {
   PAID_CREDIT_PACKS,
   INTERVIEW_PASS_CREDITS,
   SESSION_SCHEDULE_COST,
-  SESSION_COMPLETION_BONUS,
 } from "@/app/lib/creditConstants";
 import { createZoomMeeting } from "@/app/lib/zoom";
 
@@ -12,7 +11,6 @@ type CreditTransactionType =
   | "interview_pass"
   | "session_scheduled"
   | "session_cancel_refund"
-  | "session_completion_bonus"
   | "paid_credit_purchase";
 
 type SessionStatus =
@@ -490,7 +488,6 @@ export async function updateSessionStatusWithCredits(input: {
   sessionId: string;
   actorId: string;
   status: "completed" | "cancelled";
-  rewardBonusCredit?: boolean;
   cancellationReason?: string;
   refundRatio?: number;
 }) {
@@ -522,17 +519,10 @@ export async function updateSessionStatusWithCredits(input: {
     }
 
     const refundId = `session-cancel-refund-${input.sessionId}`;
-    const bonusId = `session-completion-bonus-${input.sessionId}`;
-    const [refundSnap, bonusSnap] = await Promise.all([
+    const refundSnap =
       input.status === "cancelled" && session.creditDeducted && !session.creditRefunded
-        ? transaction.get(transactionRef(refundId))
-        : Promise.resolve(null),
-      input.status === "completed" &&
-      input.rewardBonusCredit !== false &&
-      !session.completionBonusAwarded
-        ? transaction.get(transactionRef(bonusId))
-        : Promise.resolve(null),
-    ]);
+        ? await transaction.get(transactionRef(refundId))
+        : null;
 
     let creditsDelta = 0;
     const nowField = input.status === "completed" ? "completedAt" : "cancelledAt";
@@ -548,7 +538,7 @@ export async function updateSessionStatusWithCredits(input: {
       typeof input.refundRatio === "number" && Number.isFinite(input.refundRatio)
         ? Math.min(Math.max(input.refundRatio, 0), 1)
         : 1;
-    const refundCredits = Math.round(SESSION_SCHEDULE_COST * refundRatio);
+    const refundCredits = refundRatio >= 1 ? SESSION_SCHEDULE_COST : 0;
 
     transaction.update(sessionRef, {
       status: input.status,
@@ -583,26 +573,6 @@ export async function updateSessionStatusWithCredits(input: {
         );
         transaction.update(sessionRef, { creditRefunded: true });
         creditsDelta += refundCredits;
-      }
-    }
-
-    if (
-      input.status === "completed" &&
-      input.rewardBonusCredit !== false &&
-      !session.completionBonusAwarded
-    ) {
-      if (!bonusSnap?.exists) {
-        applyCreditDelta(transaction, requesterId, SESSION_COMPLETION_BONUS);
-        writeCreditTransaction(
-          transaction,
-          bonusId,
-          requesterId,
-          SESSION_COMPLETION_BONUS,
-          "session_completion_bonus",
-          { sessionId: input.sessionId },
-        );
-        transaction.update(sessionRef, { completionBonusAwarded: true });
-        creditsDelta += SESSION_COMPLETION_BONUS;
       }
     }
 

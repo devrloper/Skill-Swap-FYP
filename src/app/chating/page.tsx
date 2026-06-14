@@ -692,7 +692,7 @@ function WorkableChatContent() {
       console.error("Failed to accept schedule:", error);
       const message = error instanceof Error ? error.message : "Schedule could not be accepted.";
       const displayMessage =
-        message.includes("at least 1 credit")
+        message.toLowerCase().includes("1 credit")
           ? `${message} Please buy paid credits from the credits badge in the navbar.`
           : message;
       showErrorToast("Schedule could not be accepted", displayMessage);

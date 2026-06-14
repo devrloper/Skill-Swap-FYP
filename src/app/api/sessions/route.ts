@@ -20,9 +20,7 @@ type UpdateSessionBody = {
   sessionId?: string;
   status?: "completed" | "cancelled";
   action?: "complete" | "cancel";
-  rewardBonusCredit?: boolean;
   cancellationReason?: string;
-  refundRatio?: number;
 };
 
 function sessionParticipants(data: Record<string, unknown>) {
@@ -40,7 +38,6 @@ function cancellationRefundRatio(data: Record<string, unknown>, actorId: string)
   if (!start) return 0;
   const hoursBeforeMeeting = (start - Date.now()) / (60 * 60 * 1000);
   if (hoursBeforeMeeting >= 24) return 1;
-  if (hoursBeforeMeeting >= 2) return 0.5;
   return 0;
 }
 
@@ -172,7 +169,7 @@ function creditErrorResponse(error: unknown) {
   switch (message) {
     case "INSUFFICIENT_CREDITS":
       return NextResponse.json(
-        { error: "The requester needs at least 1 credit to schedule this meeting." },
+        { error: "Learner needs 1 credit before this session can be scheduled." },
         { status: 402 },
       );
     case "FORBIDDEN":
@@ -283,16 +280,12 @@ export async function PATCH(req: Request) {
     const sessionSnap = await adminDb.collection("sessions").doc(sessionId).get();
     const sessionData = sessionSnap.exists ? sessionSnap.data() || {} : {};
     const actorId = sessionUser.uid.trim();
-    const refundRatio =
-      status === "cancelled"
-        ? body.refundRatio ?? cancellationRefundRatio(sessionData, actorId)
-        : body.refundRatio;
+    const refundRatio = status === "cancelled" ? cancellationRefundRatio(sessionData, actorId) : 0;
 
     const result = await updateSessionStatusWithCredits({
       sessionId,
       actorId,
       status,
-      rewardBonusCredit: body.rewardBonusCredit,
       cancellationReason: body.cancellationReason,
       refundRatio,
     });

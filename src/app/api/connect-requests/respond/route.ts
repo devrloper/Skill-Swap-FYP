@@ -282,7 +282,7 @@ export async function PATCH(req: Request) {
     if (err instanceof Error) {
       if (err.message === "INSUFFICIENT_CREDITS") {
         return NextResponse.json(
-          { error: "The learner needs at least 1 credit before this session can be accepted." },
+          { error: "Learner needs 1 credit before this session can be scheduled." },
           { status: 402 },
         );
       }
