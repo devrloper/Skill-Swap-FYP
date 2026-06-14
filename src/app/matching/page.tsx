@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, GraduationCap, Sparkles, Star } from "lucide-react";
 import Navbar from "@/app/components/innernavbar/page";
@@ -11,6 +11,7 @@ import SidebarFilters from "@/app/components/sidebarfilters/page";
 import { auth } from "@/app/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import ChipLoader from "@/app/components/loader/page";
+import { getAiMatches, type AiMatchResult } from "@/app/lib/matching-algorithm";
 interface ProfileData {
   id: string;
   fullName?: string;
@@ -164,6 +165,21 @@ export default function FindMatchPage() {
     typeof selectedProfile?.rating === "number" && Number.isFinite(selectedProfile.rating)
       ? selectedProfile.rating
       : 0;
+  const displayedProfiles =
+    filters.offering || filters.seeking || filters.location
+      ? filteredProfiles
+      : profiles;
+  const aiMatches = useMemo(
+    () => getAiMatches(currentUserProfile, displayedProfiles),
+    [currentUserProfile, displayedProfiles],
+  );
+  const selectedAiMatch = useMemo(
+    () =>
+      selectedProfile
+        ? getAiMatches(currentUserProfile, [selectedProfile])[0] || null
+        : null,
+    [currentUserProfile, selectedProfile],
+  );
 
   return (
     <>
@@ -407,10 +423,8 @@ export default function FindMatchPage() {
 
                 {/* Display filtered or all profiles */}
                 {!loading &&
-                  (filters.offering || filters.seeking || filters.location
-                    ? filteredProfiles
-                    : profiles
-                  ).map((profile, i) => {
+                  aiMatches.map((match: AiMatchResult, i) => {
+                    const profile = match.profile;
                     const learnSkills = [
                       ...(profile.skills?.learnSkills || []),
                       ...(profile.skills?.customLearnSkills || []),
@@ -449,6 +463,9 @@ export default function FindMatchPage() {
                           reviewCount={
                             profile.reviewCount || profile.reviews?.length || 0
                           }
+                          matchScore={match.score}
+                          matchLabel={`${match.label} Match`}
+                          matchReasons={match.reasons}
                           onConnect={() => openProfileModal(profile)}
                           connectDisabled={false}
                           connectLabel="View Profile"
@@ -533,6 +550,30 @@ export default function FindMatchPage() {
 
               <div className="grid gap-6 overflow-y-auto p-6 lg:grid-cols-[0.95fr_1.05fr] flex-1 min-h-0">
                 <div className="space-y-5">
+                  {selectedAiMatch && (
+                    <div className="rounded-[24px] border border-purple-100 bg-purple-50 p-5 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-purple-950">
+                          <Sparkles size={18} className="text-purple-700" />
+                          <h3 className="font-bold">AI Match</h3>
+                        </div>
+                        <span className="rounded-full bg-purple-900 px-3 py-1 text-sm font-black text-white">
+                          {selectedAiMatch.score}% {selectedAiMatch.label}
+                        </span>
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        {selectedAiMatch.reasons.map((reason) => (
+                          <p
+                            key={reason}
+                            className="rounded-2xl bg-white/75 px-4 py-2 text-sm font-semibold leading-6 text-slate-700"
+                          >
+                            {reason}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 shadow-sm">
                     <div className="flex items-center gap-2 text-slate-800">
                       <Sparkles size={18} className="text-purple-600" />

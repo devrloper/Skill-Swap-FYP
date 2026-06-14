@@ -1,6 +1,25 @@
 import Button from "@/app/ui/button";
 import { Briefcase, MapPin, GraduationCap, Star } from "lucide-react";
 
+type MatchCardProps = {
+  name: string;
+  offer: string;
+  seek: string;
+  location: string;
+  gender?: string;
+  tags: string[];
+  imageUrl?: string;
+  showConnect?: boolean;
+  connectDisabled?: boolean;
+  connectLabel?: string;
+  rating?: number;
+  reviewCount?: number;
+  matchScore?: number;
+  matchLabel?: string;
+  matchReasons?: string[];
+  onConnect: () => void;
+};
+
 export default function MatchCard({
   name,
   offer,
@@ -14,8 +33,11 @@ export default function MatchCard({
   connectLabel = "View Profile",
   rating = 0,
   reviewCount = 0,
+  matchScore,
+  matchLabel,
+  matchReasons = [],
   onConnect,
-}) {
+}: MatchCardProps) {
   const displayImage = imageUrl || "/girl.png";
   const numericRating =
     typeof rating === "number" && Number.isFinite(rating)
@@ -29,7 +51,7 @@ export default function MatchCard({
         className="
         relative bg-white/40 backdrop-blur-2xl cursor-pointer 
         border border-white/50 rounded-[40px] 
-        p-8 pt-14 flex flex-col h-[450px] 
+        p-8 pt-14 flex flex-col h-[500px] 
         shadow-[0_8px_30px_rgb(0,0,0,0.04)]
         transition-all duration-500 
         hover:bg-white/60 hover:shadow-2xl
@@ -55,6 +77,15 @@ export default function MatchCard({
             ({reviewCount || 0})
           </span>
         </div>
+
+        {typeof matchScore === "number" && (
+          <div className="absolute left-8 top-6 inline-flex items-center gap-1.5 rounded-full bg-purple-900 px-3 py-1.5 text-xs font-black text-white shadow-md">
+            <span>{matchScore}%</span>
+            <span className="font-bold text-purple-100">
+              {matchLabel || "AI Match"}
+            </span>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 space-y-6">
@@ -103,6 +134,17 @@ export default function MatchCard({
               </span>
             ))}
           </div>
+
+          {matchReasons.length > 0 && (
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/80 px-3 py-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-purple-700">
+                AI Reason
+              </p>
+              <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-gray-700">
+                {matchReasons[0]}
+              </p>
+            </div>
+          )}
 
           {/* Gender */}
           {gender && (
