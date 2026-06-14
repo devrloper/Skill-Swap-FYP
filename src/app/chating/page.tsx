@@ -26,8 +26,10 @@ import {
 } from "lucide-react";
 import {
   addDoc,
+  arrayUnion,
   collection,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -56,6 +58,7 @@ type ChatUser = {
   avatar: string;
   lastMsg: string;
   lastMessageAt: number;
+  unreadCount: number;
   online: boolean;
 };
 
@@ -175,6 +178,7 @@ function mergeUserRecords(
   profilesMap: Map<string, FirestoreRecord>,
   currentUserId: string,
   lastMessages: Map<string, { text: string; createdAt: number }>,
+  unreadCounts: Map<string, number>,
 ) {
   const ids = new Set([...usersMap.keys(), ...profilesMap.keys()]);
 
@@ -201,6 +205,7 @@ function mergeUserRecords(
         avatar: buildAvatarUrl(merged, name, id),
         lastMsg: lastMessage?.text || "Start a conversation",
         lastMessageAt: lastMessage?.createdAt || toMillis(merged.createdAt),
+        unreadCount: unreadCounts.get(id) || 0,
         online: false,
       };
     })
@@ -217,6 +222,7 @@ function WorkableChatContent() {
   const [lastMessages, setLastMessages] = useState<
     Map<string, { text: string; createdAt: number }>
   >(new Map());
+  const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map());
   const [activeUserId, setActiveUserId] = useState("");
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -242,8 +248,15 @@ function WorkableChatContent() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const contacts = useMemo(
-    () => mergeUserRecords(usersMap, profilesMap, user?.uid || "", lastMessages),
-    [usersMap, profilesMap, user?.uid, lastMessages],
+    () =>
+      mergeUserRecords(
+        usersMap,
+        profilesMap,
+        user?.uid || "",
+        lastMessages,
+        unreadCounts,
+      ),
+    [usersMap, profilesMap, user?.uid, lastMessages, unreadCounts],
   );
 
   const filteredContacts = useMemo(() => {
@@ -311,26 +324,71 @@ function WorkableChatContent() {
 
     loadAcceptedChatUsers();
 
+    let messageUnsubs: Array<() => void> = [];
     const unsubChats = onSnapshot(
       collection(db, "users", user.uid, "chats"),
       (snapshot) => {
         const next = new Map<string, { text: string; createdAt: number }>();
+        const seenPeerIds = new Set<string>();
+
+        messageUnsubs.forEach((unsubscribe) => unsubscribe());
+        messageUnsubs = [];
+
         snapshot.docs.forEach((item) => {
           const data = item.data() as FirestoreRecord;
           const peerId = getStringValue(data, ["peerId"]);
           if (!peerId) return;
+          seenPeerIds.add(peerId);
           next.set(peerId, {
             text: getStringValue(data, ["lastMessage"], "Start a conversation"),
             createdAt: toMillis(data.updatedAt) || toMillis(data.createdAt),
           });
+
+          const chatId = getStringValue(data, ["chatId"], item.id);
+          const unreadQuery = query(
+            collection(db, "chatRooms", chatId, "messages"),
+            orderBy("createdAt", "asc"),
+          );
+          messageUnsubs.push(
+            onSnapshot(unreadQuery, (messagesSnapshot) => {
+              const unreadCount = messagesSnapshot.docs.filter((messageDoc) => {
+                const message = messageDoc.data() as FirestoreRecord;
+                const readBy = Array.isArray(message.readBy)
+                  ? message.readBy.map(String)
+                  : [];
+                return (
+                  getStringValue(message, ["senderId"]) !== user.uid &&
+                  !readBy.includes(user.uid)
+                );
+              }).length;
+
+              setUnreadCounts((current) => {
+                const updated = new Map(current);
+                if (unreadCount > 0) {
+                  updated.set(peerId, unreadCount);
+                } else {
+                  updated.delete(peerId);
+                }
+                return updated;
+              });
+            }),
+          );
         });
         setLastMessages(next);
+        setUnreadCounts((current) => {
+          const updated = new Map(current);
+          Array.from(updated.keys()).forEach((peerId) => {
+            if (!seenPeerIds.has(peerId)) updated.delete(peerId);
+          });
+          return updated;
+        });
       },
     );
 
     return () => {
       isMounted = false;
       unsubChats();
+      messageUnsubs.forEach((unsubscribe) => unsubscribe());
     };
   }, [user]);
 
@@ -408,6 +466,45 @@ function WorkableChatContent() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const markChatRead = async (peerId: string) => {
+    if (!user?.uid) return;
+
+    const chatId = pairId(user.uid, peerId);
+    const messagesQuery = query(
+      collection(db, "chatRooms", chatId, "messages"),
+      orderBy("createdAt", "asc"),
+    );
+
+    try {
+      const snapshot = await getDocs(messagesQuery);
+      const unreadDocs = snapshot.docs.filter((item) => {
+        const data = item.data() as FirestoreRecord;
+        const readBy = Array.isArray(data.readBy) ? data.readBy.map(String) : [];
+        return (
+          getStringValue(data, ["senderId"]) !== user.uid &&
+          !readBy.includes(user.uid)
+        );
+      });
+
+      if (!unreadDocs.length) return;
+
+      await Promise.all(
+        unreadDocs.map((item) =>
+          updateDoc(item.ref, {
+            readBy: arrayUnion(user.uid),
+          }),
+        ),
+      );
+      setUnreadCounts((current) => {
+        const updated = new Map(current);
+        updated.delete(peerId);
+        return updated;
+      });
+    } catch (error) {
+      console.error("Failed to mark chat as read:", error);
+    }
+  };
 
   const ensureChatRoom = async (peer: ChatUser, text: string) => {
     if (!user?.uid) return "";
@@ -771,23 +868,37 @@ function WorkableChatContent() {
                   onClick={() => {
                     setActiveUserId(contact.id);
                     setMobileView("chat");
+                    markChatRead(contact.id);
                   }}
                   className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
-                    activeUser?.id === contact.id
-                      ? "bg-slate-50 shadow-inner"
-                      : "hover:bg-slate-50"
+                    contact.unreadCount > 0
+                      ? "bg-purple-50 ring-1 ring-purple-200 shadow-sm"
+                      : activeUser?.id === contact.id
+                        ? "bg-slate-50 shadow-inner"
+                        : "hover:bg-slate-50"
                   }`}
                 >
-                  <img
-                    src={contact.avatar}
-                    className="w-11 h-11 rounded-full border-2 border-white shadow-sm object-cover"
-                    alt={contact.name}
-                  />
+                  <div className="relative shrink-0">
+                    <img
+                      src={contact.avatar}
+                      className="w-11 h-11 rounded-full border-2 border-white shadow-sm object-cover"
+                      alt={contact.name}
+                    />
+                    {contact.unreadCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#4B164C] px-1.5 text-[10px] font-black text-white ring-2 ring-white">
+                        {contact.unreadCount > 9 ? "9+" : contact.unreadCount}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0 text-left">
                     <div className="flex justify-between items-center gap-2">
                       <p
                         className={`font-bold text-sm truncate ${
-                          activeUser?.id === contact.id ? "text-[#4B164C]" : "text-slate-700"
+                          contact.unreadCount > 0
+                            ? "text-[#4B164C]"
+                            : activeUser?.id === contact.id
+                              ? "text-[#4B164C]"
+                              : "text-slate-700"
                         }`}
                       >
                         {contact.name}
@@ -796,7 +907,23 @@ function WorkableChatContent() {
                         {formatLastSeen(contact.lastMessageAt)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 truncate">{contact.lastMsg}</p>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <p
+                        className={`min-w-0 truncate text-xs ${
+                          contact.unreadCount > 0
+                            ? "font-semibold text-slate-700"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {contact.lastMsg}
+                      </p>
+                      {contact.unreadCount > 0 && (
+                        <span className="shrink-0 rounded-full bg-[#4B164C] px-2 py-0.5 text-[10px] font-black text-white">
+                          {contact.unreadCount} unseen{" "}
+                          {contact.unreadCount === 1 ? "msg" : "msgs"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               ))}
