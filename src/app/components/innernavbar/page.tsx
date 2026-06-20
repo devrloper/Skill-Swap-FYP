@@ -314,28 +314,29 @@ export default function Navbar() {
   const creditsBadge = (
     <Link
       href="/pricing"
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-bold transition sm:gap-1.5 sm:px-3 ${
         credits > 0
           ? "border-purple-100 bg-purple-50 text-purple-700 hover:bg-purple-100"
           : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
       }`}
       title={credits > 0 ? "Available credits" : "No credits left. Buy paid credits."}
     >
-      <Coins className="h-4 w-4" />
-      {credits} Credits
+      <Coins className="h-4 w-4 shrink-0" />
+      <span>{credits}</span>
+      <span className="hidden sm:inline">Credits</span>
     </Link>
   );
 
   return (
     <>
       <header className="fixed top-0 left-0 w-full bg-white/70 backdrop-blur-md z-50 shadow-sm">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 py-4 flex items-center justify-between">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-6 sm:py-4 md:px-8 lg:px-10">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg w-10 h-10 flex items-center justify-center rounded-full">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-base font-bold text-white sm:h-10 sm:w-10 sm:text-lg">
               S
             </div>
-            <span className="text-lg sm:text-xl font-semibold text-gray-800 whitespace-nowrap">
+            <span className="truncate text-base font-semibold text-gray-800 sm:text-xl">
               Skill Swap
             </span>
           </div>
@@ -565,7 +566,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Right Section */}
-          <div className="flex items-center gap-3 lg:hidden">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:hidden">
             {creditsBadge}
             <div className="relative" ref={notificationsMobileRef}>
               <button
@@ -577,7 +578,7 @@ export default function Navbar() {
                   if (next) await fetchNotifications();
                 }}
               >
-                <Bell className="w-6 h-6 text-gray-700 cursor-pointer" />
+                <Bell className="h-5 w-5 cursor-pointer text-gray-700 sm:h-6 sm:w-6" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] rounded-full ring-2 ring-white flex items-center justify-center">
                     {unreadCount > 9 ? "9+" : unreadCount}
@@ -586,7 +587,7 @@ export default function Navbar() {
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-3 w-80 bg-white shadow-xl rounded-2xl border border-gray-200 z-50 overflow-hidden">
+                <div className="fixed left-3 right-3 top-16 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-80">
                   <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                     <p className="font-semibold text-gray-800">Notifications</p>
                     <button
@@ -697,17 +698,17 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-            <div className="relative w-9 h-9">
+            <div className="relative h-8 w-8 shrink-0 sm:h-9 sm:w-9">
               {profilePhotoURL || user?.photoURL ? (
                 //  Google Sign-in Image
                 <img
                   src={profilePhotoURL || user?.photoURL || ""}
                   alt="User"
-                  className="w-9 h-9 rounded-full object-cover border border-gray-300"
+                  className="h-8 w-8 rounded-full border border-gray-300 object-cover sm:h-9 sm:w-9"
                 />
               ) : (
                 // ✅ Email Signup → First Letter
-                <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold uppercase">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold uppercase text-white sm:h-9 sm:w-9 sm:text-base">
                   {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
                 </div>
               )}
@@ -718,7 +719,7 @@ export default function Navbar() {
               {/* Dropdown */}
               {profileOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-lg border border-gray-200 z-50"
+                  className="absolute right-0 z-50 mt-2 w-[min(12rem,calc(100vw-1.5rem))] rounded-lg border border-gray-200 bg-white shadow-xl"
                   onMouseLeave={() => setProfileOpen(false)}
                 >
                   <div className="flex flex-col items-center gap-2 p-4 border-b border-gray-100">
@@ -751,7 +752,7 @@ export default function Navbar() {
             </div>
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-700 focus:outline-none"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-purple-50 focus:outline-none"
               aria-label="Toggle Menu"
             >
               {isOpen ? (
@@ -789,7 +790,7 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="lg:hidden bg-white/90 backdrop-blur-md border-t border-gray-200 h-screen flex flex-col items-center space-y-4 pt-6 px-6">
+          <div className="flex max-h-[calc(100dvh-4rem)] flex-col items-center space-y-4 overflow-y-auto border-t border-gray-200 bg-white/90 px-6 pt-6 pb-10 backdrop-blur-md lg:hidden">
             {/* Mobile / Tablet Links */}
             <Link
               href="/"

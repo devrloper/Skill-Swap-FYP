@@ -531,12 +531,12 @@ export default function UserDashboard() {
           </motion.div>
         )}
       </AnimatePresence>{" "}
-      <div className="min-h-screen bg-gradient-to-br from-[#fbc2eb] to-purple-600 p-6 font-sans text-slate-700">
+      <div className="min-h-screen bg-gradient-to-br from-[#fbc2eb] to-purple-600 px-3 py-4 font-sans text-slate-700 sm:p-6">
         <Navbar />
-        <div className="max-w-[1400px] mx-auto bg-white/30 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/40 overflow-hidden flex flex-col md:flex-row min-h-[850px]  mt-14">
+        <div className="mx-auto mt-14 flex min-h-[calc(100dvh-5.5rem)] max-w-[1400px] flex-col overflow-hidden rounded-[24px] border border-white/40 bg-white/30 shadow-2xl backdrop-blur-xl md:flex-row md:rounded-[40px]">
           {/* --- SIDEBAR --- */}
-          <aside className="w-full md:w-64 bg-white/20 backdrop-blur-lg border-r border-white/20 p-8 flex flex-col">
-            <div className="flex flex-col items-center mb-10">
+          <aside className="w-full border-b border-white/20 bg-white/20 p-4 backdrop-blur-lg md:w-64 md:border-b-0 md:border-r md:p-8">
+            <div className="mb-4 flex items-center gap-3 md:mb-10 md:flex-col">
               <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center mb-2 shadow-inner">
                 <Users className="text-indigo-600" size={24} />
               </div>
@@ -545,7 +545,7 @@ export default function UserDashboard() {
               </h2>
             </div>
 
-            <nav className="space-y-2 flex-1">
+            <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:block md:space-y-2 md:overflow-visible md:px-0 md:pb-0">
               {[
                 {
                   name: "Overview",
@@ -562,7 +562,7 @@ export default function UserDashboard() {
                 <div
                   key={item.name}
                   onClick={() => setActiveTab(item.tab)}
-                  className={`flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all ${
+                  className={`flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2.5 cursor-pointer transition-all md:gap-4 md:px-4 md:py-3 ${
                     item.tab === activeTab
                         ? "bg-gradient-to-r from-blue-100/50 to-purple-100/50 shadow-sm border border-white/50 text-indigo-700"
                         : "text-slate-500 hover:bg-white/20"
@@ -574,17 +574,17 @@ export default function UserDashboard() {
                       item.tab === activeTab ? "text-indigo-600" : ""
                     }
                   />
-                  <span className="text-sm font-semibold">{item.name}</span>
+                  <span className="whitespace-nowrap text-xs font-semibold md:text-sm">{item.name}</span>
                 </div>
               ))}
             </nav>
           </aside>
 
           {/* --- MAIN CONTENT --- */}
-          <main className="flex-1 p-8 overflow-y-auto">
+          <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             {/* TOP BAR */}
-            <header className="flex items-center justify-between mb-8">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full">
+            <header className="mb-6 flex items-center justify-between sm:mb-8">
+              <div className="flex w-full flex-col items-start justify-between gap-4 md:flex-row md:items-center">
                 {/* Search Bar - Full width on mobile, half on desktop */}
                 <div className="relative w-full md:w-1/2">
                   <Search
@@ -600,7 +600,7 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Icons & Actions - Wraps or shrinks on small screens */}
-                <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto justify-between md:justify-end">
+                <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:justify-end md:gap-6">
                   <button
                     type="button"
                     onClick={() => setActiveTab("notifications")}
@@ -630,7 +630,7 @@ export default function UserDashboard() {
               </div>
             </header>
 
-            <h1 className="text-3xl font-bold text-slate-800 mb-6">
+            <h1 className="mb-5 break-words text-2xl font-bold text-slate-800 sm:mb-6 sm:text-3xl">
               {activeTitle}
             </h1>
 
@@ -678,14 +678,14 @@ export default function UserDashboard() {
                     key={item.label}
                     type="button"
                     onClick={() => setActiveTab(item.tab)}
-                    className="rounded-[28px] border border-white/60 bg-white/45 p-5 text-left shadow-sm transition hover:bg-white/65 hover:shadow-md"
+                    className="min-w-0 rounded-[22px] border border-white/60 bg-white/45 p-4 text-left shadow-sm transition hover:bg-white/65 hover:shadow-md sm:rounded-[28px] sm:p-5"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                           {item.label}
                         </p>
-                        <p className="mt-2 text-2xl font-black text-slate-800">
+                        <p className="mt-2 break-words text-xl font-black text-slate-800 sm:text-2xl">
                           {item.value}
                         </p>
                       </div>
@@ -700,9 +700,9 @@ export default function UserDashboard() {
 
             {/* MY PROFILE */}
             {activeTab === "profile" && (
-              <div className="mb-8 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+              <div className="mb-6 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:mb-8 sm:rounded-[30px] sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex min-w-0 items-center gap-4">
                     <img
                       src={
                         myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"
@@ -720,11 +720,11 @@ export default function UserDashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setEditProfileOpen(true)}
-                      className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white text-sm font-semibold shadow-md hover:brightness-105 transition cursor-pointer"
+                      className="flex-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:brightness-105 sm:flex-none cursor-pointer"
                     >
                       Edit Profile
                     </button>
@@ -732,7 +732,7 @@ export default function UserDashboard() {
                       <button
                         type="button"
                         onClick={() => setViewProfileOpen(true)}
-                        className="px-4 py-2 rounded-full bg-white/60 border border-white/70 text-slate-700 text-sm font-semibold hover:bg-white/70 transition cursor-pointer"
+                        className="flex-1 rounded-full border border-white/70 bg-white/60 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white/70 sm:flex-none cursor-pointer"
                       >
                         View Public
                       </button>
@@ -755,11 +755,11 @@ export default function UserDashboard() {
 
                 {!myProfileLoading && myProfile && (
                   <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
+                    <div className="min-w-0 rounded-2xl border border-white/60 bg-white/50 p-4">
                       <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         About
                       </p>
-                      <p className="mt-2 text-sm text-slate-700">
+                      <p className="mt-2 break-words text-sm text-slate-700">
                         {myProfile.bio || "—"}
                       </p>
                       <p className="mt-3 text-xs text-slate-600">
@@ -772,7 +772,7 @@ export default function UserDashboard() {
                       </p>
                     </div>
 
-                    <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
+                    <div className="min-w-0 rounded-2xl border border-white/60 bg-white/50 p-4">
                       <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         Skills
                       </p>
@@ -803,7 +803,7 @@ export default function UserDashboard() {
                       </div>
                     </div>
 
-                    <div className="bg-white/50 border border-white/60 rounded-2xl p-4">
+                    <div className="min-w-0 rounded-2xl border border-white/60 bg-white/50 p-4">
                       <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
                         AI Interview
                       </p>
@@ -874,9 +874,9 @@ export default function UserDashboard() {
 
             {activeTab === "sessions" && (
               <>
-                <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm mb-6">
+                <div className="mb-6 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6">
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="font-bold text-slate-700 flex items-center gap-2">
                         <Video size={18} className="text-purple-600" />
                         Upcoming Sessions
@@ -911,7 +911,7 @@ export default function UserDashboard() {
                         return (
                           <div
                             key={session.id}
-                            className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm"
+                            className="min-w-0 rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
@@ -922,7 +922,7 @@ export default function UserDashboard() {
                                   {isProvider ? "Learner" : "Provider"}: {getSessionPeerName(session)}
                                 </p>
                               </div>
-                              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                                 {session.status || "scheduled"}
                               </span>
                             </div>
@@ -963,7 +963,7 @@ export default function UserDashboard() {
               <>
                 {/* CONNECT REQUESTS */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                  <div className="min-w-0 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                       <div>
                         <h3 className="font-bold text-slate-700 flex items-center gap-2">
@@ -1045,7 +1045,7 @@ export default function UserDashboard() {
                                   )}
                                 </div>
                               </div>
-                              <div className="flex flex-wrap gap-2 sm:justify-end">
+                              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                                 {getPeerId(r) && (
                                   <Link
                                     href={`/profile/${getPeerId(r)}`}
@@ -1093,8 +1093,8 @@ export default function UserDashboard() {
                     )}
                   </div>
 
-                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="min-w-0 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="font-bold text-slate-700 flex items-center gap-2">
                           <Users size={18} className="text-purple-600" />
@@ -1179,8 +1179,8 @@ export default function UserDashboard() {
             {activeTab === "chats" && (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                  <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="min-w-0 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6 lg:col-span-3">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="font-bold text-slate-700 flex items-center gap-2">
                           <MessageSquare
@@ -1214,7 +1214,7 @@ export default function UserDashboard() {
                         return (
                           <div
                             key={c.id}
-                            className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex items-center justify-between gap-3"
+                            className="flex min-w-0 flex-col gap-3 rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-slate-800 truncate">
@@ -1228,7 +1228,7 @@ export default function UserDashboard() {
                             {peerId && (
                               <Link
                                 href={`/chating?connectionId=${encodeURIComponent(c.id)}&peer=${encodeURIComponent(peerId)}`}
-                                className="inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 transition"
+                                className="inline-flex w-full items-center justify-center gap-1 rounded-2xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
                               >
                                 <MessageSquare size={14} />
                                 Chat
@@ -1247,7 +1247,7 @@ export default function UserDashboard() {
             {activeTab === "notifications" && (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                  <div className="lg:col-span-3 bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                  <div className="min-w-0 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6 lg:col-span-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                       <div>
                         <h3 className="font-bold text-slate-700 flex items-center gap-2">
@@ -1301,7 +1301,7 @@ export default function UserDashboard() {
                         return (
                           <div
                             key={notification.id}
-                            className="bg-white/70 border border-white/70 rounded-3xl p-4 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                            className="flex min-w-0 flex-col gap-3 rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
@@ -1314,7 +1314,7 @@ export default function UserDashboard() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="mt-1 break-words text-xs text-slate-500">
                                 {notification.message ||
                                   "You have a new update."}
                               </p>
@@ -1328,7 +1328,7 @@ export default function UserDashboard() {
                               ) : null}
                             </div>
 
-                            <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                               {peerId && (
                                 <Link
                                   href={`/profile/${peerId}`}
@@ -1377,8 +1377,8 @@ export default function UserDashboard() {
                 {/* TOP GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   {/* Total Employees (Donut) */}
-                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
+                  <div className="min-w-0 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6">
+                    <div className="mb-2 flex items-start justify-between gap-3">
                       <h3 className="font-bold text-slate-700">
                         Total Employees
                       </h3>
@@ -1412,7 +1412,7 @@ export default function UserDashboard() {
                   </div>
 
                   {/* Top Skills */}
-                  <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                  <div className="min-w-0 rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6">
                     <h3 className="font-bold text-slate-700 mb-4">
                       Top Skills
                     </h3>
@@ -1458,7 +1458,7 @@ export default function UserDashboard() {
 
                   {/* Stats Summary (Attendance/Late/Absent) */}
                   <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       {[
                         { label: "Attendance", val: 30 },
                         { label: "Late", val: 3 },
@@ -1478,7 +1478,7 @@ export default function UserDashboard() {
                       ))}
                     </div>
                     {/* Birthday Card */}
-                    <div className="bg-gradient-to-br from-slate-100/80 to-slate-200/80 rounded-[30px] p-4 flex items-center gap-4 relative overflow-hidden border border-white">
+                    <div className="relative flex items-center gap-3 overflow-hidden rounded-[22px] border border-white bg-gradient-to-br from-slate-100/80 to-slate-200/80 p-4 sm:gap-4 sm:rounded-[30px]">
                       <img
                         src="https://i.pravatar.cc/150?u=terry"
                         className="w-12 h-12 rounded-full border-2 border-white"
@@ -1502,7 +1502,7 @@ export default function UserDashboard() {
                 {/* BOTTOM GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Weekly Activity Line Chart */}
-                  <div className="lg:col-span-2 bg-white/40 border border-white/60 rounded-[30px] p-4 sm:p-6 overflow-hidden">
+                  <div className="min-w-0 overflow-hidden rounded-[22px] border border-white/60 bg-white/40 p-4 sm:rounded-[30px] sm:p-6 lg:col-span-2">
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                       <h3 className="font-bold text-slate-700 text-base sm:text-lg">
@@ -1533,7 +1533,7 @@ export default function UserDashboard() {
                           />
 
                           <YAxis
-                            hide={window.innerWidth < 640}
+                            width={28}
                             axisLine={false}
                             tickLine={false}
                             tick={{ fontSize: 10, fontWeight: "bold" }}
@@ -1595,12 +1595,12 @@ export default function UserDashboard() {
 
                   {/* Holiday / Calendar */}
                   <div className="space-y-6">
-                    <div className="bg-white/40 border border-white/60 rounded-[30px] p-6 shadow-sm">
+                    <div className="rounded-[22px] border border-white/60 bg-white/40 p-4 shadow-sm sm:rounded-[30px] sm:p-6">
                       <h3 className="font-bold text-sm mb-4">
                         Employees on holiday
                       </h3>
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center">
+                        <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-orange-100" />
                             <span className="text-xs font-bold">Unhealthy</span>
@@ -1609,7 +1609,7 @@ export default function UserDashboard() {
                             Only today
                           </span>
                         </div>
-                        <div className="flex justify-between items-center">
+                        <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-blue-100" />
                             <span className="text-xs font-bold">
@@ -1624,7 +1624,7 @@ export default function UserDashboard() {
                     </div>
 
                     {/* Mini Calendar mockup */}
-                    <div className="bg-white/60 rounded-[30px] p-4 border border-white shadow-sm text-center">
+                    <div className="rounded-[22px] border border-white bg-white/60 p-4 text-center shadow-sm sm:rounded-[30px]">
                       <p className="text-[10px] font-bold text-slate-400 mb-2">
                         December
                       </p>
