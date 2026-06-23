@@ -12,6 +12,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/signin",
   "/signup",
   "/forgot-password",
+  "/learner"
 ];
 
 function isPublicPath(pathname: string) {

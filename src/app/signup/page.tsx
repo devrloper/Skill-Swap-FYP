@@ -84,6 +84,7 @@ export default function SignupPage() {
         name,
         email,
         role,
+        learnerJourneyStarted: false,
         credits: 0,
         createdAt: serverTimestamp(),
       });

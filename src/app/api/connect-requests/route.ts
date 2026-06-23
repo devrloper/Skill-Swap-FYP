@@ -22,6 +22,7 @@ type CreateSkillRequestBody = {
   message?: string;
   schedule?: string;
   duration?: string;
+  requestType?: "skill_swap" | "mentor";
 };
 
 function parseDuration(value?: string) {
@@ -93,7 +94,8 @@ export async function POST(req: Request) {
     const body = (await req.json()) as CreateSkillRequestBody;
     const senderId = sessionUser.uid.trim();
     const receiverId = body?.receiverId?.trim();
-    const offeredSkill = body?.offeredSkill?.trim();
+    const requestType = body?.requestType === "mentor" ? "mentor" : "skill_swap";
+    const offeredSkill = requestType === "mentor" ? "Learning commitment" : body?.offeredSkill?.trim();
     const requestedSkill = body?.requestedSkill?.trim();
     const message = body?.message?.trim();
     const schedule = body?.schedule?.trim();
@@ -148,7 +150,22 @@ export async function POST(req: Request) {
     );
     const senderInterview = senderInterviewSnap.exists ? senderInterviewSnap.data() || {} : null;
 
-    if (!canSendSkillRequest(senderProfile, senderInterview)) {
+    const senderRole = String(senderUserSnap.data()?.role || "");
+    const learnerJourneySnap = requestType === "mentor"
+      ? await adminDb.collection("learnerJourneys").doc(senderId).get()
+      : null;
+    const journeySkills = Array.isArray(learnerJourneySnap?.data()?.skills)
+      ? learnerJourneySnap?.data()?.skills.map(String)
+      : [];
+
+    if (requestType === "mentor" && (senderRole !== "learner" || !hasMatchingSkill(journeySkills, requestedSkill))) {
+      return NextResponse.json(
+        { error: "Choose this skill in your learner journey before booking a mentor." },
+        { status: 403 },
+      );
+    }
+
+    if (requestType !== "mentor" && !canSendSkillRequest(senderProfile, senderInterview)) {
       return NextResponse.json(
         { error: "Create your profile first (enroll first)." },
         { status: 403 },
@@ -158,7 +175,7 @@ export async function POST(req: Request) {
     const senderSkills = extractProfileSkills(senderProfile);
     const receiverSkills = extractProfileSkills(receiverProfile);
 
-    if (!hasMatchingSkill(senderSkills.teach, offeredSkill)) {
+    if (requestType !== "mentor" && !hasMatchingSkill(senderSkills.teach, offeredSkill)) {
       return NextResponse.json(
         { error: `You do not appear to offer \"${offeredSkill}\" on your profile.` },
         { status: 400 },
@@ -280,15 +297,18 @@ export async function POST(req: Request) {
       requestKey,
       connectionId,
       chatEnabled: false,
+      requestType,
     });
 
     await adminDb.collection("notifications").add({
       userId: receiverId,
       type: "skill_request",
-      title: "New skill swap request",
-      message: senderName
-        ? `${senderName} wants to swap ${offeredSkill} for ${requestedSkill}.`
-        : `Someone wants to swap ${offeredSkill} for ${requestedSkill}.`,
+      title: requestType === "mentor" ? "New mentor session request" : "New skill swap request",
+      message: requestType === "mentor"
+        ? `${senderName || "A learner"} wants your guidance in ${requestedSkill}.`
+        : senderName
+          ? `${senderName} wants to swap ${offeredSkill} for ${requestedSkill}.`
+          : `Someone wants to swap ${offeredSkill} for ${requestedSkill}.`,
       senderId,
       fromUserId: senderId,
       senderName: senderName || null,

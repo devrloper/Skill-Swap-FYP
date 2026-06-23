@@ -101,7 +101,7 @@ const LoginPage = () => {
       // Role-based redirect
       if (role === "learner") {
         showAuthToast("Signed in successfully");
-        router.push("/pricing");
+        router.push(safeNextPath || "/learner");
       } else {
         showAuthToast("Signed in successfully");
         router.push(safeNextPath || "/dashboard"); // or "/" if you want home page
@@ -158,7 +158,7 @@ const LoginPage = () => {
         );
       } else if (role === "learner") {
         showAuthToast("Signed in successfully");
-        router.push("/pricing");
+        router.push(safeNextPath || "/learner");
       } else {
         showAuthToast("Signed in successfully");
         router.push(safeNextPath || "/dashboard");
