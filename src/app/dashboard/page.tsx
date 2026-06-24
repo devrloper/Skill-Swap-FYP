@@ -55,6 +55,9 @@ type ConnectRequestItem = {
   senderName?: string | null;
   receiverName?: string | null;
   fromUserName?: string | null;
+  peerId?: string;
+  peerName?: string | null;
+  users?: string[];
   offeredSkill?: string;
   requestedSkill?: string;
   message?: string | null;
@@ -403,19 +406,26 @@ export default function UserDashboard() {
     }
   };
 
-  const getPeerId = (request: ConnectRequestItem) =>
-    request.senderId ||
-    request.fromUserId ||
-    request.receiverId ||
-    request.toUserId ||
-    "";
+  const getPeerId = (request: ConnectRequestItem) => {
+    if (request.peerId) return request.peerId;
+    if (request.senderId && request.senderId !== userId) return request.senderId;
+    if (request.fromUserId && request.fromUserId !== userId) return request.fromUserId;
+    if (request.receiverId && request.receiverId !== userId) return request.receiverId;
+    if (request.toUserId && request.toUserId !== userId) return request.toUserId;
+    return request.users?.find((id) => id && id !== userId) || "";
+  };
 
   const getPeerName = (request: ConnectRequestItem, fallback = "User") => {
     const peerId = getPeerId(request);
+    const directionName =
+      request.senderId === userId || request.fromUserId === userId
+        ? request.receiverName
+        : request.receiverId === userId || request.toUserId === userId
+          ? request.senderName || request.fromUserName
+          : null;
     return (
-      request.senderName ||
-      request.fromUserName ||
-      request.receiverName ||
+      request.peerName ||
+      directionName ||
       profileNames[peerId] ||
       peerId ||
       fallback
@@ -1211,6 +1221,7 @@ export default function UserDashboard() {
                       {filteredActiveConnections.map((c) => {
                         const peerId = getPeerId(c);
                         const peerName = getPeerName(c);
+                        const currentUserName = myProfile?.fullName || "You";
                         return (
                           <div
                             key={c.id}
@@ -1218,7 +1229,7 @@ export default function UserDashboard() {
                           >
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-slate-800 truncate">
-                                {peerName}
+                                {currentUserName} to {peerName}
                               </p>
                               <p className="text-[11px] text-slate-500 mt-1">
                                 {c.offeredSkill || "Skill"} ↔{" "}
