@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Smile, Paperclip, Send, X, Mic } from "lucide-react";
+import { MessageSquare, Smile, Paperclip, Send, X } from "lucide-react";
 
 export default function Chatbot() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -30,15 +30,19 @@ export default function Chatbot() {
     setIsTyping(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/homechat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMsg }),
       });
 
       const data = await res.json();
-      setMessages((prev) => [...prev, { role: "bot", text: data.reply }]);
-    } catch (error) {
+      const reply =
+        typeof data.reply === "string" && data.reply.trim()
+          ? data.reply.trim()
+          : "I could not generate a reply right now. Please try again.";
+      setMessages((prev) => [...prev, { role: "bot", text: reply }]);
+    } catch {
       setMessages((prev) => [
         ...prev,
         { role: "bot", text: "Something went wrong. Please try again." },

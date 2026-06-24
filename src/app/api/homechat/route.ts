@@ -1,31 +1,51 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// .env se key access ho rahi hai
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const GEMINI_MODELS = [
+  process.env.GEMINI_MODEL,
+  "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+].filter(Boolean) as string[];
 
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
+    const userMessage = String(message || "").trim();
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ reply: "API Key is missing in server env!" }, { status: 500 });
+    if (!userMessage) {
+      return NextResponse.json({ reply: "Please type a message first." }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ reply: "Chat is not configured yet. Please add the Gemini API key." });
+    }
 
-    // AI ko context dena
     const prompt = `You are "Skill Swap AI", a helpful assistant for Skill Swap company. 
     Be professional, concise, and friendly. 
-    User message: ${message}`;
+    User message: ${userMessage}`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    let lastError: unknown = null;
+    for (const modelName of GEMINI_MODELS) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        return NextResponse.json({ reply: text });
+      } catch (error) {
+        lastError = error;
+        console.error(`Gemini Error with ${modelName}:`, error);
+      }
+    }
 
-    return NextResponse.json({ reply: text });
+    throw lastError;
   } catch (error) {
     console.error("Gemini Error:", error);
-    return NextResponse.json({ reply: "I'm having trouble thinking right now. Please try again." }, { status: 500 });
+    return NextResponse.json({
+      reply:
+        "I'm having trouble connecting to Gemini right now, but I can still help with SkillSwap basics: choose a skill, follow your learning path, practise, take the mock test, and pass 70% to get certified.",
+    });
   }
 }
