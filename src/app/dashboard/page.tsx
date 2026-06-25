@@ -17,7 +17,6 @@ import {
   LayoutDashboard,
   CalendarCheck,
   Users,
-  BarChart3,
   ClipboardCheck,
   Search,
   Bell,
@@ -66,6 +65,8 @@ type ConnectRequestItem = {
   status?: string;
   connectionId?: string | null;
   chatEnabled?: boolean;
+  createdAt?: unknown;
+  acceptedAt?: unknown;
 };
 
 type DashboardNotification = {
@@ -150,7 +151,8 @@ type ProfileDoc = {
   };
 };
 
-// Mock data (Function ke bahar reh sakta hai)
+const analyticsColors = ["#06b6d4", "#f59e0b", "#10b981", "#8b5cf6"];
+
 const activityData = [
   { day: "Sun", animation: 20, illustration: 40, uiux: 30 },
   { day: "Mon", animation: 18, illustration: 35, uiux: 50 },
@@ -165,6 +167,8 @@ const genderData = [
   { name: "Men", value: 22, color: "#00C2FF" },
   { name: "Woman", value: 10, color: "#FF85B8" },
 ];
+
+const SHOW_LEGACY_ANALYTICS = false;
 
 function getRequestBadge(status?: string) {
   switch (status) {
@@ -508,6 +512,106 @@ export default function UserDashboard() {
     ),
   );
 
+  const allRequests = [...incomingRequests, ...outgoingRequests];
+  const requestStatusCounts = allRequests.reduce(
+    (acc, request) => {
+      const status = String(request.status || "pending").toLowerCase();
+      if (status === "accepted") acc.accepted += 1;
+      else if (status === "rejected") acc.rejected += 1;
+      else acc.pending += 1;
+      return acc;
+    },
+    { accepted: 0, pending: 0, rejected: 0 },
+  );
+  const activeSessions = sessions.filter(
+    (session) =>
+      !["completed", "cancelled", "rejected"].includes(
+        String(session.status || "").toLowerCase(),
+      ),
+  );
+  const completedSessions = sessions.filter(
+    (session) => String(session.status || "").toLowerCase() === "completed",
+  );
+  const unreadNotificationsCount = dashboardNotifications.filter(
+    (notification) => !notification.read,
+  ).length;
+  const profileCompletion = myProfile?.profileCompleted
+    ? 100
+    : Math.min(100, ((myProfile?.completedSteps?.length || 0) / 4) * 100);
+  const interviewScore =
+    typeof myProfile?.interview?.score === "number"
+      ? myProfile.interview.score
+      : typeof myProfile?.interviewScore === "number"
+        ? myProfile.interviewScore
+        : 0;
+  const requestSuccessRate = allRequests.length
+    ? Math.round((requestStatusCounts.accepted / allRequests.length) * 100)
+    : 0;
+  const allProfileSkills = [
+    ...(myProfile?.skills?.teachSkills || []),
+    ...(myProfile?.skills?.customTeachSkills || []),
+    ...(myProfile?.skills?.learnSkills || []),
+    ...(myProfile?.skills?.customLearnSkills || []),
+  ].filter(Boolean);
+  const skillCounts = allProfileSkills.reduce<Record<string, number>>(
+    (acc, skill) => {
+      acc[skill] = (acc[skill] || 0) + 1;
+      return acc;
+    },
+    {},
+  );
+  const topSkills = Object.entries(skillCounts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 5);
+  const analyticsDistribution = [
+    { name: "Sessions", value: sessions.length, color: analyticsColors[0] },
+    { name: "Requests", value: allRequests.length, color: analyticsColors[1] },
+    { name: "Chats", value: activeConnections.length, color: analyticsColors[2] },
+    {
+      name: "Notifications",
+      value: dashboardNotifications.length,
+      color: analyticsColors[3],
+    },
+  ].filter((item) => item.value > 0);
+  const analyticsPieData = analyticsDistribution.length
+    ? analyticsDistribution
+    : [{ name: "No activity", value: 1, color: "#cbd5e1" }];
+  const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    return date;
+  });
+  const analyticsActivityData = lastSevenDays.map((date) => {
+    const start = date.getTime();
+    const end = start + 24 * 60 * 60 * 1000;
+    const inDay = (value: unknown) => {
+      const millis = toMillis(value);
+      return Boolean(millis && millis >= start && millis < end);
+    };
+
+    return {
+      day: new Intl.DateTimeFormat("en", { weekday: "short" }).format(date),
+      sessions: sessions.filter((session) =>
+        inDay(session.dateTime || session.meetingDateTime),
+      ).length,
+      requests: allRequests.filter((request) =>
+        inDay(request.createdAt || request.acceptedAt),
+      ).length,
+      notifications: dashboardNotifications.filter((notification) =>
+        inDay(notification.createdAt),
+      ).length,
+    };
+  });
+  const nextSessions = activeSessions
+    .slice()
+    .sort(
+      (a, b) =>
+        (toMillis(a.dateTime || a.meetingDateTime) || Number.MAX_SAFE_INTEGER) -
+        (toMillis(b.dateTime || b.meetingDateTime) || Number.MAX_SAFE_INTEGER),
+    )
+    .slice(0, 4);
+
   const myProfilePhotoURL =
     myProfile?.photoURL && !myProfile.photoURL.startsWith("blob:")
       ? myProfile.photoURL.startsWith("data:")
@@ -522,12 +626,8 @@ export default function UserDashboard() {
       requests: "Skill Requests",
       chats: "Active Chats",
       notifications: "Notifications",
-      analytics: "Analytics",
+      analytics: `Welcome ${myProfile?.fullName || "User"}!`,
     }[activeTab] || "Dashboard";
-
-  const unreadNotificationsCount = dashboardNotifications.filter(
-    (notification) => !notification.read,
-  ).length;
 
   const handleOpenNotifications = async () => {
     setActiveTab("notifications");
@@ -578,7 +678,6 @@ export default function UserDashboard() {
                 { name: "Requests", icon: ClipboardCheck, tab: "requests" as const },
                 { name: "Chats", icon: MessageSquare, tab: "chats" as const },
                 { name: "Notifications", icon: Bell, tab: "notifications" as const },
-                { name: "Analytics", icon: BarChart3, tab: "analytics" as const },
               ].map((item) => (
                 <div
                   key={item.name}
@@ -691,14 +790,20 @@ export default function UserDashboard() {
                     tab: "requests" as const,
                   },
                   {
+                    label: "Accepted Requests",
+                    value: requestStatusCounts.accepted,
+                    icon: CheckCircle2,
+                    tab: "requests" as const,
+                  },
+                  {
                     label: "Active Chats",
                     value: filteredActiveConnections.length,
                     icon: MessageSquare,
                     tab: "chats" as const,
                   },
                   {
-                    label: "Notifications",
-                    value: filteredNotifications.length,
+                    label: "Unread Alerts",
+                    value: unreadNotificationsCount,
                     icon: Bell,
                     tab: "notifications" as const,
                   },
@@ -712,7 +817,7 @@ export default function UserDashboard() {
                     label: "Interview",
                     value: myProfile?.interview?.result || myProfile?.interviewStatus || "Pending",
                     icon: Sparkles,
-                    tab: "analytics" as const,
+                    tab: "overview" as const,
                   },
                 ].map((item) => (
                   <button
@@ -1414,7 +1519,232 @@ export default function UserDashboard() {
               </>
             )}
 
-            {activeTab === "analytics" && (
+            {activeTab === "overview" && (
+              <>
+                <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <div className="min-w-0 rounded-[24px] border border-white/70 bg-white/60 p-5 shadow-sm sm:p-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-slate-800">Activity Mix</h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Live totals from your dashboard.
+                        </p>
+                      </div>
+                      <span className="text-2xl font-black text-slate-900">
+                        {sessions.length + allRequests.length + activeConnections.length}
+                      </span>
+                    </div>
+                    <div className="relative mt-4 h-44">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={analyticsPieData}
+                            innerRadius={48}
+                            outerRadius={68}
+                            paddingAngle={5}
+                            dataKey="value"
+                          >
+                            {analyticsPieData.map((entry, index) => (
+                              <Cell key={`analytics-cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {analyticsPieData.map((item) => (
+                        <span
+                          key={item.name}
+                          className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold text-slate-600"
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          {item.name}: {analyticsDistribution.length ? item.value : 0}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 rounded-[24px] border border-white/70 bg-white/60 p-5 shadow-sm sm:p-6">
+                    <h3 className="font-bold text-slate-800">Profile Health</h3>
+                    <div className="mt-5 space-y-4">
+                      {[
+                        { label: "Profile Completion", value: Math.round(profileCompletion), color: "bg-cyan-500" },
+                        { label: "Interview Score", value: interviewScore, color: "bg-violet-500" },
+                        { label: "Request Success", value: requestSuccessRate, color: "bg-emerald-500" },
+                      ].map((item) => (
+                        <div key={item.label}>
+                          <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-600">
+                            <span>{item.label}</span>
+                            <span>{item.value}%</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-white/80">
+                            <div
+                              className={`h-full rounded-full ${item.color}`}
+                              style={{ width: `${Math.min(100, Math.max(0, item.value))}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-5 rounded-2xl bg-slate-950 p-4 text-white">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-200">
+                        Interview
+                      </p>
+                      <p className="mt-2 text-lg font-black">
+                        {myProfile?.interview?.result || myProfile?.interviewStatus || "Not attempted"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        {typeof myProfile?.interview?.correct === "number" &&
+                        typeof myProfile?.interview?.total === "number"
+                          ? `${myProfile.interview.correct}/${myProfile.interview.total} correct answers`
+                          : "Take the interview to unlock detailed scoring."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 rounded-[24px] border border-white/70 bg-white/60 p-5 shadow-sm sm:p-6">
+                    <h3 className="font-bold text-slate-800">Your Skills</h3>
+                    <div className="mt-4 space-y-3">
+                      {topSkills.length > 0 ? (
+                        topSkills.map(([skill, count], index) => (
+                          <div key={skill} className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-cyan-400 text-xs font-black text-white">
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-slate-800">
+                                {skill}
+                              </p>
+                              <p className="text-[11px] text-slate-500">
+                                {count > 1 ? `${count} mentions` : "Added to profile"}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-white/70 bg-white/60 p-4 text-sm text-slate-600">
+                          Add skills in your profile to see skill insights here.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <div className="min-w-0 overflow-hidden rounded-[24px] border border-white/70 bg-white/60 p-5 shadow-sm sm:p-6 lg:col-span-2">
+                    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="font-bold text-slate-800">
+                          Last 7 Days Activity
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Sessions, requests, and notifications by day.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (userId) {
+                            loadConnectRequests(userId);
+                            loadSessions();
+                            loadDashboardNotifications(userId);
+                          }
+                        }}
+                        className="inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-white"
+                      >
+                        <Clock3 size={14} />
+                        Refresh overview
+                      </button>
+                    </div>
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={analyticsActivityData}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: "bold" }} />
+                          <YAxis width={28} axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: "bold" }} allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{
+                              borderRadius: "14px",
+                              border: "1px solid #e2e8f0",
+                              boxShadow: "0 12px 30px rgba(15,23,42,0.12)",
+                            }}
+                          />
+                          <Line type="monotone" dataKey="sessions" stroke="#06b6d4" strokeWidth={3} dot={false} />
+                          <Line type="monotone" dataKey="requests" stroke="#f59e0b" strokeWidth={3} dot={false} />
+                          <Line type="monotone" dataKey="notifications" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 flex flex-wrap justify-center gap-4 text-[11px] font-bold text-slate-600">
+                      <span className="inline-flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-cyan-500" />Sessions</span>
+                      <span className="inline-flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-amber-500" />Requests</span>
+                      <span className="inline-flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-violet-500" />Notifications</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="rounded-[24px] border border-white/70 bg-white/60 p-5 shadow-sm sm:p-6">
+                      <h3 className="font-bold text-slate-800">Request Pipeline</h3>
+                      <div className="mt-4 space-y-4">
+                        {[
+                          { label: "Accepted", value: requestStatusCounts.accepted, color: "bg-emerald-500" },
+                          { label: "Pending", value: requestStatusCounts.pending, color: "bg-amber-500" },
+                          { label: "Rejected", value: requestStatusCounts.rejected, color: "bg-rose-500" },
+                        ].map((item) => {
+                          const percent = allRequests.length
+                            ? Math.round((item.value / allRequests.length) * 100)
+                            : 0;
+                          return (
+                            <div key={item.label}>
+                              <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-600">
+                                <span>{item.label}</span>
+                                <span>{item.value}</span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-white/80">
+                                <div
+                                  className={`h-full rounded-full ${item.color}`}
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[24px] border border-white/70 bg-white/60 p-5 shadow-sm sm:p-6">
+                      <h3 className="font-bold text-slate-800">Next Sessions</h3>
+                      <div className="mt-4 space-y-3">
+                        {nextSessions.length > 0 ? (
+                          nextSessions.map((session) => (
+                            <div key={session.id} className="rounded-2xl bg-white/75 p-3 text-xs text-slate-600">
+                              <p className="font-bold text-slate-800">
+                                {session.topic || "Skill Swap Meeting"}
+                              </p>
+                              <p className="mt-1">
+                                {formatSessionDate(session.dateTime || session.meetingDateTime)}
+                              </p>
+                              <p className="mt-1 font-semibold text-purple-700">
+                                {formatStartsIn(session.meetingStartsInMs)}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 p-4 text-xs text-slate-500">
+                            No upcoming sessions scheduled.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {SHOW_LEGACY_ANALYTICS && activeTab === "analytics" && (
               <>
                 {/* TOP GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
