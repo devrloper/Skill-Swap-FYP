@@ -6,12 +6,14 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  sendEmailVerification,
   setPersistence,
   browserSessionPersistence,
   browserLocalPersistence,
+  signOut,
 } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChipLoader from "@/app/components/loader/page";
 import { motion, AnimatePresence } from "framer-motion";
@@ -75,6 +77,19 @@ const LoginPage = () => {
       );
       const user = userCredential.user;
 
+      await user.reload();
+      if (!user.emailVerified) {
+        await sendEmailVerification(user, {
+          url: `${window.location.origin}/signin`,
+          handleCodeInApp: false,
+        });
+        await signOut(auth);
+        setError(
+          "Please verify your email first. We sent a new verification link to your inbox.",
+        );
+        return;
+      }
+
       // Create httpOnly session cookie for route protection (middleware).
       await establishSessionCookie(user);
 
@@ -90,10 +105,12 @@ const LoginPage = () => {
       }
 
       // Get user role from Firestore
-      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
         throw new Error("User data not found");
       }
+      await updateDoc(userRef, { emailVerified: true });
 
       const userData = userSnap.data() as { role?: string };
       const { role } = userData;
@@ -140,9 +157,16 @@ const LoginPage = () => {
           name: user.displayName || "",
           email: user.email,
           role: "exchanger", // default role
+          emailVerified: user.emailVerified,
           credits: 0,
           createdAt: serverTimestamp(),
         });
+      } else {
+        await setDoc(
+          userRef,
+          { emailVerified: user.emailVerified },
+          { merge: true },
+        );
       }
 
       const userData = (await getDoc(userRef)).data() as { role?: string } | undefined;

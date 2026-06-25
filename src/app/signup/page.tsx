@@ -12,8 +12,10 @@ import {
 import { auth, db } from "@/app/lib/firebase";
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   setPersistence,
   browserSessionPersistence,
+  signOut,
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -79,19 +81,29 @@ export default function SignupPage() {
         displayName: name, // Used for the avatar initial.
       });
 
+      await sendEmailVerification(user, {
+        url: `${window.location.origin}/signin`,
+        handleCodeInApp: false,
+      });
+
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
         email,
         role,
+        emailVerified: false,
         learnerJourneyStarted: false,
         credits: 0,
         createdAt: serverTimestamp(),
       });
 
-      showAuthToast("Account created successfully");
+      await signOut(auth);
 
-      setTimeout(() => router.push("/signin"), 1500);
+      showAuthToast("Verification link sent to your email");
+      setMessage("Please check your email and verify your account before signing in.");
+      setIsError(false);
+
+      setTimeout(() => router.push("/signin"), 2500);
     } catch (err: unknown) {
       console.error("FULL SIGNUP ERROR:", err);
 
