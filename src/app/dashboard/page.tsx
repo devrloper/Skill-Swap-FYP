@@ -525,6 +525,17 @@ export default function UserDashboard() {
       analytics: "Analytics",
     }[activeTab] || "Dashboard";
 
+  const unreadNotificationsCount = dashboardNotifications.filter(
+    (notification) => !notification.read,
+  ).length;
+
+  const handleOpenNotifications = async () => {
+    setActiveTab("notifications");
+    if (userId) {
+      await loadDashboardNotifications(userId);
+    }
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -613,19 +624,39 @@ export default function UserDashboard() {
                 <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:justify-end md:gap-6">
                   <button
                     type="button"
-                    onClick={() => setActiveTab("notifications")}
-                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={handleOpenNotifications}
+                    disabled={notificationsLoading}
+                    className="group relative flex items-center gap-3 rounded-full border border-white/60 bg-white/65 px-3 py-2 shadow-sm transition hover:bg-white hover:shadow-md disabled:cursor-wait disabled:opacity-70"
+                    aria-label={`Open notifications${unreadNotificationsCount ? `, ${unreadNotificationsCount} unread` : ""}`}
                   >
                     <img
-                      src="https://i.pravatar.cc/150?u=admin"
-                      className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                      alt="Admin"
+                      src={myProfilePhotoURL || "https://i.pravatar.cc/150?u=me"}
+                      className="h-9 w-9 rounded-full border-2 border-white object-cover shadow-sm"
+                      alt={myProfile?.fullName || "Profile"}
                     />
                     {/* Label hidden on very small screens to save space */}
-                    <span className="hidden sm:inline text-sm font-bold text-slate-600">
-                      Notifications
+                    <span className="hidden sm:flex flex-col items-start leading-tight">
+                      <span className="text-sm font-bold text-slate-700">
+                        Notifications
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-500">
+                        {notificationsLoading
+                          ? "Refreshing..."
+                          : unreadNotificationsCount
+                            ? `${unreadNotificationsCount} unread`
+                            : "All caught up"}
+                      </span>
                     </span>
-                    <Bell size={18} className="text-blue-500" />
+                    <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600 transition group-hover:bg-blue-100">
+                      <Bell size={19} />
+                      {unreadNotificationsCount > 0 && (
+                        <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-white">
+                          {unreadNotificationsCount > 9
+                            ? "9+"
+                            : unreadNotificationsCount}
+                        </span>
+                      )}
+                    </span>
                   </button>
 
                   <button
