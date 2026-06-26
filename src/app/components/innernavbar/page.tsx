@@ -45,6 +45,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -63,6 +64,8 @@ export default function Navbar() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setAuthReady(true);
+      if (!currentUser) setProfileOpen(false);
     });
 
     return () => unsubscribe();
@@ -113,8 +116,12 @@ export default function Navbar() {
     let cancelled = false;
     (async () => {
       try {
-        const snap = await getDoc(doc(db, "profiles", user.uid));
-        const data = snap.exists() ? snap.data() : null;
+        const [profileSnap, userSnap] = await Promise.all([
+          getDoc(doc(db, "profiles", user.uid)),
+          getDoc(doc(db, "users", user.uid)),
+        ]);
+        const data = profileSnap.exists() ? profileSnap.data() : null;
+        const userData = userSnap.exists() ? userSnap.data() : null;
         if (cancelled) return;
 
         setProfilePhotoURL(
@@ -123,13 +130,20 @@ export default function Navbar() {
             : "",
         );
         setProfileName(
-          (data?.fullName || data?.name || user.displayName || "") as string,
+          (data?.fullName ||
+            data?.name ||
+            userData?.fullName ||
+            userData?.name ||
+            userData?.displayName ||
+            user.displayName ||
+            user.email?.split("@")[0] ||
+            "") as string,
         );
       } catch (err) {
         console.error("Failed to load profile avatar:", err);
         if (!cancelled) {
           setProfilePhotoURL("");
-          setProfileName(user.displayName || "");
+          setProfileName(user.displayName || user.email?.split("@")[0] || "");
         }
       }
     })();
@@ -137,7 +151,7 @@ export default function Navbar() {
     return () => {
       cancelled = true;
     };
-  }, [user?.uid, user?.displayName]);
+  }, [user?.uid, user?.displayName, user?.email]);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -311,6 +325,12 @@ export default function Navbar() {
 
   const navLinkClass =
     "relative text-gray-700 hover:text-purple-600 transition font-medium after:absolute after:left-1/2 after:-bottom-1 after:w-0 after:h-[2px] after:bg-gradient-to-r after:from-purple-600 after:to-pink-500 after:transition-all after:duration-300 hover:after:w-full hover:after:left-0";
+  const accountName =
+    profileName ||
+    user?.displayName ||
+    user?.email?.split("@")[0] ||
+    "";
+  const accountInitial = accountName.charAt(0) || user?.email?.charAt(0) || "S";
   const creditsBadge = (
     <Link
       href="/pricing"
@@ -377,7 +397,7 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Right Section */}
-          <div className="hidden lg:flex items-center gap-4">
+          <div className={`hidden lg:flex items-center gap-4 ${authReady && user ? "" : "invisible"}`}>
             {creditsBadge}
             {/* Notifications */}
             <div className="relative" ref={notificationsDesktopRef}>
@@ -525,7 +545,7 @@ export default function Navbar() {
                   />
                 ) : (
                   <div className="w-full h-full bg-purple-600 flex items-center justify-center text-white font-semibold uppercase">
-                    {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                    {accountInitial}
                   </div>
                 )}
               </button>
@@ -543,11 +563,11 @@ export default function Navbar() {
                     ) : (
                       // Fallback: show initials if no image
                       <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold text-lg uppercase">
-                        {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                        {accountInitial}
                       </div>
                     )}
                     <p className="font-semibold text-gray-800 text-center truncate">
-                      {profileName || user?.displayName || "User"}
+                      {accountName || "Account"}
                     </p>
                     <p className="text-xs text-gray-500 truncate text-center">
                       {user?.email}
@@ -566,7 +586,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Right Section */}
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:hidden">
+          <div className={`flex shrink-0 items-center gap-2 sm:gap-3 lg:hidden ${authReady && user ? "" : "invisible"}`}>
             {creditsBadge}
             <div className="relative" ref={notificationsMobileRef}>
               <button
@@ -709,7 +729,7 @@ export default function Navbar() {
               ) : (
                 // ✅ Email Signup → First Letter
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold uppercase text-white sm:h-9 sm:w-9 sm:text-base">
-                  {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                  {accountInitial}
                 </div>
               )}
 
@@ -731,11 +751,11 @@ export default function Navbar() {
                       />
                     ) : (
                       <div className="w-14 h-14 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold text-lg uppercase">
-                        {profileName?.charAt(0) || user?.displayName?.charAt(0) || user?.email?.charAt(0)}
+                        {accountInitial}
                       </div>
                     )}
                     <p className="font-semibold text-gray-800 text-center truncate">
-                      {profileName || user?.displayName || "User"}
+                      {accountName || "Account"}
                     </p>
                     <p className="text-xs text-gray-500 truncate text-center">
                       {user?.email}

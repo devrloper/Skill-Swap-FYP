@@ -116,6 +116,8 @@ type WrongAnswerItem = {
 
 type ProfileDoc = {
   fullName?: string;
+  name?: string;
+  displayName?: string;
   email?: string;
   location?: string;
   phone?: string;
@@ -351,9 +353,29 @@ export default function UserDashboard() {
   const loadMyProfile = async (uid: string) => {
     setMyProfileLoading(true);
     try {
-      const snap = await getDoc(doc(db, "profiles", uid));
-      const data = snap.exists() ? (snap.data() as ProfileDoc) : null;
-      setMyProfile(data);
+      const [profileSnap, userSnap] = await Promise.all([
+        getDoc(doc(db, "profiles", uid)),
+        getDoc(doc(db, "users", uid)),
+      ]);
+      const profileData = profileSnap.exists()
+        ? (profileSnap.data() as ProfileDoc)
+        : {};
+      const userData = userSnap.exists()
+        ? (userSnap.data() as ProfileDoc)
+        : {};
+      setMyProfile({
+        ...userData,
+        ...profileData,
+        fullName:
+          profileData.fullName ||
+          profileData.name ||
+          userData.fullName ||
+          userData.name ||
+          userData.displayName ||
+          userData.email?.split("@")[0] ||
+          "",
+        email: profileData.email || userData.email,
+      });
     } catch (err) {
       console.error("Failed to load my profile:", err);
       setMyProfile(null);
@@ -615,18 +637,24 @@ export default function UserDashboard() {
   const myProfilePhotoURL =
     myProfile?.photoURL && !myProfile.photoURL.startsWith("blob:")
       ? myProfile.photoURL.startsWith("data:")
-        ? myProfile.photoURL
-        : `${myProfile.photoURL}${myProfile.photoUpdatedAt ? `?v=${myProfile.photoUpdatedAt}` : ""}`
+      ? myProfile.photoURL
+      : `${myProfile.photoURL}${myProfile.photoUpdatedAt ? `?v=${myProfile.photoUpdatedAt}` : ""}`
       : "";
+  const dashboardName =
+    myProfile?.fullName ||
+    myProfile?.name ||
+    myProfile?.displayName ||
+    myProfile?.email?.split("@")[0] ||
+    "there";
   const activeTitle =
     {
-      overview: `Welcome ${myProfile?.fullName || "User"}!`,
+      overview: `Welcome ${dashboardName}!`,
       profile: "My Profile",
       sessions: "My Sessions",
       requests: "Skill Requests",
       chats: "Active Chats",
       notifications: "Notifications",
-      analytics: `Welcome ${myProfile?.fullName || "User"}!`,
+      analytics: `Welcome ${dashboardName}!`,
     }[activeTab] || "Dashboard";
 
   const handleOpenNotifications = async () => {
