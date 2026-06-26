@@ -194,7 +194,7 @@ function MiniBars({
 
 function ProgressBar({
   value,
-  color = "bg-gradient-to-r from-violet-400 to-pink-400",
+  color = "bg-gradient-to-r from-purple-800 to-pink-500",
 }: {
   value: number;
   color?: string;
@@ -250,7 +250,7 @@ function Section({
   return (
     <section className="rounded-[26px] border border-white/70 bg-white/60 p-5 shadow-[0_20px_60px_rgba(156,120,255,0.13)] backdrop-blur-xl">
       <div className="mb-5 flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-400 to-pink-300 text-white shadow-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-purple-800 to-pink-500 text-white shadow-sm">
           <Icon size={18} />
         </div>
         <div>
@@ -305,7 +305,7 @@ function SkillBars({ items, empty }: { items: SkillItem[]; empty: string }) {
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-violet-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-400 via-fuchsia-300 to-pink-300"
+              className="h-full rounded-full bg-gradient-to-r from-purple-800 to-pink-500"
               style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }}
             />
           </div>
@@ -325,7 +325,7 @@ function Sidebar({
   return (
     <aside className="flex h-full flex-col border-r border-white/60 bg-white/55 p-5 text-[#6f6692] backdrop-blur-2xl">
       <div className="mb-7 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-300 to-pink-300 text-lg font-black text-white shadow-[0_12px_35px_rgba(180,130,255,.34)]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-purple-800 to-pink-500 text-lg font-black text-white shadow-[0_12px_35px_rgba(180,130,255,.34)]">
           S
         </div>
         <div>
@@ -356,12 +356,12 @@ function Sidebar({
         })}
       </nav>
 
-      <div className="mt-auto rounded-[24px] border border-white/70 bg-gradient-to-br from-violet-50/90 to-pink-50/80 p-4 shadow-sm">
-        <p className="flex items-center gap-2 text-xs font-black text-[#7c5ce0]">
-          <ShieldCheck size={15} className="text-violet-500" />
+      <div className="mt-auto rounded-[24px] border border-white/20 bg-gradient-to-r from-purple-800 to-pink-500 p-4 text-white shadow-sm">
+        <p className="flex items-center gap-2 text-xs font-black text-white">
+          <ShieldCheck size={15} className="text-white" />
           Admin health
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-[#958cb0]">
+        <p className="mt-2 text-xs leading-relaxed text-white/80">
           Monitor learner journeys, exchanger readiness, requests, credits, and session flow from one place.
         </p>
       </div>
@@ -667,7 +667,7 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-pink-400 px-4 text-sm font-black text-white shadow-[0_12px_35px_rgba(180,130,255,.32)] transition hover:opacity-95"
+                  className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-800 to-pink-500 px-4 text-sm font-black text-white shadow-[0_12px_35px_rgba(180,130,255,.32)] transition hover:opacity-95"
                 >
                   <LogOut size={16} />
                   Logout
@@ -697,28 +697,28 @@ export default function AdminDashboardPage() {
                     value={formatNumber(totals?.users || 0)}
                     detail={`${formatNumber(totals?.learners || 0)} learners, ${formatNumber(totals?.exchangers || 0)} exchangers`}
                     icon={Users}
-                    accent="bg-gradient-to-br from-violet-100 to-pink-100 text-violet-600"
+                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                   />
                   <MetricCard
                     title="Learner journeys"
                     value={formatNumber(totals?.learnerJourneys || 0)}
                     detail={`${health?.learnerActivationRate || 0}% learner activation`}
                     icon={BookOpen}
-                    accent="bg-gradient-to-br from-blue-100 to-violet-100 text-violet-600"
+                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                   />
                   <MetricCard
                     title="Open requests"
                     value={formatNumber(totals?.pendingRequests || 0)}
                     detail={`${health?.requestAcceptanceRate || 0}% acceptance rate`}
                     icon={Target}
-                    accent="bg-gradient-to-br from-pink-100 to-fuchsia-100 text-pink-600"
+                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                   />
                   <MetricCard
                     title="Session flow"
                     value={formatNumber(totals?.sessions || 0)}
                     detail={`${formatNumber(totals?.upcomingSessions || 0)} upcoming meetings`}
                     icon={CalendarClock}
-                    accent="bg-gradient-to-br from-violet-100 to-blue-100 text-violet-600"
+                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                   />
                 </div>
 
@@ -733,15 +733,15 @@ export default function AdminDashboardPage() {
                         <div className="grid gap-5 md:grid-cols-3">
                           <div>
                             <p className="mb-3 text-xs font-black uppercase text-[#9a91b8]">Users</p>
-                            <MiniBars items={summary?.trends.users || []} color="bg-gradient-to-t from-violet-400 to-pink-300" />
+                            <MiniBars items={summary?.trends.users || []} color="bg-gradient-to-r from-purple-800 to-pink-500" />
                           </div>
                           <div>
                             <p className="mb-3 text-xs font-black uppercase text-[#9a91b8]">Requests</p>
-                            <MiniBars items={summary?.trends.requests || []} color="bg-gradient-to-t from-blue-300 to-violet-300" />
+                            <MiniBars items={summary?.trends.requests || []} color="bg-gradient-to-r from-purple-800 to-pink-500" />
                           </div>
                           <div>
                             <p className="mb-3 text-xs font-black uppercase text-[#9a91b8]">Sessions</p>
-                            <MiniBars items={summary?.trends.sessions || []} color="bg-gradient-to-t from-pink-300 to-fuchsia-300" />
+                            <MiniBars items={summary?.trends.sessions || []} color="bg-gradient-to-r from-purple-800 to-pink-500" />
                           </div>
                         </div>
                       </Section>
@@ -749,10 +749,10 @@ export default function AdminDashboardPage() {
                       <Section title="Health scorecard" subtitle="Critical operating ratios" icon={Activity}>
                         <div className="space-y-5">
                           {[
-                            ["Profile completion", health?.profileCompletionRate || 0, "bg-gradient-to-r from-violet-400 to-pink-300"],
-                            ["Learner activation", health?.learnerActivationRate || 0, "bg-gradient-to-r from-blue-300 to-violet-400"],
-                            ["Request acceptance", health?.requestAcceptanceRate || 0, "bg-gradient-to-r from-pink-300 to-fuchsia-300"],
-                            ["Session completion", health?.sessionCompletionRate || 0, "bg-gradient-to-r from-violet-300 to-blue-300"],
+                            ["Profile completion", health?.profileCompletionRate || 0, "bg-gradient-to-r from-purple-800 to-pink-500"],
+                            ["Learner activation", health?.learnerActivationRate || 0, "bg-gradient-to-r from-purple-800 to-pink-500"],
+                            ["Request acceptance", health?.requestAcceptanceRate || 0, "bg-gradient-to-r from-purple-800 to-pink-500"],
+                            ["Session completion", health?.sessionCompletionRate || 0, "bg-gradient-to-r from-purple-800 to-pink-500"],
                           ].map(([label, value, color]) => (
                             <div key={String(label)}>
                               <div className="mb-2 flex items-center justify-between text-sm">
@@ -804,7 +804,7 @@ export default function AdminDashboardPage() {
                           value={formatNumber(totals?.learners || 0)}
                           detail={`${formatNumber(totals?.learnerJourneys || 0)} journeys started`}
                           icon={BookOpen}
-                          accent="bg-gradient-to-br from-blue-100 to-violet-100 text-violet-600"
+                          accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                         />
                         <SkillBars items={summary?.skills.topLearning || []} empty="No learner skill data yet." />
                       </div>
@@ -826,7 +826,7 @@ export default function AdminDashboardPage() {
                           value={formatNumber(totals?.exchangers || 0)}
                           detail={`${formatNumber(totals?.profiles || 0)} completed profiles`}
                           icon={UserCheck}
-                          accent="bg-gradient-to-br from-violet-100 to-pink-100 text-violet-600"
+                          accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                         />
                         <SkillBars items={summary?.skills.topTeaching || []} empty="No teaching skill data yet." />
                       </div>
@@ -879,10 +879,10 @@ export default function AdminDashboardPage() {
                               value={totals?.sessions ? (item.value / totals.sessions) * 100 : 0}
                               color={
                                 item.name === "Upcoming"
-                                  ? "bg-gradient-to-r from-blue-300 to-violet-400"
+                                  ? "bg-gradient-to-r from-purple-800 to-pink-500"
                                   : item.name === "Completed"
-                                    ? "bg-gradient-to-r from-violet-400 to-pink-300"
-                                    : "bg-gradient-to-r from-pink-300 to-fuchsia-300"
+                                    ? "bg-gradient-to-r from-purple-800 to-pink-500"
+                                    : "bg-gradient-to-r from-purple-800 to-pink-500"
                               }
                             />
                           </div>
@@ -890,7 +890,7 @@ export default function AdminDashboardPage() {
                       </div>
                     </Section>
                     <Section title="Session trend" subtitle="Session activity over the last week" icon={BarChart3}>
-                      <MiniBars items={summary?.trends.sessions || []} color="bg-gradient-to-t from-violet-400 to-pink-300" />
+                      <MiniBars items={summary?.trends.sessions || []} color="bg-gradient-to-r from-purple-800 to-pink-500" />
                       <p className="mt-5 text-sm text-[#8b83a8]">
                         Completion rate is {health?.sessionCompletionRate || 0}% across all stored sessions.
                       </p>
@@ -907,9 +907,9 @@ export default function AdminDashboardPage() {
                           value={`${passRate}%`}
                           detail={`${formatNumber(totals?.interviewsPass || 0)} passed, ${formatNumber(totals?.interviewsFail || 0)} failed`}
                           icon={Brain}
-                          accent="bg-gradient-to-br from-violet-100 to-pink-100 text-violet-600"
+                          accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                         />
-                        <ProgressBar value={passRate} color="bg-gradient-to-r from-violet-400 to-pink-300" />
+                        <ProgressBar value={passRate} color="bg-gradient-to-r from-purple-800 to-pink-500" />
                       </div>
                     </Section>
                     <Section title="Failed interview review" subtitle="Lowest scores that may need admin attention" icon={XCircle}>
@@ -951,28 +951,28 @@ export default function AdminDashboardPage() {
                       value={formatMoney(totals?.revenue || 0)}
                       detail="Paid credit purchases"
                       icon={CircleDollarSign}
-                      accent="bg-gradient-to-br from-violet-100 to-blue-100 text-violet-600"
+                      accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                     />
                     <MetricCard
                       title="Purchases"
                       value={formatNumber(totals?.purchases || 0)}
                       detail="Credit purchase records"
                       icon={CheckCircle2}
-                      accent="bg-gradient-to-br from-blue-100 to-violet-100 text-violet-600"
+                      accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                     />
                     <MetricCard
                       title="Live credits"
                       value={formatNumber(totals?.totalCredits || 0)}
                       detail="Credits held by users"
                       icon={Sparkles}
-                      accent="bg-gradient-to-br from-pink-100 to-fuchsia-100 text-pink-600"
+                      accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                     />
                     <MetricCard
                       title="Awarded credits"
                       value={formatNumber(totals?.awardedCredits || 0)}
                       detail="Positive credit transactions"
                       icon={TrendingUp}
-                      accent="bg-gradient-to-br from-violet-100 to-pink-100 text-violet-600"
+                      accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                     />
                   </div>
                 )}
