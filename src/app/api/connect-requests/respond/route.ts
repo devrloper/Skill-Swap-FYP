@@ -181,63 +181,91 @@ export async function PATCH(req: Request) {
       const duration = request.duration || 30;
 
       if (!scheduleDate) {
-        return NextResponse.json({ error: "Request is missing meeting date/time" }, { status: 422 });
-      }
-
-      const sessionResult = await scheduleAcceptedRequestWithZoom({
-        sessionId,
-        requestId: requestRef.id,
-        learnerId: requestSenderId,
-        providerId: requestReceiverId,
-        skillId: String(request.requestedSkill || request.offeredSkill || "") || null,
-        topic: `Skill Swap: ${request.offeredSkill || "Skill"} - ${request.requestedSkill || "Session"}`,
-        dateTime: scheduleDate as string | Date,
-        duration: duration as string | number,
-        message: String(request.message || ""),
-      });
-
-      await requestRef.update({
-        status: "accepted",
-        meetingStatus: "scheduled",
-        sessionId,
-        zoomMeetingId: sessionResult.zoomMeeting.zoomMeetingId,
-        joinUrl: sessionResult.zoomMeeting.joinUrl,
-        startUrl: sessionResult.zoomMeeting.startUrl,
-        respondedAt: FieldValue.serverTimestamp(),
-        respondedBy: actorId,
-      });
-      await createConnectionArtifacts(connectionId, requestSenderId, requestReceiverId, { ...request, id: requestRef.id });
-      await requestRef.update({ connectionId, chatEnabled: true });
-      await Promise.all([
-        adminDb.collection("notifications").add({
+        await requestRef.update({
+          status: "accepted",
+          meetingStatus: "not_scheduled",
+          sessionId: null,
+          respondedAt: FieldValue.serverTimestamp(),
+          respondedBy: actorId,
+          connectionId,
+          chatEnabled: true,
+        });
+        await createConnectionArtifacts(connectionId, requestSenderId, requestReceiverId, { ...request, id: requestRef.id });
+        await markRequestNotificationsHandled(requestRef.id, requestReceiverId, "accepted");
+        await adminDb.collection("notifications").add({
           userId: requestSenderId,
-          type: "session_accepted",
-          title: "Session accepted",
-          message: `Your session for ${request.offeredSkill} - ${request.requestedSkill} was accepted and scheduled.`,
+          type: "skill_request_response",
+          title: "Skill swap request accepted",
+          message: `Your request for ${request.offeredSkill} - ${request.requestedSkill} was accepted. You can schedule the meeting from chat.`,
           senderId: requestReceiverId,
+          fromUserId: requestReceiverId,
+          fromUserName: request.receiverName || null,
           receiverId: requestSenderId,
           requestId: requestRef.id,
-          sessionId,
+          connectRequestId: requestRef.id,
           connectionId,
-          status: "scheduled",
+          offeredSkill: request.offeredSkill || null,
+          requestedSkill: request.requestedSkill || null,
+          status: "accepted",
           read: false,
           createdAt: FieldValue.serverTimestamp(),
-        }),
-        adminDb.collection("notifications").add({
-          userId: requestReceiverId,
-          type: "session_scheduled",
-          title: "Meeting scheduled",
-          message: `Zoom meeting is ready for ${request.offeredSkill} - ${request.requestedSkill}.`,
-          senderId: requestSenderId,
-          receiverId: requestReceiverId,
+        });
+      } else {
+        const sessionResult = await scheduleAcceptedRequestWithZoom({
+          sessionId,
           requestId: requestRef.id,
+          learnerId: requestSenderId,
+          providerId: requestReceiverId,
+          skillId: String(request.requestedSkill || request.offeredSkill || "") || null,
+          topic: `Skill Swap: ${request.offeredSkill || "Skill"} - ${request.requestedSkill || "Session"}`,
+          dateTime: scheduleDate as string | Date,
+          duration: duration as string | number,
+          message: String(request.message || ""),
+        });
+
+        await requestRef.update({
+          status: "accepted",
+          meetingStatus: "scheduled",
           sessionId,
-          connectionId,
-          status: "scheduled",
-          read: false,
-          createdAt: FieldValue.serverTimestamp(),
-        }),
-      ]);
+          zoomMeetingId: sessionResult.zoomMeeting.zoomMeetingId,
+          joinUrl: sessionResult.zoomMeeting.joinUrl,
+          startUrl: sessionResult.zoomMeeting.startUrl,
+          respondedAt: FieldValue.serverTimestamp(),
+          respondedBy: actorId,
+        });
+        await createConnectionArtifacts(connectionId, requestSenderId, requestReceiverId, { ...request, id: requestRef.id });
+        await requestRef.update({ connectionId, chatEnabled: true });
+        await Promise.all([
+          adminDb.collection("notifications").add({
+            userId: requestSenderId,
+            type: "session_accepted",
+            title: "Session accepted",
+            message: `Your session for ${request.offeredSkill} - ${request.requestedSkill} was accepted and scheduled.`,
+            senderId: requestReceiverId,
+            receiverId: requestSenderId,
+            requestId: requestRef.id,
+            sessionId,
+            connectionId,
+            status: "scheduled",
+            read: false,
+            createdAt: FieldValue.serverTimestamp(),
+          }),
+          adminDb.collection("notifications").add({
+            userId: requestReceiverId,
+            type: "session_scheduled",
+            title: "Meeting scheduled",
+            message: `Zoom meeting is ready for ${request.offeredSkill} - ${request.requestedSkill}.`,
+            senderId: requestSenderId,
+            receiverId: requestReceiverId,
+            requestId: requestRef.id,
+            sessionId,
+            connectionId,
+            status: "scheduled",
+            read: false,
+            createdAt: FieldValue.serverTimestamp(),
+          }),
+        ]);
+      }
     } else {
       await requestRef.update({
         status: newStatus,
@@ -278,7 +306,10 @@ export async function PATCH(req: Request) {
       ok: true,
       status: newStatus,
       requestId: requestRef.id,
-      sessionId: newStatus === "accepted" ? `request_${requestRef.id}` : null,
+      sessionId:
+        newStatus === "accepted" && (request.meetingDateTime || request.schedule)
+          ? `request_${requestRef.id}`
+          : null,
       connectionId: newStatus === "accepted" ? pairId(requestSenderId, requestReceiverId) : request.connectionId || null,
     });
   } catch (err) {

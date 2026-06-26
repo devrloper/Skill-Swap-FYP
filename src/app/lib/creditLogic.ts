@@ -38,6 +38,20 @@ function readCredits(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function readAvailableCredits(
+  userData?: FirebaseFirestore.DocumentData,
+  profileData?: FirebaseFirestore.DocumentData,
+) {
+  return Math.max(readCredits(userData?.credits), readCredits(profileData?.credits));
+}
+
+function readRole(
+  userData?: FirebaseFirestore.DocumentData,
+  profileData?: FirebaseFirestore.DocumentData,
+) {
+  return String(userData?.role || profileData?.role || "").trim().toLowerCase();
+}
+
 function toDate(value: unknown) {
   if (!value) return null;
   if (value instanceof Date) return value;
@@ -98,6 +112,20 @@ function applyCreditDelta(
 ) {
   const update = {
     credits: FieldValue.increment(delta),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  transaction.set(userRef(userId), update, { merge: true });
+  transaction.set(profileRef(userId), update, { merge: true });
+}
+
+function setCreditBalance(
+  transaction: FirebaseFirestore.Transaction,
+  userId: string,
+  credits: number,
+) {
+  const update = {
+    credits,
     updatedAt: FieldValue.serverTimestamp(),
   };
 
@@ -274,11 +302,10 @@ export async function scheduleSessionWithCreditDebit(input: {
     const schedule = (message.schedule || {}) as Record<string, unknown>;
     const requesterId = String(schedule.proposedBy || message.senderId || "");
     const receiverId = String(message.receiverId || "");
-    const providerId = input.actorId;
-    const learnerId = requesterId;
     const participants = [String(message.senderId || ""), receiverId].filter(Boolean);
     const dateTime = toDate(schedule.dateTime);
     const duration = minutesFrom(schedule.duration, 30);
+    const [firstParticipantId = "", secondParticipantId = ""] = participants;
 
     if (!requesterId || !participants.includes(input.actorId)) {
       throw new Error("FORBIDDEN");
@@ -300,8 +327,32 @@ export async function scheduleSessionWithCreditDebit(input: {
       throw new Error("OVERLAPPING_SESSION");
     }
 
-    const userSnap = await transaction.get(userRef(requesterId));
-    const credits = readCredits(userSnap.data()?.credits);
+    const [
+      firstUserSnap,
+      firstProfileSnap,
+      secondUserSnap,
+      secondProfileSnap,
+    ] = await Promise.all([
+      firstParticipantId ? transaction.get(userRef(firstParticipantId)) : Promise.resolve(null),
+      firstParticipantId ? transaction.get(profileRef(firstParticipantId)) : Promise.resolve(null),
+      secondParticipantId ? transaction.get(userRef(secondParticipantId)) : Promise.resolve(null),
+      secondParticipantId ? transaction.get(profileRef(secondParticipantId)) : Promise.resolve(null),
+    ]);
+
+    const firstRole = readRole(firstUserSnap?.data(), firstProfileSnap?.data());
+    const secondRole = readRole(secondUserSnap?.data(), secondProfileSnap?.data());
+    const learnerId =
+      firstRole === "learner"
+        ? firstParticipantId
+        : secondRole === "learner"
+          ? secondParticipantId
+          : requesterId;
+    const providerId =
+      participants.find((participantId) => participantId && participantId !== learnerId) ||
+      input.actorId;
+    const learnerUserSnap = learnerId === firstParticipantId ? firstUserSnap : secondUserSnap;
+    const learnerProfileSnap = learnerId === firstParticipantId ? firstProfileSnap : secondProfileSnap;
+    const credits = readAvailableCredits(learnerUserSnap?.data(), learnerProfileSnap?.data());
 
     if (!debitSnap.exists && credits < SESSION_SCHEDULE_COST) {
       throw new Error("INSUFFICIENT_CREDITS");
@@ -359,11 +410,11 @@ export async function scheduleSessionWithCreditDebit(input: {
     );
 
     if (!debitSnap.exists) {
-      applyCreditDelta(transaction, requesterId, -SESSION_SCHEDULE_COST);
+      setCreditBalance(transaction, learnerId, credits - SESSION_SCHEDULE_COST);
       writeCreditTransaction(
         transaction,
         scheduleTransactionId,
-        requesterId,
+        learnerId,
         -SESSION_SCHEDULE_COST,
         "session_scheduled",
         { sessionId: input.sessionId, chatId: input.chatId },
@@ -373,6 +424,7 @@ export async function scheduleSessionWithCreditDebit(input: {
     return {
       alreadyScheduled: false,
       requesterId,
+      learnerId,
       deductedCredits: !debitSnap.exists,
       zoomMeeting,
     };

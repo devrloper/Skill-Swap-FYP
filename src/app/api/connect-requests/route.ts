@@ -119,16 +119,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please choose valid skills" }, { status: 400 });
     }
 
-    if (!schedule) {
-      return NextResponse.json({ error: "Please select meeting date and time" }, { status: 400 });
-    }
-
-    const scheduleDate = new Date(schedule);
-    if (Number.isNaN(scheduleDate.getTime())) {
+    const scheduleDate = schedule ? new Date(schedule) : null;
+    if (scheduleDate && Number.isNaN(scheduleDate.getTime())) {
       return NextResponse.json({ error: "Please select a valid meeting date and time" }, { status: 400 });
     }
 
-    if (scheduleDate.getTime() <= Date.now()) {
+    if (scheduleDate && scheduleDate.getTime() <= Date.now()) {
       return NextResponse.json({ error: "Meeting cannot be scheduled in the past" }, { status: 400 });
     }
 
@@ -203,7 +199,7 @@ export async function POST(req: Request) {
       .where("senderId", "==", senderId)
       .get();
 
-    if (await hasScheduleOverlap([senderId, receiverId], scheduleDate, duration)) {
+    if (scheduleDate && (await hasScheduleOverlap([senderId, receiverId], scheduleDate, duration))) {
       return NextResponse.json(
         { error: "This date/time overlaps with an existing booking." },
         { status: 409 },
@@ -286,9 +282,9 @@ export async function POST(req: Request) {
       message: message || null,
       schedule: schedule || null,
       meetingDateTime: scheduleDate,
-      duration,
+      duration: scheduleDate ? duration : null,
       creditsUsed: 1,
-      meetingStatus: "pending",
+      meetingStatus: scheduleDate ? "pending" : "not_scheduled",
       status: "pending",
       createdAt: FieldValue.serverTimestamp(),
       expiresAt,

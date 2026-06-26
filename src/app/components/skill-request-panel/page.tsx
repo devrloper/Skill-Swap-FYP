@@ -85,8 +85,6 @@ export default function SkillRequestPanel({
   const [offeredSkill, setOfferedSkill] = useState("");
   const [requestedSkill, setRequestedSkill] = useState("");
   const [message, setMessage] = useState("");
-  const [schedule, setSchedule] = useState("");
-  const [duration, setDuration] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [existingRequest, setExistingRequest] = useState<ExistingRequest | null>(null);
@@ -257,17 +255,6 @@ export default function SkillRequestPanel({
       return;
     }
 
-    if (!schedule) {
-      setError("Please select meeting date and time.");
-      return;
-    }
-
-    const scheduleDate = new Date(schedule);
-    if (Number.isNaN(scheduleDate.getTime()) || scheduleDate.getTime() <= Date.now()) {
-      setError("Please select a future meeting date and time.");
-      return;
-    }
-
     try {
       setSubmitting(true);
       const idToken = await auth.currentUser?.getIdToken();
@@ -282,8 +269,6 @@ export default function SkillRequestPanel({
           offeredSkill,
           requestedSkill,
           message,
-          schedule,
-          duration,
         }),
       });
 
@@ -318,8 +303,6 @@ export default function SkillRequestPanel({
         requestedSkill,
       });
       setMessage("");
-      setSchedule("");
-      setDuration("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send request.");
     } finally {
@@ -427,39 +410,6 @@ export default function SkillRequestPanel({
               disabled={isPendingRequest || isAlreadyConnected}
               className="mt-2 w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 ring-purple-200 disabled:opacity-60"
             />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Meeting date & time
-            </span>
-            <input
-              type="datetime-local"
-              value={schedule}
-              onChange={(e) => setSchedule(e.target.value)}
-              required
-              disabled={isPendingRequest || isAlreadyConnected}
-              className="mt-2 w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 ring-purple-200 disabled:opacity-60"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Duration
-            </span>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              disabled={isPendingRequest || isAlreadyConnected}
-              className="mt-2 w-full rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 ring-purple-200 disabled:opacity-60"
-            >
-              <option value="">30 minutes</option>
-              <option value="15">15 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
-              <option value="60">60 minutes</option>
-              <option value="90">90 minutes</option>
-            </select>
           </label>
 
           {error && (
