@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   XCircle,
   Star,
+  Mail,
+  Fingerprint,
 } from "lucide-react";
 import {
   addDoc,
@@ -833,13 +835,13 @@ function WorkableChatContent() {
             <Bell className="w-6 h-6 cursor-pointer hover:text-white" />
             <Settings className="w-6 h-6 cursor-pointer hover:text-white" />
           </div>
-          <div className="mt-auto flex flex-col items-center gap-2">
+          <div className="mt-auto flex w-full translate-y-3 flex-col items-center justify-center gap-2 px-2 pb-2 text-center">
             <img
               src={currentUserAvatar}
-              className="w-10 h-10 rounded-full border-2 border-orange-400 p-0.5 object-cover"
+              className="mx-auto block h-10 w-10 rounded-full border-2 border-orange-400 p-0.5 object-cover"
               alt={currentUserName}
             />
-            <span className="text-[10px] text-white/70 text-center leading-tight max-w-14 truncate">
+            <span className="block w-full max-w-[64px] truncate text-center text-[10px] leading-tight text-white/70">
               {currentUserName}
             </span>
           </div>
@@ -1442,31 +1444,55 @@ function WorkableChatContent() {
         </AnimatePresence>
 
         {activeUser && (
-          <aside className="hidden xl:flex w-72 lg:w-70 bg-white rounded-[28px] p-8 shadow-sm flex-col items-center shrink-0">
-            <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-full border-[6px] border-[#F3F4F6] overflow-hidden mb-4 shadow-inner">
-              <img
-                src={activeUser.avatar}
-                className="w-full h-full object-cover"
-                alt={activeUser.name}
-              />
-            </div>
+          <aside className="hidden w-72 shrink-0 overflow-hidden rounded-[30px] border border-white/70 bg-white shadow-[0_18px_50px_rgba(75,22,76,0.12)] xl:flex lg:w-70 flex-col">
+            <div className="relative flex flex-col items-center px-7 pb-7 pt-8 text-center">
+              <div className="absolute inset-x-0 top-0 h-36 bg-[linear-gradient(135deg,#f7f0ff_0%,#fce8f5_48%,#fff7ed_100%)]" />
+              <div className="absolute left-6 top-5 h-16 w-16 rounded-full bg-white/70 blur-xl" />
+              <div className="absolute right-5 top-14 h-20 w-20 rounded-full bg-violet-200/35 blur-2xl" />
 
-            <div className="text-center w-full">
-              <h3 className="text-xl font-bold text-slate-800">{activeUser.name}</h3>
-              <p className="text-sm text-slate-400">{activeUser.role}</p>
-              <div className="flex items-center justify-center gap-1 text-[11px] text-red-400 mt-2 font-semibold">
-                <MapPin className="w-3 h-3" /> {activeUser.location}
+              <div className="relative mb-4 rounded-full bg-white p-2 shadow-[0_16px_35px_rgba(75,22,76,0.14)]">
+                <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-[#D9C4FF] bg-[#F7ECFF] lg:h-36 lg:w-36">
+                  <img
+                    src={activeUser.avatar}
+                    className="h-full w-full object-cover"
+                    alt={activeUser.name}
+                  />
+                </div>
+                <span className="absolute bottom-4 right-4 h-4 w-4 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />
+              </div>
+
+              <h3 className="relative max-w-full truncate text-2xl font-extrabold text-slate-900">
+                {activeUser.name}
+              </h3>
+              <div className="relative mt-2 rounded-full bg-[#F7ECFF] px-4 py-1 text-xs font-bold capitalize text-[#7c1d8a]">
+                {activeUser.role || "member"}
+              </div>
+              <div className="relative mt-3 inline-flex max-w-full items-center justify-center gap-1.5 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-500">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{activeUser.location}</span>
               </div>
             </div>
 
-            <div className="w-full mt-8 space-y-4 pt-8 border-t border-slate-100 text-xs">
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-400">E-mail:</span>
-                <span className="font-bold truncate">{activeUser.email || "Not added"}</span>
+            <div className="mx-6 mb-7 space-y-3 rounded-3xl border border-slate-100 bg-slate-50/80 p-4 text-xs">
+              <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-purple-50 text-[#7c1d8a]">
+                  <Mail className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-400">E-mail</p>
+                  <p className="truncate font-extrabold text-slate-900">
+                    {activeUser.email || "Not added"}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-slate-400">User ID:</span>
-                <span className="font-bold truncate">{activeUser.id}</span>
+              <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-pink-50 text-pink-500">
+                  <Fingerprint className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-400">User ID</p>
+                  <p className="truncate font-extrabold text-slate-900">{activeUser.id}</p>
+                </div>
               </div>
             </div>
           </aside>
