@@ -6,11 +6,9 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  sendEmailVerification,
   setPersistence,
   browserSessionPersistence,
   browserLocalPersistence,
-  signOut,
 } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
@@ -76,19 +74,6 @@ const LoginPage = () => {
         password,
       );
       const user = userCredential.user;
-
-      await user.reload();
-      if (!user.emailVerified) {
-        await sendEmailVerification(user, {
-          url: `${window.location.origin}/signin`,
-          handleCodeInApp: false,
-        });
-        await signOut(auth);
-        setError(
-          "Please verify your email first. We sent a new verification link to your inbox.",
-        );
-        return;
-      }
 
       // Create httpOnly session cookie for route protection (middleware).
       await establishSessionCookie(user);

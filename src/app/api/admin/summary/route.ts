@@ -1,72 +1,99 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/app/lib/firebaseAdmin";
 import { getSessionUser, isAdminEmail } from "@/app/lib/serverAuth";
+import { extractProfileSkills, toMillis } from "@/app/lib/skill-request-utils";
 
 export const dynamic = "force-dynamic";
 
-type ConnectRequestDoc = {
-  id: string;
-  fromUserId?: string;
-  toUserId?: string;
-  status?: string;
-  createdAt?: unknown;
-  fromUserName?: string | null;
-};
+type DocRecord = Record<string, unknown> & { id: string };
+type RoleName = "learner" | "exchanger";
 
-type ProfileDoc = {
-  id: string;
-  fullName?: string;
-  name?: string;
-  displayName?: string;
-  interviewScore?: number;
-};
-
-function toMillis(value: unknown): number {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const anyValue = value as any;
-  if (anyValue?.toMillis) return Number(anyValue.toMillis());
-  if (value instanceof Date) return value.getTime();
-  return 0;
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
-async function safeCount(
-  ref: FirebaseFirestore.Query | FirebaseFirestore.CollectionReference,
-) {
-  // Prefer aggregation count() when available, fallback to .get().size
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const anyRef = ref as any;
-  try {
-    if (typeof anyRef.count === "function") {
-      const snap = await anyRef.count().get();
-      const data = snap.data();
-      if (typeof data?.count === "number") return data.count as number;
+function readString(data: Record<string, unknown>, keys: string[], fallback = "") {
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return fallback;
+}
+
+function readNumber(data: Record<string, unknown>, keys: string[], fallback = 0) {
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
     }
-  } catch {
-    // ignore
   }
-
-  const snap = await ref.get();
-  return snap.size;
+  return fallback;
 }
 
-async function loadProfileNames(userIds: string[]) {
-  const unique = Array.from(new Set(userIds.filter(Boolean)));
-  if (unique.length === 0) return {} as Record<string, string>;
-
-  const refs = unique.map((id) => adminDb.collection("profiles").doc(id));
-  const snaps = await adminDb.getAll(...refs);
-
-  const map: Record<string, string> = {};
-  for (let i = 0; i < snaps.length; i++) {
-    const snap = snaps[i];
-    if (!snap.exists) continue;
-    const data = snap.data() || {};
-    map[unique[i]] = (data.fullName || data.name || data.displayName || "User") as string;
+function userRoles(data: Record<string, unknown>): RoleName[] {
+  const roles = new Set<RoleName>();
+  const role = data.role;
+  if (role === "learner" || role === "exchanger") roles.add(role);
+  if (Array.isArray(data.roles)) {
+    data.roles.forEach((item) => {
+      if (item === "learner" || item === "exchanger") roles.add(item);
+    });
   }
-  return map;
+  if (roles.size === 0) roles.add("exchanger");
+  return Array.from(roles);
 }
 
-export async function GET(req: Request) {
+function displayName(user: DocRecord, profile?: DocRecord) {
+  return (
+    readString(asRecord(profile), ["fullName", "name", "displayName"]) ||
+    readString(user, ["name", "displayName", "fullName"]) ||
+    readString(user, ["email"], "User")
+  );
+}
+
+function increment(map: Map<string, number>, key: string) {
+  const clean = key.trim();
+  if (!clean) return;
+  map.set(clean, (map.get(clean) || 0) + 1);
+}
+
+function topItems(map: Map<string, number>, limit = 6) {
+  return Array.from(map.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+function statusCount(docs: DocRecord[], status: string) {
+  return docs.filter((doc) => readString(doc, ["status"]).toLowerCase() === status).length;
+}
+
+function dayKey(offset: number) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - offset);
+  return date.toISOString().slice(0, 10);
+}
+
+function trendFor(docs: DocRecord[], dateKeys: string[], keys: string[]) {
+  const counts = new Map(dateKeys.map((key) => [key, 0]));
+  docs.forEach((doc) => {
+    const millis = keys.map((key) => toMillis(doc[key])).find((value) => value > 0) || 0;
+    if (!millis) return;
+    const key = new Date(millis).toISOString().slice(0, 10);
+    if (counts.has(key)) counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return dateKeys.map((key) => ({ date: key, value: counts.get(key) || 0 }));
+}
+
+async function collectionDocs(name: string): Promise<DocRecord[]> {
+  const snap = await adminDb.collection(name).get();
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function GET() {
   try {
     const sessionUser = await getSessionUser();
     if (!sessionUser) {
@@ -75,79 +102,238 @@ export async function GET(req: Request) {
     if (!isAdminEmail(sessionUser.email)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    const { searchParams } = new URL(req.url);
-    const recentLimitParam = Number(searchParams.get("recentLimit") || "10");
-    const recentLimit = Number.isFinite(recentLimitParam)
-      ? Math.min(Math.max(recentLimitParam, 5), 25)
-      : 10;
-
-    const usersRef = adminDb.collection("users");
-    const profilesRef = adminDb.collection("profiles");
-    const connectRequestsRef = adminDb.collection("connectRequests");
 
     const [
-      totalUsers,
-      totalProfiles,
-      passCount,
-      failCount,
-      pendingConnectCount,
-      pendingConnectSnap,
-      failedProfilesSnap,
+      users,
+      profiles,
+      learnerJourneys,
+      skillRequests,
+      legacyConnectRequests,
+      sessions,
+      interviews,
+      creditPurchases,
+      creditTransactions,
     ] = await Promise.all([
-      safeCount(usersRef),
-      safeCount(profilesRef),
-      safeCount(profilesRef.where("interviewStatus", "==", "Pass")),
-      safeCount(profilesRef.where("interviewStatus", "==", "Fail")),
-      safeCount(connectRequestsRef.where("status", "==", "pending")),
-      connectRequestsRef.where("status", "==", "pending").limit(50).get(),
-      profilesRef.where("interviewStatus", "==", "Fail").limit(50).get(),
+      collectionDocs("users"),
+      collectionDocs("profiles"),
+      collectionDocs("learnerJourneys"),
+      collectionDocs("skillRequests"),
+      collectionDocs("connectRequests"),
+      collectionDocs("sessions"),
+      collectionDocs("interviews"),
+      collectionDocs("creditPurchases"),
+      collectionDocs("creditTransactions"),
     ]);
 
-    const pendingConnect: ConnectRequestDoc[] = pendingConnectSnap.docs
-      .map(
-        (doc) => ({ id: doc.id, ...(doc.data() as object) }) as ConnectRequestDoc,
-      )
+    const requests = [...skillRequests, ...legacyConnectRequests];
+    const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+    const userMap = new Map(users.map((user) => [user.id, user]));
+    const learnerIds = new Set<string>();
+    const exchangerIds = new Set<string>();
+    const bothRoleIds = new Set<string>();
+
+    users.forEach((user) => {
+      const roles = userRoles(user);
+      if (roles.includes("learner")) learnerIds.add(user.id);
+      if (roles.includes("exchanger")) exchangerIds.add(user.id);
+      if (roles.includes("learner") && roles.includes("exchanger")) bothRoleIds.add(user.id);
+    });
+
+    const teachSkillCounts = new Map<string, number>();
+    const learnSkillCounts = new Map<string, number>();
+    profiles.forEach((profile) => {
+      const skills = extractProfileSkills(profile);
+      skills.teach.forEach((skill) => increment(teachSkillCounts, skill));
+      skills.learn.forEach((skill) => increment(learnSkillCounts, skill));
+    });
+    learnerJourneys.forEach((journey) => {
+      const skills = Array.isArray(journey.skills) ? journey.skills : [];
+      skills.map(String).forEach((skill) => increment(learnSkillCounts, skill));
+    });
+
+    const requestedSkillCounts = new Map<string, number>();
+    requests.forEach((request) => {
+      increment(requestedSkillCounts, readString(request, ["requestedSkill", "skill"]));
+    });
+
+    const passProfiles = profiles.filter((profile) =>
+      ["pass", "passed"].includes(readString(profile, ["interviewStatus"]).toLowerCase()),
+    );
+    const failProfiles = profiles.filter((profile) =>
+      ["fail", "failed"].includes(readString(profile, ["interviewStatus"]).toLowerCase()),
+    );
+    const passInterviews = interviews.filter((interview) =>
+      ["pass", "passed"].includes(readString(interview, ["result", "status"]).toLowerCase()),
+    );
+    const failInterviews = interviews.filter((interview) =>
+      ["fail", "failed"].includes(readString(interview, ["result", "status"]).toLowerCase()),
+    );
+    const interviewsPass = Math.max(passProfiles.length, passInterviews.length);
+    const interviewsFail = Math.max(failProfiles.length, failInterviews.length);
+
+    const now = Date.now();
+    const upcomingSessions = sessions.filter((session) => {
+      const status = readString(session, ["status"]).toLowerCase();
+      const start = toMillis(session.dateTime || session.meetingDateTime || session.schedule);
+      return !["completed", "cancelled", "rejected"].includes(status) && start > now;
+    });
+    const completedSessions = statusCount(sessions, "completed");
+    const cancelledSessions = sessions.filter((session) =>
+      ["cancelled", "rejected"].includes(readString(session, ["status"]).toLowerCase()),
+    ).length;
+
+    const paidPurchases = creditPurchases.filter((purchase) =>
+      ["paid", "completed", "succeeded"].includes(readString(purchase, ["status", "paymentStatus"]).toLowerCase()),
+    );
+    const revenue = paidPurchases.reduce(
+      (sum, purchase) => sum + readNumber(purchase, ["amount", "amountPaid", "totalAmount", "price"]),
+      0,
+    );
+    const totalCredits = users.reduce((sum, user) => sum + readNumber(user, ["credits"]), 0);
+    const awardedCredits = creditTransactions.reduce(
+      (sum, transaction) => sum + Math.max(0, readNumber(transaction, ["creditsDelta", "delta", "credits"])),
+      0,
+    );
+
+    const acceptedRequests = requests.filter((request) =>
+      ["accepted", "completed"].includes(readString(request, ["status"]).toLowerCase()),
+    ).length;
+    const requestAcceptanceRate = requests.length
+      ? Math.round((acceptedRequests / requests.length) * 100)
+      : 0;
+    const profileCompletionRate = users.length
+      ? Math.round((profiles.length / users.length) * 100)
+      : 0;
+    const learnerActivationRate = learnerIds.size
+      ? Math.round((learnerJourneys.length / learnerIds.size) * 100)
+      : 0;
+    const sessionCompletionRate = sessions.length
+      ? Math.round((completedSessions / sessions.length) * 100)
+      : 0;
+
+    const recentUsers = users
+      .slice()
       .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
-      .slice(0, recentLimit);
+      .slice(0, 12)
+      .map((user) => {
+        const profile = profileMap.get(user.id);
+        const roles = userRoles(user);
+        return {
+          id: user.id,
+          name: displayName(user, profile),
+          email: readString(user, ["email"]),
+          roles,
+          credits: readNumber(user, ["credits"]),
+          hasProfile: Boolean(profile),
+          learnerJourney: learnerJourneys.some((journey) => journey.id === user.id),
+          createdAt: toMillis(user.createdAt),
+        };
+      });
 
-    const nameMap = await loadProfileNames([
-      ...pendingConnect.map((r) => r.fromUserId || ""),
-      ...pendingConnect.map((r) => r.toUserId || ""),
-      ...failedProfilesSnap.docs.map((d) => d.id),
-    ]);
+    const recentRequests = requests
+      .slice()
+      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+      .slice(0, 12)
+      .map((request) => {
+        const senderId = readString(request, ["senderId", "fromUserId"]);
+        const receiverId = readString(request, ["receiverId", "toUserId"]);
+        const sender = senderId ? userMap.get(senderId) : undefined;
+        const receiver = receiverId ? userMap.get(receiverId) : undefined;
+        return {
+          id: request.id,
+          senderId,
+          receiverId,
+          senderName:
+            readString(request, ["senderName", "fromUserName"]) ||
+            (sender ? displayName(sender, profileMap.get(senderId)) : "User"),
+          receiverName:
+            readString(request, ["receiverName", "toUserName"]) ||
+            (receiver ? displayName(receiver, profileMap.get(receiverId)) : "User"),
+          offeredSkill: readString(request, ["offeredSkill"]),
+          requestedSkill: readString(request, ["requestedSkill", "skill"]),
+          requestType: readString(request, ["requestType"], "skill_swap"),
+          status: readString(request, ["status"], "pending"),
+          createdAt: toMillis(request.createdAt),
+        };
+      });
 
-    const pendingConnectEnriched = pendingConnect.map((r) => ({
-      id: r.id,
-      fromUserId: r.fromUserId || "",
-      toUserId: r.toUserId || "",
-      status: r.status || "pending",
-      createdAt: r.createdAt || null,
-      fromUserName:
-        r.fromUserName || (r.fromUserId ? nameMap[r.fromUserId] : null) || null,
-      toUserName: r.toUserId ? nameMap[r.toUserId] || null : null,
-    }));
+    const failedInterviews = [...failProfiles, ...failInterviews]
+      .map((item) => {
+        const userId = readString(item, ["userId"], item.id);
+        const user = userMap.get(userId) || ({ id: userId } as DocRecord);
+        return {
+          userId,
+          name: displayName(user, profileMap.get(userId) || item),
+          interviewScore: readNumber(item, ["interviewScore", "score"], -1),
+        };
+      })
+      .sort((a, b) => a.interviewScore - b.interviewScore)
+      .slice(0, 10);
 
-    const failedInterviews = failedProfilesSnap.docs
-      .map((doc) => ({ id: doc.id, ...(doc.data() as object) }) as ProfileDoc)
-      .map((p) => ({
-        userId: p.id,
-        name: p.fullName || p.name || p.displayName || nameMap[p.id] || "User",
-        interviewScore:
-          typeof p.interviewScore === "number" ? p.interviewScore : null,
-      }))
-      .sort((a, b) => (a.interviewScore ?? 999) - (b.interviewScore ?? 999))
-      .slice(0, recentLimit);
+    const dateKeys = Array.from({ length: 7 }, (_, index) => dayKey(6 - index));
+    const userTrend = trendFor(users, dateKeys, ["createdAt"]);
+    const requestTrend = trendFor(requests, dateKeys, ["createdAt"]);
+    const sessionTrend = trendFor(sessions, dateKeys, ["createdAt", "dateTime", "meetingDateTime"]);
 
     return NextResponse.json({
       totals: {
-        users: totalUsers,
-        profiles: totalProfiles,
-        interviewsPass: passCount,
-        interviewsFail: failCount,
-        connectPending: pendingConnectCount,
+        users: users.length,
+        learners: learnerIds.size,
+        exchangers: exchangerIds.size,
+        dualRoleUsers: bothRoleIds.size,
+        profiles: profiles.length,
+        learnerJourneys: learnerJourneys.length,
+        requests: requests.length,
+        pendingRequests: statusCount(requests, "pending"),
+        acceptedRequests,
+        rejectedRequests: statusCount(requests, "rejected"),
+        sessions: sessions.length,
+        upcomingSessions: upcomingSessions.length,
+        completedSessions,
+        cancelledSessions,
+        interviewsPass,
+        interviewsFail,
+        totalCredits,
+        awardedCredits,
+        purchases: creditPurchases.length,
+        revenue,
+      },
+      health: {
+        profileCompletionRate,
+        learnerActivationRate,
+        requestAcceptanceRate,
+        sessionCompletionRate,
+      },
+      breakdowns: {
+        usersByRole: [
+          { name: "Exchangers", value: exchangerIds.size },
+          { name: "Learners", value: learnerIds.size },
+          { name: "Both", value: bothRoleIds.size },
+        ],
+        requestsByStatus: [
+          { name: "Pending", value: statusCount(requests, "pending") },
+          { name: "Accepted", value: acceptedRequests },
+          { name: "Rejected", value: statusCount(requests, "rejected") },
+        ],
+        sessionsByStatus: [
+          { name: "Upcoming", value: upcomingSessions.length },
+          { name: "Completed", value: completedSessions },
+          { name: "Cancelled", value: cancelledSessions },
+        ],
+      },
+      trends: {
+        users: userTrend,
+        requests: requestTrend,
+        sessions: sessionTrend,
+      },
+      skills: {
+        topTeaching: topItems(teachSkillCounts),
+        topLearning: topItems(learnSkillCounts),
+        topRequested: topItems(requestedSkillCounts),
       },
       recent: {
-        pendingConnect: pendingConnectEnriched,
+        users: recentUsers,
+        requests: recentRequests,
         failedInterviews,
       },
     });
