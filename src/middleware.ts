@@ -68,6 +68,12 @@ export function middleware(request: NextRequest) {
   const session = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const lastPath = request.cookies.get(LAST_PATH_COOKIE_NAME)?.value;
 
+  // Landing and auth pages should open normally even if a session exists.
+  // The user explicitly clicked Sign in, so do not force them back to dashboard.
+  if (pathname === "/" || pathname === "/signin" || pathname === "/signup") {
+    return NextResponse.next();
+  }
+
   // If not logged in, block direct URL access to protected pages.
   if (!session && !publicPath) {
     const url = request.nextUrl.clone();
@@ -92,14 +98,6 @@ export function middleware(request: NextRequest) {
       url.search = "";
       return NextResponse.redirect(url);
     }
-  }
-
-  // If logged in, prevent going back to auth pages via URL.
-  if (session && (pathname === "/signin" || pathname === "/signup")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
   }
 
   const res = NextResponse.next();
