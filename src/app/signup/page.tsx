@@ -12,6 +12,7 @@ import {
 import { auth, db } from "@/app/lib/firebase";
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   setPersistence,
   browserSessionPersistence,
   signOut,
@@ -80,12 +81,17 @@ export default function SignupPage() {
         displayName: name, // Used for the avatar initial.
       });
 
+      await sendEmailVerification(user, {
+        url: `${window.location.origin}/signin`,
+        handleCodeInApp: false,
+      });
+
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
         email,
         role,
-        emailVerified: true,
+        emailVerified: false,
         learnerJourneyStarted: false,
         credits: 0,
         createdAt: serverTimestamp(),
@@ -93,8 +99,8 @@ export default function SignupPage() {
 
       await signOut(auth);
 
-      showAuthToast("Account created successfully");
-      setMessage("Account created successfully. Please sign in.");
+      showAuthToast("Verification link sent to your email");
+      setMessage("Please check your email and verify your account before signing in.");
       setIsError(false);
 
       setTimeout(() => router.push("/signin"), 2500);
