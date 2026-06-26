@@ -820,28 +820,28 @@ function WorkableChatContent() {
         )}
       </AnimatePresence>
 
-      <div className="flex h-screen w-full bg-[#E5D9F2] p-2 lg:p-4 gap-2 lg:gap-4 overflow-hidden font-sans text-slate-800 mt-16">
+      <div className="relative flex h-screen w-full gap-2 overflow-hidden bg-[radial-gradient(circle_at_top_left,#f8dcff_0%,transparent_32%),radial-gradient(circle_at_top_right,#ffe5f4_0%,transparent_30%),linear-gradient(135deg,#f3edff_0%,#eef7ff_44%,#fff1fa_100%)] p-2 font-sans text-slate-800 mt-16 lg:gap-4 lg:p-4">
         <Navbar />
 
-        <aside className="hidden lg:flex w-20 bg-[#4B164C] rounded-[32px] flex-col items-center py-8 relative shadow-2xl shrink-0">
-          <div className="flex flex-col gap-8 text-white/50">
-            <Home className="w-6 h-6 cursor-pointer hover:text-white" />
-            <Users className="w-6 h-6 cursor-pointer hover:text-white" />
-            <div className="bg-[#F3F4F6] p-4 rounded-l-[24px] -mr-4 text-[#4B164C] z-10 relative">
+        <aside className="hidden w-20 shrink-0 flex-col items-center rounded-[32px] bg-[#4B164C] py-8 shadow-[0_24px_60px_rgba(75,22,76,0.28)] lg:flex">
+          <div className="flex flex-col gap-7 text-white/55">
+            <Home className="h-6 w-6 cursor-pointer transition hover:scale-110 hover:text-white" />
+            <Users className="h-6 w-6 cursor-pointer transition hover:scale-110 hover:text-white" />
+            <div className="relative z-10 -mr-4 rounded-l-[24px] bg-white p-4 text-[#4B164C] shadow-[0_14px_32px_rgba(255,255,255,0.18)]">
               <MessageSquare className="w-6 h-6" />
             </div>
-            <FileText className="w-6 h-6 cursor-pointer hover:text-white" />
-            <Video className="w-6 h-6 cursor-pointer hover:text-white" />
-            <Bell className="w-6 h-6 cursor-pointer hover:text-white" />
-            <Settings className="w-6 h-6 cursor-pointer hover:text-white" />
+            <FileText className="h-6 w-6 cursor-pointer transition hover:scale-110 hover:text-white" />
+            <Video className="h-6 w-6 cursor-pointer transition hover:scale-110 hover:text-white" />
+            <Bell className="h-6 w-6 cursor-pointer transition hover:scale-110 hover:text-white" />
+            <Settings className="h-6 w-6 cursor-pointer transition hover:scale-110 hover:text-white" />
           </div>
           <div className="mt-auto flex w-full translate-y-3 flex-col items-center justify-center gap-2 px-2 pb-2 text-center">
             <img
               src={currentUserAvatar}
-              className="mx-auto block h-10 w-10 rounded-full border-2 border-orange-400 p-0.5 object-cover"
+              className="mx-auto block h-11 w-11 rounded-full border-2 border-white/80 bg-white/10 p-0.5 object-cover shadow-lg"
               alt={currentUserName}
             />
-            <span className="block w-full max-w-[64px] truncate text-center text-[10px] leading-tight text-white/70">
+            <span className="block w-full max-w-[64px] truncate text-center text-[10px] font-semibold leading-tight text-white/75">
               {currentUserName}
             </span>
           </div>
@@ -850,14 +850,22 @@ function WorkableChatContent() {
         <section
           className={`${mobileView === "list" ? "flex" : "hidden"} md:flex w-full md:w-72 lg:w-80 flex-col gap-4 shrink-0`}
         >
-          <div className="bg-white rounded-[28px] p-6 flex-1 shadow-sm flex flex-col overflow-hidden">
-            <h2 className="text-xl font-bold mb-4">Chat</h2>
+          <div className="flex flex-1 flex-col overflow-hidden rounded-[30px] border border-white/75 bg-white/85 p-5 shadow-[0_20px_60px_rgba(75,22,76,0.10)] backdrop-blur-xl">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#9b7aad]">Skill Swap</p>
+                <h2 className="mt-1 text-2xl font-black text-slate-900">Messages</h2>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#4B164C] text-white shadow-lg shadow-purple-200">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+            </div>
             <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9b7aad]" />
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full bg-[#F8F9FB] rounded-xl py-2.5 pl-10 text-sm focus:outline-none border border-slate-100 placeholder:text-slate-400"
+                className="w-full rounded-2xl border border-purple-100 bg-white/90 py-3 pl-11 pr-4 text-sm shadow-inner outline-none transition placeholder:text-slate-400 focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100"
                 placeholder="Search users..."
               />
             </div>
@@ -872,18 +880,18 @@ function WorkableChatContent() {
                     setMobileView("chat");
                     markChatRead(contact.id);
                   }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
+                  className={`group flex w-full cursor-pointer items-center gap-3 rounded-3xl border p-3.5 transition-all ${
                     contact.unreadCount > 0
-                      ? "bg-purple-50 ring-1 ring-purple-200 shadow-sm"
+                      ? "border-purple-200 bg-purple-50/90 shadow-[0_12px_28px_rgba(126,34,206,0.10)]"
                       : activeUser?.id === contact.id
-                        ? "bg-slate-50 shadow-inner"
-                        : "hover:bg-slate-50"
+                        ? "border-[#eadbff] bg-white shadow-[0_12px_28px_rgba(75,22,76,0.08)]"
+                        : "border-transparent bg-white/40 hover:border-purple-100 hover:bg-white hover:shadow-sm"
                   }`}
                 >
                   <div className="relative shrink-0">
                     <img
                       src={contact.avatar}
-                      className="w-11 h-11 rounded-full border-2 border-white shadow-sm object-cover"
+                      className="h-12 w-12 rounded-2xl border-2 border-white object-cover shadow-sm transition group-hover:scale-105"
                       alt={contact.name}
                     />
                     {contact.unreadCount > 0 && (
@@ -920,7 +928,7 @@ function WorkableChatContent() {
                         {contact.lastMsg}
                       </p>
                       {contact.unreadCount > 0 && (
-                        <span className="shrink-0 rounded-full bg-[#4B164C] px-2 py-0.5 text-[10px] font-black text-white">
+                        <span className="shrink-0 rounded-full bg-[#4B164C] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">
                           {contact.unreadCount} unseen{" "}
                           {contact.unreadCount === 1 ? "msg" : "msgs"}
                         </span>
@@ -940,41 +948,50 @@ function WorkableChatContent() {
         </section>
 
         <main
-          className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex flex-1 bg-white rounded-[28px] shadow-sm flex-col overflow-hidden`}
+          className={`${mobileView === "chat" ? "flex" : "hidden"} flex-1 flex-col overflow-hidden rounded-[30px] border border-white/75 bg-white/90 shadow-[0_20px_70px_rgba(75,22,76,0.10)] backdrop-blur-xl md:flex`}
         >
           {activeUser ? (
             <>
-              <header className="px-4 lg:px-8 py-5 border-b border-slate-50 flex justify-between items-center bg-white">
+              <header className="flex items-center justify-between border-b border-purple-50 bg-white/85 px-4 py-4 lg:px-7">
                 <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
                     onClick={() => setMobileView("list")}
-                    className="md:hidden p-1 text-slate-400"
+                    className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 md:hidden"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
-                  <img
-                    src={activeUser.avatar}
-                    className="w-10 h-10 rounded-full object-cover"
-                    alt={activeUser.name}
-                  />
+                  <div className="relative">
+                    <img
+                      src={activeUser.avatar}
+                      className="h-12 w-12 rounded-2xl border-2 border-white object-cover shadow-md"
+                      alt={activeUser.name}
+                    />
+                    <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400" />
+                  </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-800 text-sm lg:text-base truncate">
+                    <p className="truncate text-sm font-black text-slate-900 lg:text-base">
                       {activeUser.name}
                     </p>
-                    <p className="text-[11px] text-slate-400 font-medium">
+                    <p className="truncate text-[11px] font-semibold text-[#9b7aad]">
                       {activeUser.email || activeUser.role}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-4 lg:gap-6 text-slate-400 items-center">
-                  <Phone className="w-5 h-5 cursor-pointer hover:text-[#4B164C]" />
-                  <VideoIcon className="w-5 h-5 cursor-pointer hover:text-[#4B164C]" />
-                  <MoreHorizontal className="w-5 h-5 cursor-pointer" />
+                <div className="flex items-center gap-2 text-[#4B164C]">
+                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-50 transition hover:bg-purple-100">
+                    <Phone className="h-5 w-5" />
+                  </button>
+                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-50 transition hover:bg-purple-100">
+                    <VideoIcon className="h-5 w-5" />
+                  </button>
+                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 transition hover:bg-slate-100">
+                    <MoreHorizontal className="h-5 w-5" />
+                  </button>
                 </div>
               </header>
 
-              <div className="flex-1 p-4 lg:p-8 overflow-y-auto space-y-6 bg-[#FBFCFE]">
+              <div className="flex-1 space-y-6 overflow-y-auto bg-[linear-gradient(180deg,#fbf9ff_0%,#ffffff_48%,#fff8fc_100%)] p-4 lg:p-8">
                 {chatError && (
                   <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                     {chatError}
@@ -982,9 +999,9 @@ function WorkableChatContent() {
                 )}
 
                 {!messages.length && !chatError && (
-                  <div className="h-full min-h-80 flex items-center justify-center text-center">
-                    <div>
-                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#4B164C]/10 text-[#4B164C]">
+                  <div className="flex h-full min-h-80 items-center justify-center text-center">
+                    <div className="rounded-[28px] border border-purple-100 bg-white/80 p-8 shadow-sm">
+                      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4B164C]/10 text-[#4B164C]">
                         <MessageSquare className="h-6 w-6" />
                       </div>
                       <p className="text-sm font-semibold text-slate-700">
@@ -1039,10 +1056,10 @@ function WorkableChatContent() {
                         </p>
                         {isSchedule ? (
                           <div
-                            className={`w-[min(100%,26rem)] rounded-[24px] p-4 text-sm shadow-sm ${
+                            className={`w-[min(100%,26rem)] rounded-[26px] border p-4 text-sm shadow-sm ${
                               isMine
-                                ? "bg-[#4B164C] text-white rounded-tr-none shadow-purple-100"
-                                : "bg-white border border-slate-100 text-slate-700 rounded-tl-none"
+                                ? "rounded-tr-none border-[#4B164C] bg-[#4B164C] text-white shadow-purple-100"
+                                : "rounded-tl-none border-purple-50 bg-white text-slate-700"
                             }`}
                           >
                             <div className="flex items-start gap-3">
@@ -1178,10 +1195,10 @@ function WorkableChatContent() {
                           </div>
                         ) : (
                           <div
-                            className={`p-4 rounded-[24px] text-sm shadow-sm break-words ${
+                            className={`break-words rounded-[26px] border px-4 py-3 text-sm leading-6 shadow-sm ${
                               isMine
-                                ? "bg-[#4B164C] text-white rounded-tr-none shadow-purple-100"
-                                : "bg-white border border-slate-100 text-slate-600 rounded-tl-none"
+                                ? "rounded-tr-none border-[#4B164C] bg-[#4B164C] text-white shadow-purple-100"
+                                : "rounded-tl-none border-purple-50 bg-white text-slate-600"
                             }`}
                           >
                             {message.text}
@@ -1194,24 +1211,24 @@ function WorkableChatContent() {
                 <div ref={bottomRef} />
               </div>
 
-              <footer className="p-4 lg:p-6">
+              <footer className="border-t border-purple-50 bg-white/85 p-4 lg:p-5">
                 <form
                   onSubmit={handleSendMessage}
-                  className="flex items-center gap-3 bg-slate-50 border border-slate-100 p-2 pl-4 rounded-[24px] focus-within:bg-white focus-within:border-purple-200 transition-all"
+                  className="flex items-center gap-3 rounded-[26px] border border-purple-100 bg-white p-2 pl-4 shadow-[0_12px_32px_rgba(75,22,76,0.08)] transition-all focus-within:border-[#b789ff] focus-within:ring-4 focus-within:ring-purple-100"
                 >
-                  <Smile className="hidden sm:block w-5 h-5 text-slate-400" />
+                  <Smile className="hidden h-5 w-5 text-[#9b7aad] sm:block" />
                   <input
-                    className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
                     placeholder={`Message ${activeUser.name}...`}
                     value={inputText}
                     onChange={(event) => setInputText(event.target.value)}
                   />
                   <div className="flex items-center gap-2 pr-1">
-                    <Paperclip className="hidden sm:block w-5 h-5 text-slate-400 rotate-45" />
+                    <Paperclip className="hidden h-5 w-5 rotate-45 text-[#9b7aad] sm:block" />
                     <button
                       type="button"
                       onClick={() => setIsScheduleOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-full border border-[#4B164C]/15 bg-white px-3 py-2 text-xs font-semibold text-[#4B164C] transition hover:bg-[#4B164C]/5"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#4B164C]/15 bg-purple-50 px-3 py-2 text-xs font-bold text-[#4B164C] transition hover:bg-purple-100"
                     >
                       <CalendarDays className="h-4 w-4" />
                       Schedule
@@ -1219,7 +1236,7 @@ function WorkableChatContent() {
                     <button
                       type="submit"
                       disabled={!inputText.trim() || isSending}
-                      className="bg-[#4B164C] p-3 rounded-full text-white shadow-lg hover:scale-105 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full bg-[#4B164C] p-3 text-white shadow-lg shadow-purple-200 transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -1232,12 +1249,12 @@ function WorkableChatContent() {
               </footer>
             </>
           ) : (
-            <div className="flex flex-1 items-center justify-center bg-[#FBFCFE] p-8 text-center">
-              <div>
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#4B164C]/10 text-[#4B164C]">
+            <div className="flex flex-1 items-center justify-center bg-[linear-gradient(180deg,#fbf9ff_0%,#fff8fc_100%)] p-8 text-center">
+              <div className="rounded-[30px] border border-purple-100 bg-white/85 p-8 shadow-sm">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4B164C]/10 text-[#4B164C]">
                   <Users className="h-6 w-6" />
                 </div>
-                <p className="font-semibold text-slate-800">No chat users available</p>
+                <p className="font-black text-slate-800">No chat users available</p>
                 <p className="mt-1 text-sm text-slate-500">
                   Users will appear here after a skill swap request is accepted.
                 </p>
@@ -1252,13 +1269,13 @@ function WorkableChatContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[90] flex h-[100dvh] items-start justify-center overflow-hidden bg-black/40 px-3 py-3 sm:items-center sm:px-4 sm:py-6"
+              className="fixed inset-0 z-[90] flex h-[100dvh] items-start justify-center overflow-hidden bg-[#1f1024]/45 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
             >
               <motion.div
                 initial={{ y: 24, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 24, opacity: 0 }}
-                className="flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-md flex-col overflow-hidden rounded-[22px] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[28px] sm:p-6"
+                className="flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-md flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white p-4 shadow-[0_24px_80px_rgba(31,16,36,0.28)] sm:max-h-[calc(100dvh-3rem)] sm:rounded-[30px] sm:p-6"
               >
                 <div className="mb-5 flex shrink-0 items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -1270,7 +1287,7 @@ function WorkableChatContent() {
                   <button
                     type="button"
                     onClick={() => setIsScheduleOpen(false)}
-                    className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-200 sm:text-sm"
+                    className="shrink-0 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-bold text-[#4B164C] transition hover:bg-purple-100 sm:text-sm"
                   >
                     Close
                   </button>
@@ -1289,7 +1306,7 @@ function WorkableChatContent() {
                       onChange={(event) =>
                         setScheduleForm((prev) => ({ ...prev, topic: event.target.value }))
                       }
-                      className="w-full min-w-0 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      className="w-full min-w-0 rounded-2xl border border-purple-100 px-4 py-3 text-sm outline-none transition focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100"
                       placeholder="Skill swap session"
                     />
                   </label>
@@ -1305,7 +1322,7 @@ function WorkableChatContent() {
                         onChange={(event) =>
                           setScheduleForm((prev) => ({ ...prev, dateTime: event.target.value }))
                         }
-                        className="w-full min-w-0 rounded-2xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-[#4B164C] sm:px-4"
+                        className="w-full min-w-0 rounded-2xl border border-purple-100 px-3 py-3 text-sm outline-none transition focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100 sm:px-4"
                         required
                       />
                     </label>
@@ -1319,7 +1336,7 @@ function WorkableChatContent() {
                         onChange={(event) =>
                           setScheduleForm((prev) => ({ ...prev, duration: event.target.value }))
                         }
-                        className="w-full min-w-0 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                        className="w-full min-w-0 rounded-2xl border border-purple-100 px-4 py-3 text-sm outline-none transition focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100"
                       >
                         <option value="15">15 min</option>
                         <option value="30">30 min</option>
@@ -1338,7 +1355,7 @@ function WorkableChatContent() {
                       onChange={(event) =>
                         setScheduleForm((prev) => ({ ...prev, notes: event.target.value }))
                       }
-                      className="min-h-24 w-full min-w-0 resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      className="min-h-24 w-full min-w-0 resize-none rounded-2xl border border-purple-100 px-4 py-3 text-sm outline-none transition focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100"
                       placeholder="Add agenda or meeting details"
                     />
                   </label>
@@ -1346,7 +1363,7 @@ function WorkableChatContent() {
                   <button
                     type="submit"
                     disabled={isScheduling}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4B164C] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4B164C] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-purple-200 transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isScheduling ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1367,13 +1384,13 @@ function WorkableChatContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-[95] flex items-center justify-center bg-[#1f1024]/45 p-4 backdrop-blur-sm"
             >
               <motion.div
                 initial={{ y: 24, opacity: 0, scale: 0.96 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: 24, opacity: 0, scale: 0.96 }}
-                className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl"
+                className="w-full max-w-md rounded-[30px] border border-white/70 bg-white p-6 shadow-[0_24px_80px_rgba(31,16,36,0.28)]"
               >
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
@@ -1383,7 +1400,7 @@ function WorkableChatContent() {
                   <button
                     type="button"
                     onClick={() => setFeedbackTarget(null)}
-                    className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-500 hover:bg-slate-200"
+                    className="rounded-full bg-purple-50 px-3 py-1 text-sm font-bold text-[#4B164C] transition hover:bg-purple-100"
                   >
                     Skip
                   </button>
@@ -1420,7 +1437,7 @@ function WorkableChatContent() {
                     <textarea
                       value={feedbackComment}
                       onChange={(event) => setFeedbackComment(event.target.value)}
-                      className="min-h-28 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#4B164C]"
+                      className="min-h-28 w-full resize-none rounded-2xl border border-purple-100 px-4 py-3 text-sm outline-none transition focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100"
                       placeholder="Share what went well or what could be improved"
                     />
                   </label>
@@ -1428,7 +1445,7 @@ function WorkableChatContent() {
                   <button
                     type="submit"
                     disabled={isSubmittingFeedback}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4B164C] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4B164C] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-purple-200 transition hover:bg-[#3d103e] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmittingFeedback ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
