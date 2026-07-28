@@ -113,6 +113,7 @@ export async function GET() {
       interviews,
       creditPurchases,
       creditTransactions,
+      userReports,
     ] = await Promise.all([
       collectionDocs("users"),
       collectionDocs("profiles"),
@@ -123,6 +124,7 @@ export async function GET() {
       collectionDocs("interviews"),
       collectionDocs("creditPurchases"),
       collectionDocs("creditTransactions"),
+      collectionDocs("userReports"),
     ]);
 
     const requests = [...skillRequests, ...legacyConnectRequests];
@@ -270,6 +272,30 @@ export async function GET() {
       .sort((a, b) => a.interviewScore - b.interviewScore)
       .slice(0, 10);
 
+    const recentReports = userReports
+      .slice()
+      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+      .slice(0, 10)
+      .map((report) => {
+        const reporterId = readString(report, ["reporterId"]);
+        const reportedUserId = readString(report, ["reportedUserId"]);
+        const reporter = reporterId ? userMap.get(reporterId) : undefined;
+        const reportedUser = reportedUserId ? userMap.get(reportedUserId) : undefined;
+        return {
+          id: report.id,
+          reporterId,
+          reporterName: reporter ? displayName(reporter, profileMap.get(reporterId)) : "User",
+          reportedUserId,
+          reportedUserName: reportedUser
+            ? displayName(reportedUser, profileMap.get(reportedUserId))
+            : "User",
+          reason: readString(report, ["reason"], "other"),
+          details: readString(report, ["details"]),
+          status: readString(report, ["status"], "open"),
+          createdAt: toMillis(report.createdAt),
+        };
+      });
+
     const dateKeys = Array.from({ length: 7 }, (_, index) => dayKey(6 - index));
     const userTrend = trendFor(users, dateKeys, ["createdAt"]);
     const requestTrend = trendFor(requests, dateKeys, ["createdAt"]);
@@ -297,6 +323,7 @@ export async function GET() {
         awardedCredits,
         purchases: creditPurchases.length,
         revenue,
+        openReports: userReports.filter((report) => readString(report, ["status"], "open") === "open").length,
       },
       health: {
         profileCompletionRate,
@@ -335,6 +362,7 @@ export async function GET() {
         users: recentUsers,
         requests: recentRequests,
         failedInterviews,
+        reports: recentReports,
       },
     });
   } catch (err) {

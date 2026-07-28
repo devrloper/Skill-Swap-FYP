@@ -12,7 +12,7 @@ import {
   Search,
   Phone,
   VideoIcon,
-  MoreHorizontal,
+  Flag,
   Send,
   Paperclip,
   Smile,
@@ -337,6 +337,10 @@ function WorkableChatContent() {
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState("");
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("harassment");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [acceptingScheduleId, setAcceptingScheduleId] = useState("");
   const [updatingSessionId, setUpdatingSessionId] = useState("");
@@ -1080,6 +1084,47 @@ function WorkableChatContent() {
     }
   };
 
+  const handleSubmitReport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!activeUser || !user?.uid || isSubmittingReport) return;
+
+    setIsSubmittingReport(true);
+    setChatError("");
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reportedUserId: activeUser.id,
+          reason: reportReason,
+          details: reportDetails,
+        }),
+      });
+      const data = await readApiResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Report could not be submitted.");
+      }
+
+      showAuthToast("Report submitted", "Admin will review this user.");
+      setIsReportOpen(false);
+      setReportReason("harassment");
+      setReportDetails("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Report could not be submitted.";
+      showErrorToast("Report failed", message);
+      setChatError(message);
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#E5D9F2]">
@@ -1270,8 +1315,14 @@ function WorkableChatContent() {
                   <button type="button" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-50 transition hover:bg-purple-100">
                     <VideoIcon className="h-5 w-5" />
                   </button>
-                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 transition hover:bg-slate-100">
-                    <MoreHorizontal className="h-5 w-5" />
+                  <button
+                    type="button"
+                    onClick={() => setIsReportOpen(true)}
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-500 transition hover:bg-red-100"
+                    aria-label={`Report ${activeUser.name}`}
+                    title="Report user"
+                  >
+                    <Flag className="h-5 w-5" />
                   </button>
                 </div>
               </header>
@@ -1846,6 +1897,94 @@ function WorkableChatContent() {
                       <CalendarDays className="h-4 w-4" />
                     )}
                     Send Schedule
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isReportOpen && activeUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[95] flex items-center justify-center bg-[#1f1024]/45 p-4 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ y: 24, opacity: 0, scale: 0.96 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 24, opacity: 0, scale: 0.96 }}
+                className="w-full max-w-md rounded-[30px] border border-white/70 bg-white p-6 shadow-[0_24px_80px_rgba(31,16,36,0.28)]"
+              >
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+                      <Flag className="h-5 w-5" />
+                    </div>
+                    <p className="text-lg font-bold text-slate-800">
+                      Report {activeUser.name}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Tell admin what happened. Reports are private.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsReportOpen(false)}
+                    className="rounded-full bg-slate-50 px-3 py-1 text-sm font-bold text-slate-500 transition hover:bg-slate-100"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmitReport} className="space-y-5">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Reason
+                    </span>
+                    <select
+                      value={reportReason}
+                      onChange={(event) => setReportReason(event.target.value)}
+                      className="w-full rounded-2xl border border-purple-100 px-4 py-3 text-sm outline-none transition focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100"
+                    >
+                      <option value="harassment">Harassment or rude behavior</option>
+                      <option value="spam">Spam or unwanted messages</option>
+                      <option value="inappropriate_content">Inappropriate content</option>
+                      <option value="fake_profile">Fake profile</option>
+                      <option value="unsafe_behavior">Unsafe behavior</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Details
+                    </span>
+                    <textarea
+                      value={reportDetails}
+                      onChange={(event) => setReportDetails(event.target.value)}
+                      maxLength={1000}
+                      className="min-h-28 w-full resize-none rounded-2xl border border-purple-100 px-4 py-3 text-sm outline-none transition focus:border-[#b789ff] focus:ring-4 focus:ring-purple-100"
+                      placeholder="Write a short note for admin review"
+                    />
+                    <span className="mt-1 block text-right text-[10px] font-semibold text-slate-400">
+                      {reportDetails.length}/1000
+                    </span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReport}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-100 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmittingReport ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Flag className="h-4 w-4" />
+                    )}
+                    Submit Report
                   </button>
                 </form>
               </motion.div>

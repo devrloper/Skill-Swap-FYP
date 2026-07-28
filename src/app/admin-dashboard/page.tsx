@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Search,
   Settings,
+  Flag,
   ShieldCheck,
   Sparkles,
   Target,
@@ -78,6 +79,18 @@ type FailedInterview = {
   interviewScore: number;
 };
 
+type UserReport = {
+  id: string;
+  reporterId: string;
+  reporterName: string;
+  reportedUserId: string;
+  reportedUserName: string;
+  reason: string;
+  details: string;
+  status: string;
+  createdAt: number;
+};
+
 type AdminSummary = {
   totals: {
     users: number;
@@ -100,6 +113,7 @@ type AdminSummary = {
     awardedCredits: number;
     purchases: number;
     revenue: number;
+    openReports: number;
   };
   health: {
     profileCompletionRate: number;
@@ -126,6 +140,7 @@ type AdminSummary = {
     users: RecentUser[];
     requests: RecentRequest[];
     failedInterviews: FailedInterview[];
+    reports: UserReport[];
   };
 };
 
@@ -137,6 +152,7 @@ const navItems = [
   { name: "Requests", icon: Target },
   { name: "Sessions", icon: CalendarClock },
   { name: "Interviews", icon: Brain },
+  { name: "Reports", icon: Flag },
   { name: "Finance", icon: CircleDollarSign },
   { name: "Settings", icon: Settings },
 ];
@@ -587,6 +603,54 @@ export default function AdminDashboardPage() {
     </div>
   );
 
+  const renderReportRows = (reports: UserReport[]) => (
+    <div className="max-w-full overflow-x-auto pb-3 [scrollbar-color:#c58cff_#f3e8ff] [scrollbar-width:thin]">
+      <table className="w-full min-w-[820px] text-sm">
+        <thead>
+          <tr className="border-b border-violet-100/80 text-left text-xs font-black uppercase tracking-wide text-[#9a91b8]">
+            <th className="py-3">Reported User</th>
+            <th>Reported By</th>
+            <th>Reason</th>
+            <th>Details</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reports.map((report) => (
+            <tr key={report.id} className="border-b border-violet-50/90">
+              <td className="py-4">
+                <p className="font-black text-[#2b2450]">{report.reportedUserName}</p>
+                <p className="mt-1 max-w-[180px] truncate text-xs text-[#958cb0]">{report.reportedUserId}</p>
+              </td>
+              <td>
+                <p className="font-black text-[#2b2450]">{report.reporterName}</p>
+                <p className="mt-1 max-w-[180px] truncate text-xs text-[#958cb0]">{report.reporterId}</p>
+              </td>
+              <td className="capitalize text-[#6f6692]">{report.reason.replaceAll("_", " ")}</td>
+              <td>
+                <p className="max-w-[260px] truncate text-[#4d4772]">
+                  {report.details || "No details added"}
+                </p>
+              </td>
+              <td>
+                <StatusBadge status={report.status} />
+              </td>
+              <td className="text-[#6f6692]">{formatDate(report.createdAt)}</td>
+            </tr>
+          ))}
+          {!reports.length && (
+            <tr>
+              <td colSpan={6} className="py-8 text-center text-sm text-[#8b83a8]">
+                No user reports found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,#c8bbff_0%,#dcecff_36%,#fae0f5_72%,#ffd4ef_100%)] p-0 text-[#2b2450] md:p-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,.55),transparent_28%),radial-gradient(circle_at_84%_22%,rgba(255,182,226,.45),transparent_30%)]" />
@@ -720,6 +784,13 @@ export default function AdminDashboardPage() {
                     icon={CalendarClock}
                     accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
                   />
+                  <MetricCard
+                    title="Open reports"
+                    value={formatNumber(totals?.openReports || 0)}
+                    detail="User safety review queue"
+                    icon={Flag}
+                    accent="bg-gradient-to-r from-red-600 to-pink-500 text-white"
+                  />
                 </div>
 
                 {active === "Overview" && (
@@ -786,6 +857,10 @@ export default function AdminDashboardPage() {
                         {renderRequestRows(filteredRequests.slice(0, 6))}
                       </Section>
                     </div>
+
+                    <Section title="User reports" subtitle="Latest safety reports from chat" icon={Flag}>
+                      {renderReportRows(summary?.recent.reports || [])}
+                    </Section>
                   </>
                 )}
 
@@ -942,6 +1017,16 @@ export default function AdminDashboardPage() {
                       </div>
                     </Section>
                   </div>
+                )}
+
+                {active === "Reports" && (
+                  <Section
+                    title="User reports"
+                    subtitle="Review chat safety reports submitted by users"
+                    icon={Flag}
+                  >
+                    {renderReportRows(summary?.recent.reports || [])}
+                  </Section>
                 )}
 
                 {active === "Finance" && (
