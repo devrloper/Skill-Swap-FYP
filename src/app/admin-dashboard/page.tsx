@@ -372,15 +372,7 @@ function Sidebar({
         })}
       </nav>
 
-      <div className="mt-auto rounded-[24px] border border-white/20 bg-gradient-to-r from-purple-800 to-pink-500 p-4 text-white shadow-sm">
-        <p className="flex items-center gap-2 text-xs font-black text-white">
-          <ShieldCheck size={15} className="text-white" />
-          Admin health
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-white/80">
-          Monitor learner journeys, exchanger readiness, requests, credits, and session flow from one place.
-        </p>
-      </div>
+    
     </aside>
   );
 }
@@ -755,46 +747,46 @@ export default function AdminDashboardPage() {
               </div>
             ) : (
               <>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <MetricCard
-                    title="Total users"
-                    value={formatNumber(totals?.users || 0)}
-                    detail={`${formatNumber(totals?.learners || 0)} learners, ${formatNumber(totals?.exchangers || 0)} exchangers`}
-                    icon={Users}
-                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
-                  />
-                  <MetricCard
-                    title="Learner journeys"
-                    value={formatNumber(totals?.learnerJourneys || 0)}
-                    detail={`${health?.learnerActivationRate || 0}% learner activation`}
-                    icon={BookOpen}
-                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
-                  />
-                  <MetricCard
-                    title="Open requests"
-                    value={formatNumber(totals?.pendingRequests || 0)}
-                    detail={`${health?.requestAcceptanceRate || 0}% acceptance rate`}
-                    icon={Target}
-                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
-                  />
-                  <MetricCard
-                    title="Session flow"
-                    value={formatNumber(totals?.sessions || 0)}
-                    detail={`${formatNumber(totals?.upcomingSessions || 0)} upcoming meetings`}
-                    icon={CalendarClock}
-                    accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
-                  />
-                  <MetricCard
-                    title="Open reports"
-                    value={formatNumber(totals?.openReports || 0)}
-                    detail="User safety review queue"
-                    icon={Flag}
-                    accent="bg-gradient-to-r from-red-600 to-pink-500 text-white"
-                  />
-                </div>
-
                 {active === "Overview" && (
                   <>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      <MetricCard
+                        title="Total users"
+                        value={formatNumber(totals?.users || 0)}
+                        detail={`${formatNumber(totals?.learners || 0)} learners, ${formatNumber(totals?.exchangers || 0)} exchangers`}
+                        icon={Users}
+                        accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
+                      />
+                      <MetricCard
+                        title="Learner journeys"
+                        value={formatNumber(totals?.learnerJourneys || 0)}
+                        detail={`${health?.learnerActivationRate || 0}% learner activation`}
+                        icon={BookOpen}
+                        accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
+                      />
+                      <MetricCard
+                        title="Open requests"
+                        value={formatNumber(totals?.pendingRequests || 0)}
+                        detail={`${health?.requestAcceptanceRate || 0}% acceptance rate`}
+                        icon={Target}
+                        accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
+                      />
+                      <MetricCard
+                        title="Session flow"
+                        value={formatNumber(totals?.sessions || 0)}
+                        detail={`${formatNumber(totals?.upcomingSessions || 0)} upcoming meetings`}
+                        icon={CalendarClock}
+                        accent="bg-gradient-to-r from-purple-800 to-pink-500 text-white"
+                      />
+                      <MetricCard
+                        title="Open reports"
+                        value={formatNumber(totals?.openReports || 0)}
+                        detail="User safety review queue"
+                        icon={Flag}
+                        accent="bg-gradient-to-r from-red-600 to-pink-500 text-white"
+                      />
+                    </div>
+
                     <div className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
                       <Section
                         title="Platform pulse"
