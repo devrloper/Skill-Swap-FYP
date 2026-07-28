@@ -4,49 +4,28 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Modal from "@/app/Modals/profilemodal/page";
-import { auth, db } from "@/app/lib/firebase";
+import { auth } from "@/app/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { CheckCircle2, Sparkles, X } from "lucide-react";
 
 export default function HeroSection() {
   const [open, setOpen] = useState(false);
+  const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [isEnrolled, setIsEnrolled] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    if (!user?.uid) {
-      setIsEnrolled(false);
+  const handleMoreDetails = () => {
+    if (!user) {
+      setSignupPromptOpen(true);
       return;
     }
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const snap = await getDoc(doc(db, "profiles", user.uid));
-        const data = snap.exists() ? snap.data() : null;
-        const enrolled =
-          Boolean(data?.enrolled) ||
-          Boolean(data?.profileCompleted) ||
-          Boolean(data?.interviewStatus) ||
-          Boolean(data?.interviewScore) ||
-          (Array.isArray(data?.completedSteps) &&
-            data.completedSteps.includes(4));
-        if (!cancelled) setIsEnrolled(enrolled);
-      } catch (err) {
-        console.error("Failed to check enrollment:", err);
-        if (!cancelled) setIsEnrolled(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.uid]);
+    setOpen(true);
+  };
 
   return (
     <>
@@ -101,6 +80,8 @@ export default function HeroSection() {
 
             <div>
               <motion.button
+                type="button"
+                onClick={handleMoreDetails}
                 whileHover={{ x: 6 }}
                 className="bg-gradient-to-r from-purple-950 cursor-pointer to-pink-600 text-white px-6 py-3 rounded-full font-medium shadow-md hover:opacity-90 transition-all"
               >
@@ -134,6 +115,80 @@ export default function HeroSection() {
           </motion.div>
         </motion.div>
       </section>
+
+      {signupPromptOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-8">
+          <div className="flex min-h-full items-start justify-center sm:items-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="relative my-auto w-full max-w-[22rem] overflow-hidden rounded-2xl bg-white text-center shadow-2xl sm:max-w-md sm:rounded-3xl"
+          >
+            <button
+              type="button"
+              onClick={() => setSignupPromptOpen(false)}
+              aria-label="Close signup prompt"
+              className="absolute right-3 top-3 z-10 rounded-full bg-white/80 p-2 text-gray-500 shadow-sm transition hover:bg-white hover:text-gray-900 sm:right-4 sm:top-4 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="bg-gradient-to-br from-purple-950 via-purple-700 to-pink-500 px-5 pb-8 pt-9 text-white sm:px-7 sm:pb-10 sm:pt-12">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/15 shadow-inner ring-1 ring-white/25 sm:mb-4 sm:h-16 sm:w-16">
+                <Sparkles size={26} />
+              </div>
+              <h2 className="text-2xl font-extrabold sm:text-3xl">
+                Sign up first
+              </h2>
+              <p className="mx-auto mt-2 max-w-xs text-xs leading-5 text-purple-50 sm:mt-3 sm:text-sm sm:leading-6">
+                Join Skill Swap to unlock profile details, connect with matches,
+                and start exchanging skills.
+              </p>
+            </div>
+
+            <div className="-mt-4 px-4 pb-5 sm:-mt-5 sm:px-7 sm:pb-7">
+              <div className="rounded-xl bg-white p-3 text-left shadow-lg ring-1 ring-purple-100 sm:rounded-2xl sm:p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-pink-600">
+                  What you get
+                </p>
+                <div className="mt-3 grid gap-2 text-xs text-gray-700 sm:text-sm">
+                  {[
+                    "Complete your learning profile",
+                    "Find skill partners faster",
+                    "Access AI interview and session tools",
+                  ].map((item) => (
+                    <p key={item} className="flex items-center gap-2">
+                      <CheckCircle2
+                        size={15}
+                        className="shrink-0 text-pink-500"
+                      />
+                      <span>{item}</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-2 sm:mt-6 sm:flex-row sm:justify-center sm:gap-3">
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-gradient-to-r from-purple-950 to-pink-600 px-7 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90 sm:py-3 cursor-pointer"
+                >
+                  Sign Up
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setSignupPromptOpen(false)}
+                  className="rounded-full border border-purple-200 px-7 py-2.5 text-sm font-semibold text-purple-900 transition hover:bg-purple-50 sm:py-3 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+          </div>
+        </div>
+      )}
 
       <Modal open={open} setOpen={setOpen} mode="enroll" />
     </>

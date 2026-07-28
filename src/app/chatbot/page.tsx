@@ -161,10 +161,13 @@ export default function ChatbotPage() {
         )}
       </AnimatePresence>
 
-      <main className="min-h-screen bg-[#f7f7fb] text-slate-950">
+      <main
+        className="min-h-screen bg-cover bg-center bg-no-repeat text-slate-950"
+        style={{ backgroundImage: "url('/bgchatbot.jpg')" }}
+      >
         <NavBar />
         <section className="relative overflow-hidden px-4 pb-6 pt-24 sm:px-6 lg:px-8">
-          <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-br from-purple-700 via-fuchsia-600 to-pink-500" />
+          <div className="absolute inset-0 bg-white/35 backdrop-blur-[1px]" />
           <div className="relative mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-white/50 bg-white shadow-[0_24px_80px_rgba(88,28,135,.20)]">
             <header className="border-b border-slate-100 bg-white/90 px-5 py-4 backdrop-blur md:px-7">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -200,7 +203,7 @@ export default function ChatbotPage() {
 
             <div
               ref={chatContainerRef}
-              className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,.10),transparent_32%),linear-gradient(180deg,#ffffff,#faf7ff)] px-4 py-6 md:px-8"
+              className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,.12),transparent_32%),linear-gradient(180deg,#ffffff,#f8f5ff)] px-4 py-6 md:px-8"
             >
               <div className="mx-auto flex max-w-3xl flex-col gap-5">
                 {messages.length <= 1 && (

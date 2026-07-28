@@ -205,7 +205,6 @@ function formatStartsIn(value?: number | null) {
 }
 
 export default function UserDashboard() {
-  // 1. States aur Effects hamesha yahan (Function body ke andar) honi chahiye
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);

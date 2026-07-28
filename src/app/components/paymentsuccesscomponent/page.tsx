@@ -56,7 +56,7 @@ export default function PaymentSuccessComponent() {
       }
     } catch (error) {
       console.error("Error verifying payment:", error);
-    } finally {
+    } finally {co
       // Redirect after 3 seconds
       setTimeout(() => {
         router.push("/pricing");

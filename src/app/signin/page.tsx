@@ -121,7 +121,7 @@ const LoginPage = () => {
         router.push(safeNextPath || "/learner");
       } else {
         showAuthToast("Signed in successfully");
-        router.push(safeNextPath || "/dashboard"); // or "/" if you want home page
+        router.push(safeNextPath || "/dashboard"); 
       }
     } catch (err: unknown) {
       console.error("LOGIN ERROR:", err);
