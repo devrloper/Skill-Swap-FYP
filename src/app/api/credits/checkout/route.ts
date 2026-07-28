@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe, STRIPE_CURRENCY, STRIPE_EXCHANGE_RATE, usdToCents } from "@/app/lib/stripe";
 import { PAID_CREDIT_PACKS } from "@/app/lib/creditConstants";
 import { getRequestUser } from "@/app/lib/serverAuth";
+import { createStripePendingPurchase } from "@/app/lib/creditLogic";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,13 @@ export async function POST(req: NextRequest) {
     });
 
     console.log("Stripe session created:", session.id);
+    await createStripePendingPurchase({
+      userId: sessionUser.uid,
+      packId,
+      stripeSessionId: session.id,
+      amount: priceInCents,
+    });
+
     return NextResponse.json({
       ok: true,
       checkoutUrl: session.url,
