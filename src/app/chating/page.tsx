@@ -112,6 +112,28 @@ type FeedbackTarget = {
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const INLINE_ATTACHMENT_LIMIT = 450 * 1024;
 const ATTACHMENT_CHUNK_SIZE = 450 * 1024;
+const CHAT_EMOJIS = [
+  "😊",
+  "😂",
+  "😍",
+  "👍",
+  "👏",
+  "🙌",
+  "🤝",
+  "💡",
+  "🔥",
+  "✨",
+  "🎯",
+  "📚",
+  "💻",
+  "✅",
+  "🙏",
+  "😎",
+  "🤔",
+  "😅",
+  "🥳",
+  "❤️",
+];
 
 function getAttachmentKind(contentType: string): "image" | "video" | "file" {
   if (contentType.startsWith("image/")) return "image";
@@ -314,6 +336,7 @@ function WorkableChatContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState("");
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [acceptingScheduleId, setAcceptingScheduleId] = useState("");
   const [updatingSessionId, setUpdatingSessionId] = useState("");
@@ -330,6 +353,7 @@ function WorkableChatContent() {
   const [chatError, setChatError] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messageInputRef = useRef<HTMLInputElement | null>(null);
 
   const contacts = useMemo(
     () =>
@@ -701,6 +725,12 @@ function WorkableChatContent() {
     setSelectedFile(null);
     setUploadProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setInputText((current) => `${current}${emoji}`);
+    setIsEmojiPickerOpen(false);
+    window.setTimeout(() => messageInputRef.current?.focus(), 0);
   };
 
   const uploadChatAttachment = async (
@@ -1617,9 +1647,32 @@ function WorkableChatContent() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 pl-2 sm:gap-3 sm:pl-4">
-                    <Smile className="hidden h-5 w-5 text-[#9b7aad] sm:block" />
+                  <div className="relative flex items-center gap-2 pl-2 sm:gap-3 sm:pl-4">
+                    {isEmojiPickerOpen && (
+                      <div className="absolute bottom-full left-0 z-20 mb-3 grid w-64 grid-cols-5 gap-1 rounded-3xl border border-purple-100 bg-white p-3 shadow-[0_18px_45px_rgba(75,22,76,0.18)]">
+                        {CHAT_EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => handleEmojiSelect(emoji)}
+                            className="flex h-10 w-10 items-center justify-center rounded-2xl text-xl transition hover:bg-purple-50"
+                            aria-label={`Add ${emoji}`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsEmojiPickerOpen((current) => !current)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-50 text-[#9b7aad] transition hover:bg-purple-100 hover:text-[#4B164C]"
+                      aria-label="Open emoji picker"
+                    >
+                      <Smile className="h-5 w-5" />
+                    </button>
                     <input
+                      ref={messageInputRef}
                       className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
                       placeholder={
                         selectedFile
