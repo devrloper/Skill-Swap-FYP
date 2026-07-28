@@ -8,6 +8,41 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+:where(
+  a,
+  button,
+  select,
+  summary,
+  label[for],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [data-clickable="true"]
+) {
+  cursor: pointer;
+}
+
+:where(
+  button,
+  select,
+  input,
+  textarea,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"]
+):disabled,
+:where([aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
   @keyframes moveDot {
       0% {
         left: 7%;

@@ -16,6 +16,8 @@ import {
   Send,
   Paperclip,
   Smile,
+  Download,
+  ImageIcon,
   MapPin,
   ChevronLeft,
   Loader2,
@@ -39,6 +41,7 @@ import {
   setDoc,
   Timestamp,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import Navbar from "@/app/components/innernavbar/page";
 import ChipLoader from "@/app/components/loader/page";
@@ -67,10 +70,20 @@ type ChatUser = {
 type ChatMessage = {
   id: string;
   text: string;
+  caption?: string;
   senderId: string;
   receiverId: string;
   createdAt: number;
-  type?: "text" | "schedule";
+  type?: "text" | "schedule" | "attachment";
+  attachment?: {
+    name: string;
+    url?: string;
+    contentType: string;
+    size: number;
+    kind: "image" | "video" | "file";
+    chunked?: boolean;
+    chunkCount?: number;
+  };
   schedule?: {
     topic: string;
     dateTime: number;
@@ -95,6 +108,71 @@ type FeedbackTarget = {
   sessionId: string;
   topic: string;
 };
+
+const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
+const INLINE_ATTACHMENT_LIMIT = 450 * 1024;
+const ATTACHMENT_CHUNK_SIZE = 450 * 1024;
+
+function getAttachmentKind(contentType: string): "image" | "video" | "file" {
+  if (contentType.startsWith("image/")) return "image";
+  if (contentType.startsWith("video/")) return "video";
+  return "file";
+}
+
+function formatFileSize(size: number) {
+  if (!size) return "";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function splitIntoChunks(value: string, size: number) {
+  const chunks: string[] = [];
+  for (let index = 0; index < value.length; index += size) {
+    chunks.push(value.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function readFileAsDataUrl(file: File, onProgress: (progress: number) => void) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      onProgress(Math.round((event.loaded / event.total) * 80));
+    };
+
+    reader.onerror = () => {
+      reject(new Error("File could not be read. Please choose another file."));
+    };
+
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result) {
+        reject(new Error("File could not be read. Please choose another file."));
+        return;
+      }
+      resolve(result);
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+function downloadDataUrl(dataUrl: string, fileName: string) {
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function getUploadErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return "File could not be prepared. Please try again with a smaller file.";
+}
 
 function getStringValue(source: FirestoreRecord, keys: string[], fallback = "") {
   for (const key of keys) {
@@ -232,6 +310,9 @@ function WorkableChatContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState("");
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [acceptingScheduleId, setAcceptingScheduleId] = useState("");
@@ -248,6 +329,7 @@ function WorkableChatContent() {
   });
   const [chatError, setChatError] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const contacts = useMemo(
     () =>
@@ -422,10 +504,40 @@ function WorkableChatContent() {
             return {
               id: item.id,
               text: getStringValue(data, ["text", "content"]),
+              caption: getStringValue(data, ["caption"]),
               senderId: getStringValue(data, ["senderId"]),
               receiverId: getStringValue(data, ["receiverId"]),
               createdAt: toMillis(data.createdAt),
-              type: data.type === "schedule" ? "schedule" : "text",
+              type:
+                data.type === "schedule"
+                  ? "schedule"
+                  : data.type === "attachment"
+                    ? "attachment"
+                    : "text",
+              attachment:
+                data.attachment && typeof data.attachment === "object"
+                  ? {
+                      name: getStringValue(data.attachment as FirestoreRecord, ["name"], "Attachment"),
+                      url: getStringValue(data.attachment as FirestoreRecord, ["url"]),
+                      contentType: getStringValue(data.attachment as FirestoreRecord, ["contentType"]),
+                      size:
+                        typeof (data.attachment as FirestoreRecord).size === "number"
+                          ? ((data.attachment as FirestoreRecord).size as number)
+                          : 0,
+                      kind: ["image", "video"].includes(
+                        String((data.attachment as FirestoreRecord).kind),
+                      )
+                        ? (String((data.attachment as FirestoreRecord).kind) as
+                            | "image"
+                            | "video")
+                        : "file",
+                      chunked: Boolean((data.attachment as FirestoreRecord).chunked),
+                      chunkCount:
+                        typeof (data.attachment as FirestoreRecord).chunkCount === "number"
+                          ? ((data.attachment as FirestoreRecord).chunkCount as number)
+                          : 0,
+                    }
+                  : undefined,
               schedule:
                 data.schedule && typeof data.schedule === "object"
                   ? {
@@ -569,32 +681,175 @@ function WorkableChatContent() {
     return chatId;
   };
 
+  const handleSelectFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) return;
+
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      showErrorToast(
+        "File is too large",
+        "Free mode supports files up to 650 KB. Please choose a smaller image or document.",
+      );
+      event.target.value = "";
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setUploadProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadChatAttachment = async (
+    file: File,
+  ): Promise<{
+    attachment: NonNullable<ChatMessage["attachment"]>;
+    chunks: string[];
+  }> => {
+    const dataUrl = await readFileAsDataUrl(file, setUploadProgress);
+    const shouldChunk = dataUrl.length > INLINE_ATTACHMENT_LIMIT;
+    const chunks = shouldChunk ? splitIntoChunks(dataUrl, ATTACHMENT_CHUNK_SIZE) : [];
+
+    setUploadProgress(85);
+
+    return {
+      attachment: {
+        name: file.name,
+        url: shouldChunk ? undefined : dataUrl,
+        contentType: file.type || "application/octet-stream",
+        size: file.size,
+        kind: getAttachmentKind(file.type || ""),
+        chunked: shouldChunk,
+        chunkCount: chunks.length,
+      },
+      chunks,
+    };
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = inputText.trim();
-    if (!text || !activeUser || !user?.uid || isSending) return;
+    if ((!text && !selectedFile) || !activeUser || !user?.uid || isSending) return;
 
     setIsSending(true);
     setChatError("");
 
     try {
-      const chatId = await ensureChatRoom(activeUser, text);
-      await addDoc(collection(db, "chatRooms", chatId, "messages"), {
-        text,
+      let attachment:
+        | {
+            name: string;
+            url?: string;
+            contentType: string;
+            size: number;
+            kind: "image" | "video" | "file";
+            chunked?: boolean;
+            chunkCount?: number;
+          }
+        | undefined;
+      let chunks: string[] = [];
+
+      if (selectedFile) {
+        const preparedAttachment = await uploadChatAttachment(selectedFile);
+        attachment = preparedAttachment.attachment;
+        chunks = preparedAttachment.chunks;
+      }
+
+      const previewText =
+        text ||
+        (attachment?.kind === "image"
+          ? "Sent an image"
+          : attachment?.kind === "video"
+            ? "Sent a video"
+            : `Sent ${attachment?.name || "a file"}`);
+      const ensuredChatId = await ensureChatRoom(activeUser, previewText);
+      const messageRef = doc(collection(db, "chatRooms", ensuredChatId, "messages"));
+
+      await setDoc(messageRef, {
+        text: previewText,
+        caption: text,
         senderId: user.uid,
         receiverId: activeUser.id,
         readBy: [user.uid],
-        type: "text",
+        type: attachment ? "attachment" : "text",
+        ...(attachment ? { attachment } : {}),
         createdAt: Timestamp.now(),
       });
+
+      if (chunks.length) {
+        const batch = writeBatch(db);
+        chunks.forEach((chunk, index) => {
+          batch.set(doc(messageRef, "attachmentChunks", String(index).padStart(4, "0")), {
+            index,
+            data: chunk,
+          });
+        });
+        await batch.commit();
+      }
+
+      setUploadProgress(100);
       setInputText("");
+      clearSelectedFile();
     } catch (error) {
       console.error("Failed to send message:", error);
-      const message = "Message could not be sent. Please check Firestore write permissions.";
+      const message = selectedFile
+        ? getUploadErrorMessage(error)
+        : "Message could not be sent. Please check Firestore write permissions.";
       showErrorToast("Message could not be sent", message);
       setChatError(message);
     } finally {
       setIsSending(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDownloadAttachment = async (message: ChatMessage) => {
+    if (!activeUser || !user?.uid || !message.attachment) return;
+
+    try {
+      setDownloadingAttachmentId(message.id);
+
+      if (message.attachment.url) {
+        downloadDataUrl(message.attachment.url, message.attachment.name);
+        return;
+      }
+
+      if (!message.attachment.chunked) {
+        showErrorToast("File is not available", "This attachment could not be downloaded.");
+        return;
+      }
+
+      const chatId = pairId(user.uid, activeUser.id);
+      const chunksSnapshot = await getDocs(
+        query(
+          collection(
+            db,
+            "chatRooms",
+            chatId,
+            "messages",
+            message.id,
+            "attachmentChunks",
+          ),
+          orderBy("index", "asc"),
+        ),
+      );
+      const dataUrl = chunksSnapshot.docs
+        .map((chunkDoc) => getStringValue(chunkDoc.data() as FirestoreRecord, ["data"]))
+        .join("");
+
+      if (!dataUrl) {
+        showErrorToast("File is not available", "Attachment data is missing.");
+        return;
+      }
+
+      downloadDataUrl(dataUrl, message.attachment.name);
+    } catch (error) {
+      console.error("Failed to download attachment:", error);
+      showErrorToast("Download failed", "File could not be downloaded. Please try again.");
+    } finally {
+      setDownloadingAttachmentId("");
     }
   };
 
@@ -1014,6 +1269,9 @@ function WorkableChatContent() {
                 {messages.map((message) => {
                   const isMine = message.senderId === user?.uid;
                   const isSchedule = message.type === "schedule" && message.schedule;
+                  const hasAttachment = message.type === "attachment" && message.attachment;
+                  const attachmentUrl = message.attachment?.url || "";
+                  const isDownloading = downloadingAttachmentId === message.id;
                   const canAcceptSchedule =
                     isSchedule &&
                     message.schedule?.status === "pending" &&
@@ -1193,6 +1451,112 @@ function WorkableChatContent() {
                               </div>
                             </div>
                           </div>
+                        ) : hasAttachment ? (
+                          <div
+                            className={`max-w-[min(18rem,76vw)] overflow-hidden rounded-[26px] border text-sm shadow-sm sm:max-w-sm ${
+                              isMine
+                                ? "rounded-tr-none border-[#4B164C] bg-[#4B164C] text-white shadow-purple-100"
+                                : "rounded-tl-none border-purple-50 bg-white text-slate-700"
+                            }`}
+                          >
+                            {message.attachment?.kind === "image" && attachmentUrl && (
+                              <a
+                                href={attachmentUrl}
+                                download={message.attachment.name}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block"
+                              >
+                                <img
+                                  src={attachmentUrl}
+                                  alt={message.attachment.name}
+                                  className="max-h-72 w-full object-cover"
+                                />
+                              </a>
+                            )}
+
+                            {message.attachment?.kind === "video" && attachmentUrl && (
+                              <video
+                                src={attachmentUrl}
+                                controls
+                                className="max-h-72 w-full bg-black"
+                              >
+                                <track kind="captions" />
+                              </video>
+                            )}
+
+                            {(message.attachment?.kind === "file" || !attachmentUrl) && (
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadAttachment(message)}
+                                disabled={isDownloading}
+                                className={`flex items-center gap-3 p-4 transition ${
+                                  isMine ? "hover:bg-white/10" : "hover:bg-purple-50"
+                                } disabled:cursor-wait disabled:opacity-70`}
+                              >
+                                <span
+                                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                                    isMine
+                                      ? "bg-white/15 text-white"
+                                      : "bg-[#4B164C]/10 text-[#4B164C]"
+                                  }`}
+                                >
+                                  <FileText className="h-5 w-5" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-bold">
+                                    {message.attachment.name}
+                                  </span>
+                                  <span
+                                    className={`mt-0.5 block text-xs ${
+                                      isMine ? "text-white/70" : "text-slate-500"
+                                    }`}
+                                  >
+                                    {formatFileSize(message.attachment.size)}
+                                  </span>
+                                </span>
+                                {isDownloading ? (
+                                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4 shrink-0" />
+                                )}
+                              </button>
+                            )}
+
+                            {(message.attachment?.kind !== "file" || message.caption) && (
+                              <div className="space-y-1 px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  {message.attachment?.kind === "image" ? (
+                                    <ImageIcon className="h-4 w-4 shrink-0" />
+                                  ) : (
+                                    <Video className="h-4 w-4 shrink-0" />
+                                  )}
+                                  <a
+                                    href={attachmentUrl || "#"}
+                                    download={message.attachment?.name}
+                                    onClick={(event) => {
+                                      if (!attachmentUrl) {
+                                        event.preventDefault();
+                                        handleDownloadAttachment(message);
+                                      }
+                                    }}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className={`min-w-0 truncate text-xs font-semibold underline-offset-2 hover:underline ${
+                                      isMine ? "text-white/80" : "text-[#4B164C]"
+                                    }`}
+                                  >
+                                    {message.attachment?.name}
+                                  </a>
+                                </div>
+                                {message.caption && (
+                                  <p className="break-words text-sm leading-6">
+                                    {message.caption}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div
                             className={`break-words rounded-[26px] border px-4 py-3 text-sm leading-6 shadow-sm ${
@@ -1214,36 +1578,94 @@ function WorkableChatContent() {
               <footer className="border-t border-purple-50 bg-white/85 p-4 lg:p-5">
                 <form
                   onSubmit={handleSendMessage}
-                  className="flex items-center gap-3 rounded-[26px] border border-purple-100 bg-white p-2 pl-4 shadow-[0_12px_32px_rgba(75,22,76,0.08)] transition-all focus-within:border-[#b789ff] focus-within:ring-4 focus-within:ring-purple-100"
+                  className="rounded-[26px] border border-purple-100 bg-white p-2 shadow-[0_12px_32px_rgba(75,22,76,0.08)] transition-all focus-within:border-[#b789ff] focus-within:ring-4 focus-within:ring-purple-100"
                 >
-                  <Smile className="hidden h-5 w-5 text-[#9b7aad] sm:block" />
-                  <input
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
-                    placeholder={`Message ${activeUser.name}...`}
-                    value={inputText}
-                    onChange={(event) => setInputText(event.target.value)}
-                  />
-                  <div className="flex items-center gap-2 pr-1">
-                    <Paperclip className="hidden h-5 w-5 rotate-45 text-[#9b7aad] sm:block" />
-                    <button
-                      type="button"
-                      onClick={() => setIsScheduleOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-full border border-[#4B164C]/15 bg-purple-50 px-3 py-2 text-xs font-bold text-[#4B164C] transition hover:bg-purple-100"
-                    >
-                      <CalendarDays className="h-4 w-4" />
-                      Schedule
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={!inputText.trim() || isSending}
-                      className="rounded-full bg-[#4B164C] p-3 text-white shadow-lg shadow-purple-200 transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isSending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
+                  {selectedFile && (
+                    <div className="mb-2 rounded-2xl bg-purple-50 px-3 py-2 text-xs text-[#4B164C]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Paperclip className="h-4 w-4 shrink-0 rotate-45" />
+                          <span className="truncate font-semibold">
+                            {selectedFile.name}
+                          </span>
+                          <span className="shrink-0 text-[#9b7aad]">
+                            {formatFileSize(selectedFile.size)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearSelectedFile}
+                          disabled={isSending}
+                          className="shrink-0 rounded-full bg-white px-2 py-1 font-bold text-[#4B164C] transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      {isSending && uploadProgress > 0 && (
+                        <div className="mt-2">
+                          <div className="h-1.5 overflow-hidden rounded-full bg-white">
+                            <div
+                              className="h-full rounded-full bg-[#4B164C] transition-all"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[10px] font-semibold text-[#9b7aad]">
+                            Uploading {uploadProgress}%
+                          </p>
+                        </div>
                       )}
-                    </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 pl-2 sm:gap-3 sm:pl-4">
+                    <Smile className="hidden h-5 w-5 text-[#9b7aad] sm:block" />
+                    <input
+                      className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                      placeholder={
+                        selectedFile
+                          ? "Add a caption..."
+                          : `Message ${activeUser.name}...`
+                      }
+                      value={inputText}
+                      onChange={(event) => setInputText(event.target.value)}
+                    />
+                    <div className="flex items-center gap-1 pr-1 sm:gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar"
+                        onChange={handleSelectFile}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isSending}
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-50 text-[#4B164C] transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        aria-label="Attach file"
+                      >
+                        <Paperclip className="h-5 w-5 rotate-45" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsScheduleOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#4B164C]/15 bg-purple-50 px-3 py-2 text-xs font-bold text-[#4B164C] transition hover:bg-purple-100"
+                      >
+                        <CalendarDays className="h-4 w-4" />
+                        <span className="hidden sm:inline">Schedule</span>
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={(!inputText.trim() && !selectedFile) || isSending}
+                        className="rounded-full bg-[#4B164C] p-3 text-white shadow-lg shadow-purple-200 transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isSending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </form>
               </footer>
