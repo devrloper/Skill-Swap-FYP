@@ -680,7 +680,7 @@ export async function createStripePendingPurchase(input: {
   userId: string;
   packId: keyof typeof PAID_CREDIT_PACKS;
   stripeSessionId: string;
-  amount: number; // amount in USD (cents)
+  amount: number; // amount in PKR minor units
 }) {
   const pack = PAID_CREDIT_PACKS[input.packId];
   const purchaseRef = adminDb.collection("creditPurchases").doc();
@@ -693,7 +693,7 @@ export async function createStripePendingPurchase(input: {
       label: pack.label,
       credits: pack.credits,
       amount: input.amount,
-      currency: "USD",
+      currency: "PKR",
       status: "pending",
       stripeSessionId: input.stripeSessionId,
       createdAt: FieldValue.serverTimestamp(),
@@ -749,7 +749,7 @@ export async function confirmStripePaidCredits(input: {
         purchaseId: purchaseId,
         packId: input.packId,
         stripeSessionId: input.stripeSessionId,
-        currency: "USD",
+        currency: "PKR",
       },
     );
 

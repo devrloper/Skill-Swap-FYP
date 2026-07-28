@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe, STRIPE_CURRENCY, STRIPE_EXCHANGE_RATE, usdToCents } from "@/app/lib/stripe";
+import { stripe, STRIPE_CURRENCY, pkrToMinorUnits } from "@/app/lib/stripe";
 import { PAID_CREDIT_PACKS } from "@/app/lib/creditConstants";
 import { getRequestUser } from "@/app/lib/serverAuth";
 import { createStripePendingPurchase } from "@/app/lib/creditLogic";
@@ -35,9 +35,8 @@ export async function POST(req: NextRequest) {
     const pack = PAID_CREDIT_PACKS[packId];
     console.log("Pack details:", pack);
     
-    const priceInUsd = pack.price * STRIPE_EXCHANGE_RATE;
-    const priceInCents = usdToCents(priceInUsd);
-    console.log(`Converting PKR ${pack.price} to USD: ${priceInUsd}, cents: ${priceInCents}`);
+    const priceInMinorUnits = pkrToMinorUnits(pack.price);
+    console.log(`Charging PKR ${pack.price}, minor units: ${priceInMinorUnits}`);
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
                 credits: pack.credits.toString(),
               },
             },
-            unit_amount: priceInCents,
+            unit_amount: priceInMinorUnits,
           },
           quantity: 1,
         },
@@ -77,7 +76,7 @@ export async function POST(req: NextRequest) {
       userId: sessionUser.uid,
       packId,
       stripeSessionId: session.id,
-      amount: priceInCents,
+      amount: priceInMinorUnits,
     });
 
     return NextResponse.json({
